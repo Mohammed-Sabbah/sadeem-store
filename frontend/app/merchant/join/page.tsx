@@ -44,86 +44,85 @@ export default function MerchantJoinPage() {
       {/* Two-Column Balanced Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         {/* ===================================================================
-            COLUMN 1: EDITORIAL VALUE PROPOSITION (Quiet Luxury & Zero Boxiness)
+            COLUMN 1: EDITORIAL VALUE PROPOSITION (Quiet Luxury & Pure Serenity)
             =================================================================== */}
-        <div className="lg:col-span-5 flex flex-col gap-6 lg:sticky lg:top-24">
-          <div className="space-y-3.5">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold text-brand-trust bg-[var(--brand-trust-soft)] border border-[var(--brand-trust-border)]">
-              المحافظة الوسطى · قطاع غزة
-            </span>
-
+        <div className="lg:col-span-5 flex flex-col gap-7 lg:sticky lg:top-24">
+          <div className="space-y-3">
             <h2 className="text-xl sm:text-2xl font-black text-brand-dark leading-snug tracking-tight m-0">
-              ركّز على جودة بضاعتك، ونحن نتولى التسويق المتقن والتوصيل الميداني للزبائن
+              ركّز على إتقان بضاعتك، ونحن نتولى التسويق والتوصيل الميداني للزبائن
             </h2>
 
             <p className="text-xs sm:text-sm text-brand-muted leading-relaxed m-0">
-              تدمج سَدِيم مبيعاتك ضمن شبكة المتاجر المعتمدة في دير البلح والنصيرات والزوايدة والمغازي والبريج، مع إدارة لوجستية متكاملة تضمن راحة التاجر ورضا الزبون.
+              سَدِيم تدمج مبيعاتك ضمن شبكة المتاجر المعتمدة في المحافظة الوسطى، مع إدارة لوجستية متكاملة تضمن راحة التاجر وتوصيل 8 ₪ موحد للزبون.
             </p>
           </div>
 
-          {/* Serene 3 Pillars (Clean list without nested boxes) */}
+          {/* Serene 3 Pillars (Pure minimalist line icons, no chromatic clutter) */}
           <div className="space-y-4 pt-1">
             {/* Pillar 1 */}
             <div className="flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-lg bg-[var(--brand-primary-soft)] text-brand-primary border border-[var(--brand-primary-border)] flex items-center justify-center shrink-0 mt-0.5">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <span className="w-8 h-8 rounded-full bg-brand-surface border border-brand-border/80 text-brand-dark flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 16h6v-5.5a1.5 1.5 0 0 0-1.5-1.5H16" />
                   <rect x="2" y="6" width="14" height="10" rx="1.5" />
                   <circle cx="6" cy="18" r="2" />
                   <circle cx="18" cy="18" r="2" />
                 </svg>
-              </div>
-              <div>
+              </span>
+              <div className="space-y-0.5">
                 <h3 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
                   استلام مباشر من باب محلك
                 </h3>
-                <p className="text-xs text-brand-muted mt-0.5 leading-relaxed m-0">
-                  مندوبو سَدِيم يتولون استلام القطع من محلك وتجميعها في طرد موحد للزبون.
+                <p className="text-xs text-brand-muted leading-relaxed m-0">
+                  يتولى مناديب سَدِيم استلام القطع من متجرك وتجميعها في طرد موحد للزبون.
                 </p>
               </div>
             </div>
 
             {/* Pillar 2 */}
             <div className="flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-lg bg-[var(--brand-trust-soft)] text-brand-trust border border-[var(--brand-trust-border)] flex items-center justify-center shrink-0 mt-0.5">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <span className="w-8 h-8 rounded-full bg-brand-surface border border-brand-border/80 text-brand-dark flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="5" width="20" height="14" rx="2" />
                   <line x1="2" y1="10" x2="22" y2="10" />
-                  <circle cx="7" cy="15" r="1" />
                 </svg>
-              </div>
-              <div>
+              </span>
+              <div className="space-y-0.5">
                 <h3 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
                   تسويات مالية دورية وموثقة
                 </h3>
-                <p className="text-xs text-brand-muted mt-0.5 leading-relaxed m-0">
-                  تحصيل مستحقات مبيعاتك نقداً عند تسليم الشحنات أو بحوالة منتظمة دون تأخير.
+                <p className="text-xs text-brand-muted leading-relaxed m-0">
+                  تحصيل مستحقات مبيعاتك نقداً أو بحوالة منتظمة بحسب رغبتك دون تأخير.
                 </p>
               </div>
             </div>
 
             {/* Pillar 3 */}
             <div className="flex items-start gap-3.5">
-              <div className="w-8 h-8 rounded-lg bg-stone-100 text-stone-700 border border-stone-200 flex items-center justify-center shrink-0 mt-0.5">
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              <span className="w-8 h-8 rounded-full bg-brand-surface border border-brand-border/80 text-brand-dark flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                 </svg>
-              </div>
-              <div>
+              </span>
+              <div className="space-y-0.5">
                 <h3 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
                   واجهة عرض فاخرة ومعتمدة
                 </h3>
-                <p className="text-xs text-brand-muted mt-0.5 leading-relaxed m-0">
-                  إبراز علامتك التجارية ومنتجاتك بتصوير منظم يعكس مكانة متجرك وموثوقيته.
+                <p className="text-xs text-brand-muted leading-relaxed m-0">
+                  إبراز علامتك التجارية ومنتجاتك بتنسيق راقٍ يعكس مكانة متجرك وموثوقيته.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Operational Policy Note */}
-          <div className="pt-3 border-t border-brand-border/60 text-xs text-brand-muted leading-relaxed">
-            <span className="font-extrabold text-brand-dark block mb-0.5">مسار التحقق والاعتماد:</span>
-            يراجع فريق التوثيق في سَدِيم الطلب خلال 24 ساعة، ثم نتواصل معك هاتفياً لترتيب الزيارة الميدانية وتفعيل حسابك رسمياً.
+          {/* Reassurance Footnote (Clean & seamless) */}
+          <div className="text-xs text-brand-muted leading-relaxed space-y-1">
+            <span className="font-extrabold text-brand-dark block">
+              مسار الاعتماد الميداني:
+            </span>
+            <p className="m-0">
+              يراجع فريق التوثيق في سَدِيم الطلب خلال 24 ساعة، ثم نتواصل معك هاتفياً لترتيب الزيارة الميدانية وتفعيل حساب متجرك.
+            </p>
           </div>
         </div>
 

@@ -7,6 +7,7 @@ const ROLE = {
 const STATUS = {
     ACTIVE: 'active',
     IN_ACTIVE: 'inActive',
+    PENDING_APPROVAL: 'pendingApproval',
 };
 
 const ROLE_VALUES = Object.values(ROLE);

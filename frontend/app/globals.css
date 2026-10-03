@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-primary-soft: var(--brand-primary-soft);
+  --color-brand-primary-border: var(--brand-primary-border);
+
+  --color-brand-trust: var(--brand-trust);
+  --color-brand-trust-soft: var(--brand-trust-soft);
+
+  --color-brand-dark: var(--brand-dark);
+  --color-brand-muted: var(--brand-muted);
+  --color-brand-subtle: var(--brand-subtle);
+
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-surface: var(--brand-surface);
+  --color-brand-card: var(--brand-card-inset);
+  --color-brand-border: var(--brand-border);
+  --color-brand-border-subtle: var(--brand-border-subtle);
+
+  --color-brand-fee: var(--brand-fee);
+  --color-brand-glow: var(--brand-glow);
+
+  --font-almarai: 'Almarai', sans-serif;
+  --font-alexandria: 'Alexandria', sans-serif;
+}

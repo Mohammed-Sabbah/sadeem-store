@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" width="100%" height="100%">
+  <g id="sadeem-accent-logo" transform="translate(10, 10)">
+    <!-- Letter 's' -->
+    <path d="M 68,54 C 64,43 53,38 41,38 C 26,38 15,46 15,58 C 15,70 26,75 42,78 C 59,82 72,87 72,101 C 72,116 57,125 39,125 C 21,125 8,116 4,103" 
+          fill="none" stroke="#2B2420" stroke-width="12.5" stroke-linecap="round" stroke-linejoin="round" transform="translate(0, -25)"/>
+    
+    <!-- Letter 'a' -->
+    <g transform="translate(82, 13)">
+      <circle cx="28" cy="49" r="23" fill="none" stroke="#2B2420" stroke-width="12.5"/>
+      <path d="M 51,26 L 51,72 C 51,72 51,73 53,73" fill="none" stroke="#2B2420" stroke-width="12.5" stroke-linecap="round"/>
+    </g>
+
+    <!-- Letter 'd' (Ascender height aligns with bag handles) -->
+    <g transform="translate(148, 13)">
+      <circle cx="28" cy="49" r="23" fill="none" stroke="#2B2420" stroke-width="12.5"/>
+      <path d="M 51,3 L 51,72" fill="none" stroke="#2B2420" stroke-width="12.5" stroke-linecap="round"/>
+    </g>
+
+    <!-- Twin 'ee' with Shopping Bag Handles -->
+    <!-- First 'e' with Canaan Red Accent Handle -->
+    <g transform="translate(216, 13)">
+      <path d="M 13,26 C 13,9 21,2 29,2 C 37,2 45,9 45,26" fill="none" stroke="#A8452F" stroke-width="10" stroke-linecap="round"/>
+      <path d="M 4,49 L 52,49 C 52,35 43,26 28,26 C 14,26 4,36 4,49 C 4,63 15,72 31,72 C 43,72 49,66 52,60" 
+            fill="none" stroke="#2B2420" stroke-width="12.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Second 'e' with Canaan Red Accent Handle -->
+    <g transform="translate(280, 13)">
+      <path d="M 13,26 C 13,9 21,2 29,2 C 37,2 45,9 45,26" fill="none" stroke="#A8452F" stroke-width="10" stroke-linecap="round"/>
+      <path d="M 4,49 L 52,49 C 52,35 43,26 28,26 C 14,26 4,36 4,49 C 4,63 15,72 31,72 C 43,72 49,66 52,60" 
+            fill="none" stroke="#2B2420" stroke-width="12.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Letter 'm' -->
+    <g transform="translate(346, 13)">
+      <path d="M 5,26 L 5,72" fill="none" stroke="#2B2420" stroke-width="12.5" stroke-linecap="round"/>
+      <path d="M 5,39 C 10,30 20,26 29,26 C 39,26 46,33 46,45 L 46,72" fill="none" stroke="#2B2420" stroke-width="12.5" stroke-linecap="round"/>
+      <path d="M 46,39 C 51,30 61,26 70,26 C 80,26 87,33 87,45 L 87,72" fill="none" stroke="#2B2420" stroke-width="12.5" stroke-linecap="round"/>
+    </g>
+  </g>
+</svg>

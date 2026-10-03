@@ -1,0 +1,267 @@
+/* ========================================================
+   سَدِيم (SADEEM) — موجه ومصدر الألوان الموحد (SINGLE SOURCE OF TRUTH)
+   ========================================================
+   أي تعديل على أي لون أو قيمة في هذا الملف ينطبق فورياً
+   على كامل صفحات وعناصر وتطبيقات المتجر (Home, PDP, Cart, Checkout, Tracking, etc.)
+   ======================================================== */
+
+:root,
+[data-palette="1"] {
+  /* ========================================================
+     الخيار 1 (الافتراضي المعتمد): كهرمان العسل السديمي وغبار الذهب
+     (Option 1: Royal Honey Amber & Cosmic Gold — Claude Recommended)
+     ======================================================== */
+  --sd-primary: #B8621B;
+  --sd-primary-hover: #9E5012;
+  --sd-primary-soft: #FAF2EB;
+  --sd-primary-tint: rgba(184, 98, 27, 0.08);
+  --sd-primary-glow: rgba(184, 98, 27, 0.20);
+  --sd-primary-border: #EEDCCE;
+
+  --sd-trust: #2D5A42;
+  --sd-trust-deep: #1E402E;
+  --sd-trust-soft: #EEF5F1;
+  --sd-trust-border: #CCD9D0;
+
+  --sd-text-main: #1C1917;
+  --sd-text-muted: #57534E;
+  --sd-text-subtle: #8C867F;
+
+  --sd-canvas: #F6F3ED;
+  --sd-surface: #FAF7F2;
+  --sd-card: #FFFFFF;
+  --sd-border: #E5DFD5;
+  --sd-border-subtle: #ECE6DC;
+  --sd-border-darker: #D8CEBF;
+
+  --sd-fee: #8B5A3C;
+  --sd-fee-tint: #FAF3EE;
+
+  --sd-glow: #B08D57;
+  --sd-glow-soft: #F7F1E6;
+
+  /* توحيد المتغيرات الرئيسية عبر كامل الموقع */
+  --brand-primary: var(--sd-primary);
+  --brand-primary-hover: var(--sd-primary-hover);
+  --brand-primary-soft: var(--sd-primary-soft);
+  --brand-primary-border: var(--sd-primary-border);
+
+  --brand-dark: var(--sd-text-main);
+  --brand-muted: var(--sd-text-muted);
+  --brand-subtle: var(--sd-text-subtle);
+
+  --brand-bg: var(--sd-canvas);
+  --brand-surface: var(--sd-surface);
+  --brand-card-inset: var(--sd-card);
+  --brand-border: var(--sd-border);
+  --brand-border-subtle: var(--sd-border-subtle);
+
+  --brand-trust: var(--sd-trust);
+  --brand-trust-soft: var(--sd-trust-soft);
+
+  --brand-fee: var(--sd-fee);
+  --brand-fee-soft: var(--sd-fee-tint);
+
+  --brand-glow: var(--sd-glow);
+
+  /* المحافظة على التوافق التام مع مسميات CSS القديمة */
+  --canaan-red: var(--brand-primary);
+  --canaan-red-hover: var(--brand-primary-hover);
+  --canaan-red-soft: var(--brand-primary-soft);
+  --canaan-red-tint: var(--sd-primary-tint);
+  --canaan-red-glow: var(--sd-primary-glow);
+  --sadeem-red: var(--brand-primary);
+  --sadeem-red-hover: var(--brand-primary-hover);
+  --sadeem-red-soft: var(--brand-primary-soft);
+
+  --canaan-black: var(--brand-dark);
+  --canaan-black-muted: var(--brand-muted);
+  --canaan-black-subtle: var(--brand-subtle);
+  --sadeem-black: var(--brand-dark);
+  --sadeem-black-muted: var(--brand-muted);
+  --sadeem-black-subtle: var(--brand-subtle);
+
+  --canaan-cream: var(--brand-bg);
+  --canaan-cream-surface: var(--brand-surface);
+  --canaan-cream-pure: var(--brand-card-inset);
+  --canaan-cream-border: var(--brand-border);
+  --canaan-cream-border-subtle: var(--brand-border-subtle);
+  --canaan-cream-darker: var(--sd-border-darker);
+  --sadeem-cream: var(--brand-bg);
+  --sadeem-cream-surface: var(--brand-surface);
+  --sadeem-cream-pure: var(--brand-card-inset);
+  --sadeem-cream-border: var(--brand-border);
+  --sadeem-cream-border-subtle: var(--brand-border-subtle);
+
+  --canaan-clay: var(--brand-fee);
+  --canaan-clay-tint: var(--brand-fee-soft);
+  --sadeem-clay: var(--brand-fee);
+
+  --canaan-olive: var(--brand-trust);
+  --canaan-olive-deep: var(--sd-trust-deep);
+  --canaan-olive-soft: var(--brand-trust-soft);
+  --canaan-olive-border: var(--sd-trust-border);
+  --sadeem-trust: var(--brand-trust);
+  --sadeem-trust-tint: var(--brand-trust-soft);
+
+  --canaan-gold: var(--brand-glow);
+  --sadeem-glow: var(--brand-glow);
+  --sadeem-glow-soft: var(--sd-glow-soft);
+
+  /* الخطوط الرسمية */
+  --font-main: 'Almarai', 'IBM Plex Sans Arabic', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Alexandria', 'Almarai', sans-serif;
+
+  /* الحواف المعمارية الهادئة (Apple & Zara Rule) */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-btn: 8px;
+  --radius-full: 9999px;
+  --brand-card-radius: 16px;
+
+  /* مقياس الفراغات 8pt Strict Spacing Scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* مسطرة الظلال الهادئة */
+  --shadow-subtle: 0 1px 3px rgba(28, 25, 23, 0.04);
+  --shadow-card: 0 2px 10px -2px rgba(28, 25, 23, 0.06);
+  --shadow-hover: 0 8px 24px -4px rgba(28, 25, 23, 0.10);
+  --shadow-cta: 0 4px 14px var(--sd-primary-glow);
+  --shadow-sheet: 0 -12px 32px rgba(28, 25, 23, 0.16);
+
+  /* الانتقالات */
+  --transition-base: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ========================================================
+   الخيار 2: ياقوت السديم الملكي والذهب السديمي
+   (Option 2: Royal Nebula Ruby & Cosmic Gold)
+   ======================================================== */
+[data-palette="2"] {
+  --sd-primary: #7C1E2D;
+  --sd-primary-hover: #631623;
+  --sd-primary-soft: #F9EDED;
+  --sd-primary-tint: rgba(124, 30, 45, 0.08);
+  --sd-primary-glow: rgba(124, 30, 45, 0.22);
+  --sd-primary-border: #ECCFD3;
+
+  --sd-trust: #1E5748;
+  --sd-trust-deep: #133D32;
+  --sd-trust-soft: #E8F4F0;
+  --sd-trust-border: #C2DFD6;
+
+  --sd-text-main: #181214;
+  --sd-text-muted: #564749;
+  --sd-text-subtle: #857477;
+
+  --sd-canvas: #FAF7F6;
+  --sd-surface: #FFFDFD;
+  --sd-card: #FFFFFF;
+  --sd-border: #E6D8D5;
+  --sd-border-subtle: #F0E6E4;
+  --sd-border-darker: #D8C3C0;
+
+  --sd-fee: #8C483F;
+  --sd-fee-tint: #FAF2F1;
+
+  --sd-glow: #C9934E;
+  --sd-glow-soft: #F7EFE5;
+}
+
+/* ========================================================
+   الخيار 3: شعلة النجم الشمسي وكحلي الفضاء
+   (Option 3: Cosmic Obsidian & Solar Flame CTA)
+   ======================================================== */
+[data-palette="3"] {
+  --sd-primary: #C85422;
+  --sd-primary-hover: #AA4116;
+  --sd-primary-soft: #FDF1EA;
+  --sd-primary-tint: rgba(200, 84, 34, 0.08);
+  --sd-primary-glow: rgba(200, 84, 34, 0.22);
+  --sd-primary-border: #F5D3C1;
+
+  --sd-trust: #1A5E44;
+  --sd-trust-deep: #103F2D;
+  --sd-trust-soft: #E8F6F0;
+  --sd-trust-border: #BFE2D3;
+
+  --sd-text-main: #0B1120;
+  --sd-text-muted: #3E4B5B;
+  --sd-text-subtle: #64748B;
+
+  --sd-canvas: #F8F9FA;
+  --sd-surface: #FFFFFF;
+  --sd-card: #FFFFFF;
+  --sd-border: #E2E8F0;
+  --sd-border-subtle: #EDF2F7;
+  --sd-border-darker: #CBD5E1;
+
+  --sd-fee: #9A5B32;
+  --sd-fee-tint: #FAF3EC;
+
+  --sd-glow: #E08C38;
+  --sd-glow-soft: #FDF5E9;
+}
+
+/* ========================================================
+   الخيار 4: السديم الليلي وحجر السليت والذهب الهادئ
+   (Option 4: Midnight Slate & Brushed Gold)
+   ======================================================== */
+[data-palette="4"] {
+  --sd-primary: #1E293B;
+  --sd-primary-hover: #0F172A;
+  --sd-primary-soft: #F1F5F9;
+  --sd-primary-tint: rgba(30, 41, 59, 0.08);
+  --sd-primary-glow: rgba(30, 41, 59, 0.20);
+  --sd-primary-border: #CBD5E1;
+
+  --sd-trust: #2E6F52;
+  --sd-trust-deep: #1F4C37;
+  --sd-trust-soft: #EBF5F0;
+  --sd-trust-border: #C9E2D5;
+
+  --sd-text-main: #0F172A;
+  --sd-text-muted: #475569;
+  --sd-text-subtle: #64748B;
+
+  --sd-canvas: #F8F6F2;
+  --sd-surface: #FFFFFF;
+  --sd-card: #FFFFFF;
+  --sd-border: #E2E8F0;
+  --sd-border-subtle: #EDF2F7;
+  --sd-border-darker: #CBD5E1;
+
+  --sd-fee: #7C5B42;
+  --sd-fee-tint: #F5EFEB;
+
+  --sd-glow: #C67D34;
+  --sd-glow-soft: #FDF5EB;
+}
+
+/* Base HTML & Body */
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-main);
+  background-color: var(--brand-bg);
+  color: var(--brand-dark);
+  direction: rtl;
+  min-height: 100vh;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

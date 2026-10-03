@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Subtle luxury gradient for app icon background -->
+    <linearGradient id="canaanBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A8452F" />
+      <stop offset="100%" stop-color="#8F3925" />
+    </linearGradient>
+    <filter id="iconShadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#2B2420" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- iOS-Style Squircle Background -->
+  <rect width="512" height="512" rx="115" fill="url(#canaanBg)" />
+
+  <!-- Twin Shopping Bags 'ee' Glyph in Cream -->
+  <g transform="translate(68, 140)" filter="url(#iconShadow)">
+    <!-- First 'e' Bag -->
+    <g transform="translate(0, 0)">
+      <!-- Handle -->
+      <path d="M 40,85 C 40,25 65,5 92,5 C 119,5 144,25 144,85" 
+            fill="none" stroke="#F6EFE3" stroke-width="26" stroke-linecap="round"/>
+      <!-- Body -->
+      <path d="M 12,150 L 172,150 C 172,105 142,82 92,82 C 45,82 12,112 12,150 C 12,192 45,225 98,225 C 138,225 160,205 170,185" 
+            fill="none" stroke="#F6EFE3" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Second 'e' Bag -->
+    <g transform="translate(204, 0)">
+      <!-- Handle -->
+      <path d="M 40,85 C 40,25 65,5 92,5 C 119,5 144,25 144,85" 
+            fill="none" stroke="#F6EFE3" stroke-width="26" stroke-linecap="round"/>
+      <!-- Body -->
+      <path d="M 12,150 L 172,150 C 172,105 142,82 92,82 C 45,82 12,112 12,150 C 12,192 45,225 98,225 C 138,225 160,205 170,185" 
+            fill="none" stroke="#F6EFE3" stroke-width="32" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+</svg>

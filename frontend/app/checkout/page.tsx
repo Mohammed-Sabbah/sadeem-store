@@ -141,6 +141,23 @@ export default function CheckoutPage() {
         setJawwalPhone(user.phone);
       }
       if (user.city) setSelectedCity(user.city);
+      if (user.addresses && user.addresses.length > 0) {
+        const mapped: SavedAddress[] = user.addresses.map((a, idx) => ({
+          id: a._id || `user-addr-${idx}`,
+          tag: a.label || 'المنزل',
+          recipientName: user.name,
+          phone: a.phone || user.phone || '',
+          governorateId: 'central',
+          governorateName: a.governorate || 'المحافظة الوسطى',
+          city: a.city || 'دير البلح',
+          details: a.detailedAddress,
+          isDefault: a.isDefault,
+        }));
+        setSavedAddresses(mapped);
+        const def = mapped.find((m) => m.isDefault);
+        if (def) setSelectedAddressId(def.id);
+        else setSelectedAddressId(mapped[0].id);
+      }
     }
   }, [user]);
 

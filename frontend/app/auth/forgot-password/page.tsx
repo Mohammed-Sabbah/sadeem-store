@@ -64,7 +64,7 @@ function ForgotPasswordForm() {
             استعادة كلمة المرور
           </h1>
           <p className="text-xs sm:text-sm text-brand-muted mt-2 m-0 leading-relaxed">
-            أدخل رقم جوالك أو بريدك الإلكتروني المسجل لإرسال تعليمات إعادة التعيين
+            أدخل بريدك الإلكتروني المسجل لإرسال تعليمات إعادة تعيين كلمة المرور
           </p>
         </div>
 
@@ -80,7 +80,7 @@ function ForgotPasswordForm() {
                   تم إرسال التعليمات بنجاح
                 </h2>
                 <p className="text-xs sm:text-sm text-brand-muted mt-2 leading-relaxed max-w-sm mx-auto m-0">
-                  أرسلنا رابط إعادة تعيين كلمة المرور إلى ({identifier}). يرجى التحقق من رسائلك للمتابعة.
+                  أرسلنا رابط إعادة تعيين كلمة المرور إلى بريدك الإلكتروني ({identifier}). يرجى التحقق من صندوق الوارد.
                 </p>
               </div>
 
@@ -104,12 +104,12 @@ function ForgotPasswordForm() {
 
               <div>
                 <label className="block text-xs sm:text-sm font-bold text-brand-dark mb-2">
-                  رقم الجوال أو البريد الإلكتروني
+                  البريد الإلكتروني المسجل
                 </label>
                 <input
-                  type="text"
+                  type="email"
                   required
-                  placeholder="059xxxxxxx أو name@example.com"
+                  placeholder="name@example.com"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   className="w-full h-12 px-4 rounded-lg border border-brand-border bg-white text-sm text-brand-dark outline-none focus:border-brand-primary focus:ring-1 focus:ring-brand-primary transition-all font-almarai placeholder:text-brand-subtle"

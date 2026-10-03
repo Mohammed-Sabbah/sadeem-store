@@ -34,7 +34,8 @@ export interface UserResponse {
 export const authService = {
   login: (data: LoginFormValues) => postRequest<UserResponse>('/api/auth/login', data),
 
-  register: (data: RegisterFormValues) => postRequest<UserResponse>('/api/auth/register', data),
+  register: (data: RegisterFormValues | { name: string; email: string; password: string }) =>
+    postRequest<UserResponse>('/api/auth/register', data),
 
   registerMerchant: (data: MerchantJoinFormValues) =>
     postRequest<{ merchantId: string; status: string; storeName: string }>(

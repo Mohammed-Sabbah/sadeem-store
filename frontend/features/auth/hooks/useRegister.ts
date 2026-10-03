@@ -15,6 +15,7 @@ export function useRegister() {
   const { setSessionUser } = useAuth();
 
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
@@ -27,11 +28,17 @@ export function useRegister() {
       name: '',
       email: '',
       password: '',
+      confirmPassword: '',
     },
   });
 
   const onSubmit = async (data: RegisterFormValues) => {
-    const res = await authService.register(data);
+    // We send name, email, password to backend cleanly
+    const res = await authService.register({
+      name: data.name,
+      email: data.email,
+      password: data.password,
+    });
 
     if (!res.success) {
       setError('root', { message: res.message || 'تعذر إنشاء الحساب' });
@@ -51,5 +58,7 @@ export function useRegister() {
     isSubmitting,
     showPassword,
     setShowPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
   };
 }

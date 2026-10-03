@@ -15,20 +15,28 @@ export const loginSchema = z.object({
 
 export type LoginFormValues = z.infer<typeof loginSchema>;
 
-export const registerSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, 'الاسم الكامل يجب ألا يقل عن حرفين'),
-  email: z
-    .string()
-    .trim()
-    .min(1, 'يرجى إدخال البريد الإلكتروني')
-    .email('يرجى إدخال بريد إلكتروني صالح (مثال: name@example.com)'),
-  password: z
-    .string()
-    .min(6, 'كلمة المرور يجب ألا تقل عن 6 خانات'),
-});
+export const registerSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(2, 'الاسم الكامل يجب ألا يقل عن حرفين'),
+    email: z
+      .string()
+      .trim()
+      .min(1, 'يرجى إدخال البريد الإلكتروني')
+      .email('يرجى إدخال بريد إلكتروني صالح (مثال: name@example.com)'),
+    password: z
+      .string()
+      .min(6, 'كلمة المرور يجب ألا تقل عن 6 خانات'),
+    confirmPassword: z
+      .string()
+      .min(6, 'يرجى تأكيد كلمة المرور'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'كلمتا المرور غير متطابقتين، يرجى التأكد',
+    path: ['confirmPassword'],
+  });
 
 export type RegisterFormValues = z.infer<typeof registerSchema>;
 

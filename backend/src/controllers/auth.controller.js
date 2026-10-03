@@ -80,6 +80,10 @@ exports.register = async (req, res) => {
       return error(res, 400, 'يجب ألا تقل كلمة المرور عن 6 خانات');
     }
 
+    if (req.body.confirmPassword && req.body.confirmPassword !== password) {
+      return error(res, 400, 'كلمتا المرور غير متطابقتين، يرجى التأكد');
+    }
+
     const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail);
     if (!isEmailValid) {
       return error(res, 400, 'يرجى إدخال بريد إلكتروني صالح (مثال: name@example.com)');

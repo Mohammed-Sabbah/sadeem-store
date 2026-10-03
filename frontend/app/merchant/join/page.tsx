@@ -21,7 +21,7 @@ export default function MerchantJoinPage() {
 
   return (
     <main className="max-w-[1240px] mx-auto px-4 pt-6 sm:pt-8 pb-24 md:pb-16 font-almarai text-right">
-      {/* Top Editorial Breadcrumb / Header Strip */}
+      {/* Top Breadcrumb & Page Header */}
       <div className="flex items-center justify-between gap-4 pb-4 mb-6 sm:mb-8 border-b border-brand-border">
         <div>
           <span className="text-xs font-bold text-brand-primary tracking-wide block mb-1">
@@ -42,12 +42,12 @@ export default function MerchantJoinPage() {
       </div>
 
       {/* Two-Column Balanced Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         {/* ===================================================================
             COLUMN 1: EDITORIAL VALUE PROPOSITION (Quiet Luxury & Zero Boxiness)
             =================================================================== */}
         <div className="lg:col-span-5 flex flex-col gap-6 lg:sticky lg:top-24">
-          <div className="space-y-4">
+          <div className="space-y-3.5">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold text-brand-trust bg-[var(--brand-trust-soft)] border border-[var(--brand-trust-border)]">
               المحافظة الوسطى · قطاع غزة
             </span>
@@ -62,73 +62,73 @@ export default function MerchantJoinPage() {
           </div>
 
           {/* Serene 3 Pillars (Clean list without nested boxes) */}
-          <div className="space-y-5 pt-2">
+          <div className="space-y-4 pt-1">
             {/* Pillar 1 */}
             <div className="flex items-start gap-3.5">
-              <div className="w-9 h-9 rounded-lg bg-[var(--brand-primary-soft)] text-brand-primary border border-[var(--brand-primary-border)] flex items-center justify-center shrink-0 mt-0.5">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <div className="w-8 h-8 rounded-lg bg-[var(--brand-primary-soft)] text-brand-primary border border-[var(--brand-primary-border)] flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M16 16h6v-5.5a1.5 1.5 0 0 0-1.5-1.5H16" />
                   <rect x="2" y="6" width="14" height="10" rx="1.5" />
                   <circle cx="6" cy="18" r="2" />
                   <circle cx="18" cy="18" r="2" />
                 </svg>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-extrabold text-brand-dark m-0">
+              <div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
                   استلام مباشر من باب محلك
                 </h3>
-                <p className="text-xs text-brand-muted leading-relaxed m-0">
-                  مندوبو سَدِيم يتولون استلام القطع المحجوزة من محلك وتجميعها في طرد موحد للزبون دون أي عناء عليك.
+                <p className="text-xs text-brand-muted mt-0.5 leading-relaxed m-0">
+                  مندوبو سَدِيم يتولون استلام القطع من محلك وتجميعها في طرد موحد للزبون.
                 </p>
               </div>
             </div>
 
             {/* Pillar 2 */}
             <div className="flex items-start gap-3.5">
-              <div className="w-9 h-9 rounded-lg bg-[var(--brand-trust-soft)] text-brand-trust border border-[var(--brand-trust-border)] flex items-center justify-center shrink-0 mt-0.5">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <div className="w-8 h-8 rounded-lg bg-[var(--brand-trust-soft)] text-brand-trust border border-[var(--brand-trust-border)] flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="5" width="20" height="14" rx="2" />
                   <line x1="2" y1="10" x2="22" y2="10" />
                   <circle cx="7" cy="15" r="1" />
                 </svg>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-extrabold text-brand-dark m-0">
+              <div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
                   تسويات مالية دورية وموثقة
                 </h3>
-                <p className="text-xs text-brand-muted leading-relaxed m-0">
-                  تحصيل مستحقات مبيعاتك نقداً عند تسليم الشحنات أو بحوالة منتظمة بحسب تفضيلك دون تأخير.
+                <p className="text-xs text-brand-muted mt-0.5 leading-relaxed m-0">
+                  تحصيل مستحقات مبيعاتك نقداً عند تسليم الشحنات أو بحوالة منتظمة دون تأخير.
                 </p>
               </div>
             </div>
 
             {/* Pillar 3 */}
             <div className="flex items-start gap-3.5">
-              <div className="w-9 h-9 rounded-lg bg-stone-100 text-stone-700 border border-stone-200 flex items-center justify-center shrink-0 mt-0.5">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <div className="w-8 h-8 rounded-lg bg-stone-100 text-stone-700 border border-stone-200 flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
               </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-extrabold text-brand-dark m-0">
+              <div>
+                <h3 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
                   واجهة عرض فاخرة ومعتمدة
                 </h3>
-                <p className="text-xs text-brand-muted leading-relaxed m-0">
-                  إبراز علامتك التجارية ومنتجاتك بتصوير منظم يعكس مكانة متجرك وموثوقيته أمام آلاف المتسوقين.
+                <p className="text-xs text-brand-muted mt-0.5 leading-relaxed m-0">
+                  إبراز علامتك التجارية ومنتجاتك بتصوير منظم يعكس مكانة متجرك وموثوقيته.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Operational Review Policy */}
-          <div className="pt-4 border-t border-brand-border/70 text-xs text-brand-muted leading-relaxed">
-            <span className="font-extrabold text-brand-dark block mb-1">مسار التحقق والاعتماد:</span>
+          {/* Operational Policy Note */}
+          <div className="pt-3 border-t border-brand-border/60 text-xs text-brand-muted leading-relaxed">
+            <span className="font-extrabold text-brand-dark block mb-0.5">مسار التحقق والاعتماد:</span>
             يراجع فريق التوثيق في سَدِيم الطلب خلال 24 ساعة، ثم نتواصل معك هاتفياً لترتيب الزيارة الميدانية وتفعيل حسابك رسمياً.
           </div>
         </div>
 
         {/* ===================================================================
-            COLUMN 2: REGISTRATION FORM (Pristine White Surface & Quiet Luxury)
+            COLUMN 2: ULTRA-CLEAN REGISTRATION FORM (Zero Boxiness & Zero Noise)
             =================================================================== */}
         <div className="lg:col-span-7 bg-white border border-brand-border/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(28,25,23,0.03)]">
           {submitted ? (
@@ -157,16 +157,6 @@ export default function MerchantJoinPage() {
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Form Intro Header */}
-              <div className="pb-3 border-b border-brand-border/60">
-                <h3 className="text-base sm:text-lg font-black text-brand-dark m-0">
-                  طلب انضمام متجر معتمد
-                </h3>
-                <p className="text-xs text-brand-muted mt-1 m-0">
-                  يُفعل الحساب بلوحة التحكم فور مراجعة واعتماد فريق التوثيق في المحافظة الوسطى.
-                </p>
-              </div>
-
               {errors.root && (
                 <div className="p-3.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm flex items-center gap-2.5">
                   <span className="w-4 h-4 rounded-full bg-red-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
@@ -176,13 +166,11 @@ export default function MerchantJoinPage() {
                 </div>
               )}
 
-              {/* SECTION 1: بيانات المتجر وموقعه في الوسطى */}
-              <div className="space-y-4">
-                <div className="pb-1 border-b border-brand-border/40">
-                  <h4 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
-                    1. هوية المتجر وموقعه في المحافظة الوسطى
-                  </h4>
-                </div>
+              {/* Group 1: بيانات المتجر والموقع */}
+              <div className="space-y-3.5">
+                <span className="text-xs font-bold text-brand-muted block">
+                  بيانات المتجر والموقع
+                </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Store Name */}
@@ -234,9 +222,6 @@ export default function MerchantJoinPage() {
                     >
                       <option value="المحافظة الوسطى">المحافظة الوسطى (المرحلة الأولى)</option>
                     </select>
-                    <span className="text-[10px] text-brand-muted mt-1 block">
-                      التوصيل الموحد محصور بالوسطى حالياً (8 ₪ ثابت).
-                    </span>
                   </div>
 
                   {/* Part 2: City / Camp */}
@@ -267,7 +252,7 @@ export default function MerchantJoinPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="مثال: شارع النخيل — بالقرب من مسجد السلام، مقابل صيدلية القدس"
+                    placeholder="الشارع وأقرب معلَم بارز بجوار المحل"
                     {...register('storeAddress')}
                     className={`w-full h-11 px-3.5 rounded-lg border bg-white text-xs sm:text-sm text-brand-dark outline-none transition-all font-almarai placeholder:text-brand-subtle ${
                       errors.storeAddress ? 'border-red-400 focus:border-red-500' : 'border-brand-border focus:border-brand-primary'
@@ -276,19 +261,14 @@ export default function MerchantJoinPage() {
                   {errors.storeAddress && (
                     <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.storeAddress.message}</p>
                   )}
-                  <span className="text-[10px] text-brand-muted mt-1 block">
-                    يستخدم هذا العنوان لوصول مناديب سَدِيم واستلام الطرود من محلك.
-                  </span>
                 </div>
               </div>
 
-              {/* SECTION 2: بيانات المسؤول وتأمين الحساب */}
-              <div className="space-y-4 pt-3 border-t border-brand-border/60">
-                <div className="pb-1 border-b border-brand-border/40">
-                  <h4 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
-                    2. بيانات المسؤول وحماية الحساب
-                  </h4>
-                </div>
+              {/* Group 2: بيانات الدخول والتواصل (Separated only by clean whitespace) */}
+              <div className="space-y-3.5 pt-2">
+                <span className="text-xs font-bold text-brand-muted block">
+                  بيانات المسؤول والدخول
+                </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Name */}
@@ -346,12 +326,12 @@ export default function MerchantJoinPage() {
                   {/* WhatsApp */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      رقم الواتساب للتنسيق التشغيلي
+                      رقم الواتساب للتنسيق
                     </label>
                     <input
                       type="tel"
                       dir="ltr"
-                      placeholder="اتركه فارغاً إن كان نفس رقم الجوال"
+                      placeholder="059xxxxxxx (اختياري)"
                       {...register('whatsapp')}
                       className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-white text-xs sm:text-sm text-brand-dark outline-none focus:border-brand-primary transition-all font-almarai placeholder:text-brand-subtle"
                     />
@@ -452,9 +432,6 @@ export default function MerchantJoinPage() {
                     </>
                   )}
                 </button>
-                <p className="text-[11px] text-brand-muted text-center mt-2.5 m-0 leading-relaxed">
-                  يخضع الطلب لمعايير الجودة والمطابقة الميدانية لمتاجر المحافظة الوسطى.
-                </p>
               </div>
             </form>
           )}

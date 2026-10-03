@@ -39,11 +39,11 @@ export const authService = {
 
   registerMerchant: (data: MerchantJoinFormValues) =>
     postRequest<{ merchantId: string; status: string; storeName: string }>(
-      '/api/auth/register-merchant',
+      '/api/auth/register/seller',
       data
     ),
 
   logout: () => postRequest<void>('/api/auth/logout'),
 
-  getMe: () => getRequest<UserResponse>('/api/auth/me'),
+  getMe: () => getRequest<UserResponse>('/api/user/me'),
 } as const;

@@ -85,13 +85,11 @@ const forgotPasswordSchema = [
 ];
 
 const verifyOtpSchema = [
-    body('email')
-        .trim()
+    cookie('passwordResetToken')
+        .exists()
+        .withMessage('Password reset session is required')
         .notEmpty()
-        .withMessage('Email is required')
-        .isEmail()
-        .withMessage('Email is invalid')
-        .normalizeEmail(),
+        .withMessage('Password reset session is required'),
 
     body('otp')
         .trim()
@@ -102,12 +100,11 @@ const verifyOtpSchema = [
 ];
 
 const resetPasswordSchema = [
-    body('token').custom((value, { req }) => {
-        if ((!value || typeof value !== 'string') && !(req.cookies && req.cookies.passwordResetToken)) {
-            throw new Error('Reset token is required');
-        }
-        return true;
-    }),
+    cookie('passwordResetToken')
+        .exists()
+        .withMessage('Reset token is required')
+        .notEmpty()
+        .withMessage('Reset token is required'),
 
     body('password')
         .notEmpty()

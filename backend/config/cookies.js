@@ -7,7 +7,7 @@ const cookieOptions = {
 };
 
 const accessTokenTTL = 15 * 60;
-const refreshTokenTTL = 15 * 24 * 60 * 60;
+const refreshTokenTTL = 30 * 24 * 60 * 60;
 
 function getCookieOptions(maxAgeSeconds) {
     return {

@@ -25,7 +25,7 @@ let refreshPromise: Promise<boolean> | null = null;
 
 async function executeRefreshToken(): Promise<boolean> {
   try {
-    const url = BASE_URL ? `${BASE_URL}/api/auth/refresh-token` : '/api/auth/refresh-token';
+    const url = BASE_URL ? `${BASE_URL}/api/auth/refresh` : '/api/auth/refresh';
     const res = await fetch(url, {
       method: 'POST',
       credentials: 'include',

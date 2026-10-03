@@ -1,16 +1,37 @@
 const crypto = require('crypto');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Store = require('../models/Store');
 const Category = require('../models/Category');
-const PasswordReset = require('../models/PasswordReset');
+const Otp = require('../models/otp.model');
+const RefreshToken = require('../models/refreshToken.model');
 const { ROLE, STATUS } = require('../constants/enums');
 const { setAuthCookies, clearAuthCookies, getCookieOptions, cookieOptions } = require('../config/cookies');
 const { issueAccessToken, issueRefreshToken, verifyToken } = require('../utils/token');
 const { generateOtp, sendEmail } = require('../utils/email');
-const { success, error, serverError } = require('../utils/responses');
+const { success, error } = require('../utils/responses');
 const { sanitizeUser } = require("../utils/user")
+
+function hashRefreshToken(token) {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function createSession(user, res) {
+    const accessToken = issueAccessToken(user);
+    const refresh = issueRefreshToken(user);
+    const payload = verifyToken(refresh.token);
+
+    await RefreshToken.create({
+        userId: user._id,
+        tokenHash: hashRefreshToken(refresh.token),
+        jti: refresh.jti,
+        familyId: refresh.familyId,
+        expiresAt: new Date(payload.exp * 1000),
+    });
+
+    setAuthCookies(res, accessToken, refresh.token);
+}
 
 function normalizeEmail(email) {
     return String(email || '').trim().toLowerCase();
@@ -43,6 +64,8 @@ async function register(req, res, next) {
             status: STATUS.ACTIVE,
             isDeleted: false,
         });
+
+        await createSession(user, res);
 
         return success(res, 201, {
             message: 'User registered successfully',
@@ -131,6 +154,8 @@ async function registerSeller(req, res, next) {
             await session.endSession();
         }
 
+        await createSession(createdUser, res);
+
         return success(res, 201, {
             message: 'Seller registered successfully',
             user: sanitizeUser(createdUser),
@@ -165,10 +190,7 @@ async function login(req, res, next) {
             return error(res, 401, 'Invalid credentials');
         }
 
-        const accessToken = issueAccessToken(user);
-        const refreshToken = issueRefreshToken(user);
-
-        setAuthCookies(res, accessToken, refreshToken);
+        await createSession(user, res);
 
         return success(res, 200, {
             message: 'Login successful',
@@ -199,6 +221,44 @@ async function refresh(req, res, next) {
             return error(res, 401, 'Invalid refresh token');
         }
 
+        if (
+            typeof payload.userId !== 'string' ||
+            !mongoose.Types.ObjectId.isValid(payload.userId) ||
+            typeof payload.jti !== 'string' ||
+            !payload.jti ||
+            typeof payload.familyId !== 'string' ||
+            !payload.familyId ||
+            !Number.isInteger(payload.exp)
+        ) {
+            return error(res, 401, 'Invalid refresh token');
+        }
+
+        const tokenHash = hashRefreshToken(refreshToken);
+        const storedToken = await RefreshToken.findOne({
+            tokenHash,
+            jti: payload.jti,
+            familyId: payload.familyId,
+            userId: payload.userId,
+        });
+
+        if (!storedToken) {
+            return error(res, 401, 'Invalid or expired refresh token');
+        }
+
+        if (storedToken.revokedAt) {
+            await RefreshToken.updateMany(
+                { familyId: storedToken.familyId, revokedAt: null },
+                { $set: { revokedAt: new Date() } }
+            );
+            return error(res, 401, 'Refresh token reuse detected. Please log in again.');
+        }
+
+        const now = new Date();
+
+        if (storedToken.expiresAt <= now) {
+            return error(res, 401, 'Invalid or expired refresh token');
+        }
+
         const user = await User.findById(payload.userId);
 
         if (!user || user.isDeleted || user.status !== STATUS.ACTIVE) {
@@ -206,7 +266,47 @@ async function refresh(req, res, next) {
         }
 
         const accessToken = issueAccessToken(user);
-        res.cookie('accessToken', accessToken, getCookieOptions(15 * 60));
+        const nextRefresh = issueRefreshToken(user, storedToken.familyId);
+        const nextPayload = verifyToken(nextRefresh.token);
+        const [replacement] = await RefreshToken.create([{
+            userId: user._id,
+            tokenHash: hashRefreshToken(nextRefresh.token),
+            jti: nextRefresh.jti,
+            familyId: nextRefresh.familyId,
+            expiresAt: new Date(nextPayload.exp * 1000),
+        }]);
+
+        const rotation = await RefreshToken.updateOne(
+            {
+                _id: storedToken._id,
+                tokenHash,
+                revokedAt: null,
+                expiresAt: { $gt: now },
+            },
+            {
+                $set: {
+                    revokedAt: now,
+                },
+            }
+        );
+
+        if (rotation.modifiedCount !== 1) {
+            await RefreshToken.deleteOne({ _id: replacement._id });
+
+            const currentToken = await RefreshToken.findById(storedToken._id);
+
+            if (currentToken && currentToken.revokedAt) {
+                await RefreshToken.updateMany(
+                    { familyId: currentToken.familyId, revokedAt: null },
+                    { $set: { revokedAt: new Date() } }
+                );
+                return error(res, 401, 'Refresh token reuse detected. Please log in again.');
+            }
+
+            return error(res, 401, 'Invalid or expired refresh token');
+        }
+
+        setAuthCookies(res, accessToken, nextRefresh.token);
 
         return success(res, 200, { message: 'Access token refreshed' });
     } catch (err) {
@@ -214,39 +314,60 @@ async function refresh(req, res, next) {
     }
 }
 
-async function logout(req, res) {
-    clearAuthCookies(res);
-    return success(res, 200, { message: 'Logged out successfully' });
+async function logout(req, res, next) {
+    try {
+        const refreshToken = req.cookies && req.cookies.refreshToken;
+
+        if (refreshToken) {
+            const storedToken = await RefreshToken.findOne({ tokenHash: hashRefreshToken(refreshToken) });
+
+            if (storedToken) {
+                await RefreshToken.updateMany(
+                    { familyId: storedToken.familyId, revokedAt: null },
+                    { $set: { revokedAt: new Date() } }
+                );
+            }
+        }
+
+        clearAuthCookies(res);
+        return success(res, 200, { message: 'Logged out successfully' });
+    } catch (err) {
+        return next(err);
+    }
 }
 
 async function forgotPassword(req, res, next) {
     try {
-        const { email } = req.body;
-        const normalizedEmail = normalizeEmail(email);
+        const normalizedEmail = normalizeEmail(req.body.email);
         const user = await User.findOne({ email: normalizedEmail });
+        const sessionToken = crypto.randomBytes(32).toString('hex');
 
-        if (user) {
+        if (user && !user.isDeleted && user.status === STATUS.ACTIVE) {
             const otp = generateOtp();
-            const otpHash = await bcrypt.hash(otp, 10);
+            const hashedOtp = await bcrypt.hash(otp, 10);
+            const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
             const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
-            await PasswordReset.findOneAndUpdate(
+            await Otp.findOneAndUpdate(
                 { userId: user._id },
                 {
                     $set: {
-                        otpHash,
-                        otpAttempts: 0,
-                        verified: false,
+                        sentTo: normalizedEmail,
+                        hashedOtp,
+                        sessionTokenHash,
                         resetTokenHash: null,
+                        attempts: 0,
+                        verified: false,
                         expiresAt,
                     },
                 },
-                { upsert: true, new: true, setDefaultsOnInsert: true }
+                { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
             );
 
-            sendEmail(normalizedEmail, otp);
+            await sendEmail(normalizedEmail, otp);
         }
 
+        res.cookie('passwordResetToken', sessionToken, getCookieOptions(10 * 60));
         return success(res, 200, {
             message: 'If an account exists with that email, a password reset code has been sent.',
         });
@@ -257,45 +378,69 @@ async function forgotPassword(req, res, next) {
 
 async function verifyOtp(req, res, next) {
     try {
-        const normalizedEmail = normalizeEmail(req.body.email);
-        const user = await User.findOne({ email: normalizedEmail });
+        const sessionToken = req.cookies && req.cookies.passwordResetToken;
 
-        if (!user) {
+        if (!sessionToken) {
             return error(res, 400, 'Invalid or expired OTP');
         }
 
-        const reset = await PasswordReset.findOne({
-            userId: user._id,
+        const sessionTokenHash = crypto.createHash('sha256').update(String(sessionToken)).digest('hex');
+        const otpRecord = await Otp.findOne({
+            sessionTokenHash,
             expiresAt: { $gt: new Date() },
             verified: false,
-            otpAttempts: { $lt: 5 },
-        }).select('+otpHash');
+            attempts: { $lt: 5 },
+        }).select('+hashedOtp +sessionTokenHash');
 
-        if (!reset || !reset.otpHash) {
+        if (!otpRecord || !otpRecord.hashedOtp) {
             return error(res, 400, 'Invalid or expired OTP');
         }
 
-        const isOtpValid = await bcrypt.compare(String(req.body.otp), reset.otpHash);
+        const user = await User.findById(otpRecord.userId);
+
+        if (!user || user.isDeleted || user.status !== STATUS.ACTIVE) {
+            return error(res, 400, 'Invalid or expired OTP');
+        }
+
+        const isOtpValid = await bcrypt.compare(String(req.body.otp), otpRecord.hashedOtp);
 
         if (!isOtpValid) {
-            reset.otpAttempts += 1;
-            await reset.save();
+            await Otp.updateOne(
+                { _id: otpRecord._id, verified: false, attempts: { $lt: 5 } },
+                { $inc: { attempts: 1 } }
+            );
             return error(res, 400, 'Invalid or expired OTP');
         }
 
         const resetToken = crypto.randomBytes(32).toString('hex');
-        reset.otpHash = undefined;
-        reset.verified = true;
-        reset.resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
-        reset.expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-        await reset.save();
+        const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+        const updatedRecord = await Otp.findOneAndUpdate(
+            {
+                _id: otpRecord._id,
+                sessionTokenHash,
+                verified: false,
+                attempts: { $lt: 5 },
+            },
+            {
+                $set: {
+                    verified: true,
+                    resetTokenHash,
+                    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+                },
+                $unset: {
+                    hashedOtp: '',
+                    sessionTokenHash: '',
+                },
+            },
+            { new: true }
+        );
+
+        if (!updatedRecord) {
+            return error(res, 400, 'Invalid or expired OTP');
+        }
 
         res.cookie('passwordResetToken', resetToken, getCookieOptions(10 * 60));
-
-        return success(res, 200, {
-            message: 'OTP verified successfully',
-            token: resetToken,
-        });
+        return success(res, 200, { message: 'OTP verified successfully' });
     } catch (err) {
         return next(err);
     }
@@ -304,34 +449,43 @@ async function verifyOtp(req, res, next) {
 async function resetPassword(req, res, next) {
     try {
         const { password } = req.body;
-        const token = req.body.token || (req.cookies && req.cookies.passwordResetToken);
+        const resetToken = req.cookies && req.cookies.passwordResetToken;
 
-        if (!token) {
-            return error(res, 400, 'Reset token is required');
+        if (!resetToken) {
+            return error(res, 400, 'Invalid or expired reset token');
         }
 
-        const hashedToken = crypto.createHash('sha256').update(String(token)).digest('hex');
-        const reset = await PasswordReset.findOne({
-            resetTokenHash: hashedToken,
+        const resetTokenHash = crypto.createHash('sha256').update(String(resetToken)).digest('hex');
+        const otpRecord = await Otp.findOne({
+            resetTokenHash,
             expiresAt: { $gt: new Date() },
             verified: true,
         });
 
-        if (!reset) {
+        if (!otpRecord) {
             return error(res, 400, 'Invalid or expired reset token');
         }
 
-        const user = await User.findById(reset.userId);
+        const user = await User.findById(otpRecord.userId);
 
-        if (!user) {
-            await PasswordReset.deleteOne({ _id: reset._id });
+        if (!user || user.isDeleted || user.status !== STATUS.ACTIVE) {
+            await Otp.deleteOne({ _id: otpRecord._id });
             return error(res, 400, 'Invalid or expired reset token');
         }
 
-        const hashedPassword = await bcrypt.hash(password, 12);
-        user.password = hashedPassword;
+        const consumedRecord = await Otp.findOneAndDelete({
+            _id: otpRecord._id,
+            resetTokenHash,
+            expiresAt: { $gt: new Date() },
+            verified: true,
+        });
+
+        if (!consumedRecord) {
+            return error(res, 400, 'Invalid or expired reset token');
+        }
+
+        user.password = await bcrypt.hash(password, 12);
         await user.save();
-        await PasswordReset.deleteOne({ _id: reset._id });
         res.clearCookie('passwordResetToken', cookieOptions);
 
         return success(res, 200, { message: 'Password reset successful' });

@@ -190,9 +190,15 @@ exports.registerMerchant = async (req, res) => {
       ownerId: user._id,
       storeName: storeName.trim(),
       category: category || 'أزياء وملابس',
+      governorate: req.body.governorate || 'المحافظة الوسطى',
       city: city || 'دير البلح',
       storeAddress: storeAddress || '',
       phone: cleanPhone,
+      whatsapp: req.body.whatsapp ? req.body.whatsapp.trim() : cleanPhone,
+      businessType: req.body.businessType || 'محل تجاري قائم',
+      payoutMethod: req.body.payoutMethod || 'كاش عند تسليم الطرد',
+      pickupTime: req.body.pickupTime || 'طوال اليوم (9 ص - 7 م)',
+      socialLink: req.body.socialLink || '',
       status: 'pending_approval',
     });
 

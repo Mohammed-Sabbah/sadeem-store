@@ -10,24 +10,29 @@ export function useMerchantJoin() {
   const [submitted, setSubmitted] = useState(false);
   const [registeredStoreName, setRegisteredStoreName] = useState('');
   const [registeredPhone, setRegisteredPhone] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const {
     register,
     handleSubmit,
     setError,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<MerchantJoinFormValues>({
     resolver: zodResolver(merchantJoinSchema),
     defaultValues: {
       name: '',
       phone: '',
+      whatsapp: '',
       email: '',
       password: '',
+      confirmPassword: '',
       storeName: '',
       category: 'أزياء وملابس',
+      governorate: 'المحافظة الوسطى',
       city: 'دير البلح',
       storeAddress: '',
-      notes: '',
     },
   });
 
@@ -52,5 +57,10 @@ export function useMerchantJoin() {
     submitted,
     registeredStoreName,
     registeredPhone,
+    showPassword,
+    setShowPassword,
+    showConfirmPassword,
+    setShowConfirmPassword,
+    watch,
   };
 }

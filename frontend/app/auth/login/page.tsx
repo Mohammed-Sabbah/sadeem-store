@@ -152,15 +152,26 @@ function LoginForm() {
             </button>
           </form>
 
-          {/* Switch to Register */}
-          <div className="mt-6 pt-5 border-t border-brand-border/70 text-center text-xs sm:text-sm text-brand-muted">
-            <span>ليس لديك حساب بعد؟ </span>
-            <Link
-              href={`/auth/register?redirect=${encodeURIComponent(redirectUrl)}`}
-              className="font-extrabold text-brand-primary hover:underline no-underline mr-1"
-            >
-              إنشاء حساب جديد
-            </Link>
+          {/* Switch to Register & Merchant Join */}
+          <div className="mt-6 pt-5 border-t border-brand-border/70 text-center text-xs sm:text-sm text-brand-muted space-y-2.5">
+            <div>
+              <span>ليس لديك حساب بعد؟ </span>
+              <Link
+                href={`/auth/register?redirect=${encodeURIComponent(redirectUrl)}`}
+                className="font-extrabold text-brand-primary hover:underline no-underline mr-1"
+              >
+                إنشاء حساب جديد
+              </Link>
+            </div>
+            <div className="pt-2 border-t border-dashed border-brand-border/60">
+              <span className="text-xs text-brand-muted">صاحب متجر أو حرفي في الوسطى؟ </span>
+              <Link
+                href="/merchant/join"
+                className="font-extrabold text-brand-trust hover:underline no-underline text-xs mr-1"
+              >
+                انضم كتاجر معتمد ←
+              </Link>
+            </div>
           </div>
         </div>
       </main>

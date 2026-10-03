@@ -140,6 +140,7 @@ export function Header() {
             <span className="w-4 h-4 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold text-xs leading-none">+</span>
           </Link>
 
+
           <Link
             href="/wishlist"
             className="p-2 rounded-full text-brand-muted hover:text-brand-primary hover:bg-brand-surface transition-colors"

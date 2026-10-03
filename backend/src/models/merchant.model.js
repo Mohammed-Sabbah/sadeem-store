@@ -27,6 +27,12 @@ const merchantSchema = new mongoose.Schema(
       ],
       default: 'أزياء وملابس',
     },
+    governorate: {
+      type: String,
+      required: true,
+      default: 'المحافظة الوسطى',
+      enum: ['المحافظة الوسطى', 'خان يونس', 'رفح', 'غزة', 'شمال غزة'],
+    },
     city: {
       type: String,
       required: true,
@@ -35,11 +41,36 @@ const merchantSchema = new mongoose.Schema(
     },
     storeAddress: {
       type: String,
-      default: '',
+      required: [true, 'يرجى إدخال العنوان التفصيلي (الشارع، معلَم قريب)'],
+      trim: true,
     },
     phone: {
       type: String,
       required: true,
+      trim: true,
+    },
+    whatsapp: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    businessType: {
+      type: String,
+      enum: ['محل تجاري قائم', 'ورشة حرفية / تصنيع', 'مشروع منزلي'],
+      default: 'محل تجاري قائم',
+    },
+    payoutMethod: {
+      type: String,
+      enum: ['كاش عند تسليم الطرد', 'محفظة جوال باي (Jawwal Pay)', 'حساب بنك فلسطين / إسلامي'],
+      default: 'كاش عند تسليم الطرد',
+    },
+    pickupTime: {
+      type: String,
+      default: 'طوال اليوم (9 ص - 7 م)',
+    },
+    socialLink: {
+      type: String,
+      default: '',
     },
     status: {
       type: String,

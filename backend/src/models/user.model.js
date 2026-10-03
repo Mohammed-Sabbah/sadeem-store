@@ -7,19 +7,19 @@ const userSchema = new mongoose.Schema(
       required: [true, 'يرجى كتابة الاسم الكامل'],
       trim: true,
     },
-    phone: {
-      type: String,
-      required: [true, 'يرجى إدخال رقم الجوال'],
-      unique: true,
-      trim: true,
-      match: [/^(\+?970|0)?5[96]\d{7}$/, 'يرجى إدخال رقم جوال فلسطيني صالح (059xxxxxxx أو 056xxxxxxx)'],
-    },
     email: {
       type: String,
+      required: [true, 'يرجى إدخال البريد الإلكتروني'],
       unique: true,
-      sparse: true,
       trim: true,
       lowercase: true,
+      match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'يرجى إدخال بريد إلكتروني صحيح'],
+    },
+    phone: {
+      type: String,
+      sparse: true,
+      trim: true,
+      match: [/^(\+?970|0)?5[96]\d{7}$/, 'يرجى إدخال رقم جوال فلسطيني صالح (059xxxxxxx أو 056xxxxxxx)'],
     },
     password: {
       type: String,

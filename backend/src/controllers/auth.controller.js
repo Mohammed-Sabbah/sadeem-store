@@ -62,49 +62,43 @@ const clearAuthCookies = (res) => {
 };
 
 /**
- * 1. Customer Registration (Fast 3-field signup)
+ * 1. Customer Registration (Fast signup with email)
  */
 exports.register = async (req, res) => {
-  const { name, identifier, password, city } = req.body;
+  const { name, email, identifier, password, city } = req.body;
+  const targetEmail = (email || identifier || '').trim().toLowerCase();
 
   try {
-    if (!name || !identifier || !password) {
-      return error(res, 400, 'يرجى ملء جميع الحقول المطلوبة (الاسم، رقم الجوال أو البريد، كلمة المرور)');
+    if (!name || !targetEmail || !password) {
+      return error(res, 400, 'يرجى ملء جميع الحقول المطلوبة (الاسم، البريد الإلكتروني، كلمة المرور)');
     }
 
     const cleanName = name.trim();
-    const cleanId = identifier.trim();
 
     if (password.length < 6) {
       return error(res, 400, 'يجب ألا تقل كلمة المرور عن 6 خانات');
     }
 
-    const isEmail = cleanId.includes('@');
-    const isPhone = /^(\+?970|0)?5[96]\d{7}$/.test(cleanId.replace(/[\s-]/g, ''));
-
-    if (!isEmail && !isPhone) {
-      return error(res, 400, 'يرجى إدخال رقم جوال فلسطيني صالح (059xxxxxxx) أو بريد إلكتروني');
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(targetEmail);
+    if (!isEmailValid) {
+      return error(res, 400, 'يرجى إدخال بريد إلكتروني صالح (مثال: name@example.com)');
     }
 
     // Check existing
     const existingUser = await User.findOne({
-      $or: [
-        ...(isPhone ? [{ phone: cleanId }] : []),
-        ...(isEmail ? [{ email: cleanId.toLowerCase() }] : []),
-      ],
+      email: targetEmail,
       isDeleted: false,
     });
 
     if (existingUser) {
-      return error(res, 409, 'رقم الجوال أو البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول');
+      return error(res, 409, 'البريد الإلكتروني مسجل مسبقاً، يرجى تسجيل الدخول');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const user = await User.create({
       name: cleanName,
-      phone: isPhone ? cleanId : `temp_${Date.now()}`,
-      email: isEmail ? cleanId.toLowerCase() : undefined,
+      email: targetEmail,
       password: hashedPassword,
       role: 'customer',
       status: 'active',
@@ -125,7 +119,6 @@ exports.register = async (req, res) => {
         user: {
           id: user._id,
           name: user.name,
-          phone: user.phone,
           email: user.email,
           role: user.role,
           status: user.status,
@@ -142,32 +135,44 @@ exports.register = async (req, res) => {
 
 /**
  * 2. Dedicated Merchant Registration (Requires Admin Approval)
+ * Requires Email (for login) AND Phone (for Gaza field dispatch & verification)
  */
 exports.registerMerchant = async (req, res) => {
   const { name, phone, email, password, storeName, category, city, storeAddress } = req.body;
 
   try {
-    if (!name || !phone || !password || !storeName) {
-      return error(res, 400, 'يرجى ملء جميع الحقول الإلزامية لطلب انضمام المتجر');
+    if (!name || !phone || !email || !password || !storeName) {
+      return error(
+        res,
+        400,
+        'يرجى ملء جميع الحقول المطلوبة (الاسم، البريد الإلكتروني، رقم الجوال، كلمة المرور، اسم المتجر)'
+      );
     }
 
+    const cleanEmail = email.trim().toLowerCase();
     const cleanPhone = phone.trim();
+
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail);
+    if (!isEmailValid) {
+      return error(res, 400, 'يرجى إدخال بريد إلكتروني صالح للدخول (مثال: store@example.com)');
+    }
+
     const isPhoneValid = /^(\+?970|0)?5[96]\d{7}$/.test(cleanPhone.replace(/[\s-]/g, ''));
     if (!isPhoneValid) {
-      return error(res, 400, 'يرجى إدخال رقم جوال فلسطيني صالح للتواصل والتحقق');
+      return error(res, 400, 'يرجى إدخال رقم جوال فلسطيني صالح للتواصل والتحقق (059xxxxxxx أو 056xxxxxxx)');
     }
 
     // Check if phone or email already in use
     const existing = await User.findOne({
       $or: [
+        { email: cleanEmail },
         { phone: cleanPhone },
-        ...(email ? [{ email: email.trim().toLowerCase() }] : []),
       ],
       isDeleted: false,
     });
 
     if (existing) {
-      return error(res, 409, 'رقم الجوال أو البريد الإلكتروني مسجل مسبقاً في النظام');
+      return error(res, 409, 'البريد الإلكتروني أو رقم الجوال مسجل مسبقاً في النظام');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -175,8 +180,8 @@ exports.registerMerchant = async (req, res) => {
     // Create user with pending_approval status
     const user = await User.create({
       name: name.trim(),
+      email: cleanEmail,
       phone: cleanPhone,
-      email: email ? email.trim().toLowerCase() : undefined,
       password: hashedPassword,
       role: 'merchant',
       status: 'pending_approval', // NOT active until admin approves!
@@ -195,10 +200,6 @@ exports.registerMerchant = async (req, res) => {
       storeAddress: storeAddress || '',
       phone: cleanPhone,
       whatsapp: req.body.whatsapp ? req.body.whatsapp.trim() : cleanPhone,
-      businessType: req.body.businessType || 'محل تجاري قائم',
-      payoutMethod: req.body.payoutMethod || 'كاش عند تسليم الطرد',
-      pickupTime: req.body.pickupTime || 'طوال اليوم (9 ص - 7 م)',
-      socialLink: req.body.socialLink || '',
       status: 'pending_approval',
     });
 
@@ -222,24 +223,24 @@ exports.registerMerchant = async (req, res) => {
 };
 
 /**
- * 3. Login (Phone or Email + Password)
+ * 3. Login (Email + Password only)
  */
 exports.login = async (req, res) => {
-  const { identifier, password } = req.body;
+  const { email, identifier, password } = req.body;
+  const loginEmail = (email || identifier || '').trim().toLowerCase();
 
   try {
-    if (!identifier || !password) {
-      return error(res, 400, 'يرجى إدخال رقم الجوال/البريد الإلكتروني وكلمة المرور');
+    if (!loginEmail || !password) {
+      return error(res, 400, 'يرجى إدخال البريد الإلكتروني وكلمة المرور');
     }
 
-    const cleanId = identifier.trim();
-    const isEmail = cleanId.includes('@');
+    const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail);
+    if (!isEmailValid) {
+      return error(res, 400, 'يرجى إدخال بريد إلكتروني صالح (مثال: name@example.com)');
+    }
 
     const user = await User.findOne({
-      $or: [
-        { phone: cleanId },
-        ...(isEmail ? [{ email: cleanId.toLowerCase() }] : []),
-      ],
+      email: loginEmail,
       isDeleted: false,
     });
 
@@ -268,8 +269,8 @@ exports.login = async (req, res) => {
     const accessToken = generateAccessToken(user);
     const refreshToken = await createRefreshToken(user._id);
 
-    setCookie(res, 'token', accessToken, 15 * 60 * 1000);
-    setCookie(res, 'refreshToken', refreshToken, 30 * 24 * 60 * 60 * 1000);
+    setCookie(res, 'token', accessToken, 15 * 60 * 1000); // 15 mins
+    setCookie(res, 'refreshToken', refreshToken, 30 * 24 * 60 * 60 * 1000); // 30 days
 
     return success(
       res,
@@ -278,12 +279,11 @@ exports.login = async (req, res) => {
         user: {
           id: user._id,
           name: user.name,
-          phone: user.phone,
           email: user.email,
+          phone: user.phone,
           role: user.role,
           status: user.status,
           city: user.city,
-          address: user.address,
           walletBalance: user.walletBalance,
         },
       },
@@ -293,6 +293,7 @@ exports.login = async (req, res) => {
     return serverError(res, err);
   }
 };
+
 
 /**
  * 4. Silent Token Refresh (Auto rotation + ban check)

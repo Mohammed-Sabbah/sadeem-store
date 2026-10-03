@@ -70,23 +70,23 @@ function LoginForm() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Identifier Field */}
+            {/* Email Field */}
             <div>
               <label className="block text-xs sm:text-sm font-bold text-brand-dark mb-1.5">
-                رقم الجوال أو البريد الإلكتروني
+                البريد الإلكتروني
               </label>
               <input
-                type="text"
-                placeholder="059xxxxxxx أو name@example.com"
-                {...register('identifier')}
+                type="email"
+                placeholder="name@example.com"
+                {...register('email')}
                 className={`w-full h-12 px-4 rounded-lg border bg-white text-sm text-brand-dark outline-none transition-all font-almarai placeholder:text-brand-subtle ${
-                  errors.identifier ? 'border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-400' : 'border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary'
+                  errors.email ? 'border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-400' : 'border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary'
                 }`}
                 dir="ltr"
-                autoComplete="username"
+                autoComplete="email"
               />
-              {errors.identifier && (
-                <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.identifier.message}</p>
+              {errors.email && (
+                <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.email.message}</p>
               )}
             </div>
 

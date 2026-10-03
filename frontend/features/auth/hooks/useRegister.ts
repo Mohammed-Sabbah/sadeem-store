@@ -25,7 +25,7 @@ export function useRegister() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       name: '',
-      identifier: '',
+      email: '',
       password: '',
     },
   });

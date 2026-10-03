@@ -319,7 +319,7 @@ export default function MerchantJoinPage() {
                   {/* Email */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      البريد الإلكتروني (اختياري)
+                      البريد الإلكتروني (لتسجيل الدخول) <span className="text-brand-primary">*</span>
                     </label>
                     <input
                       type="email"

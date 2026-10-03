@@ -3,14 +3,11 @@ import { z } from 'zod';
 const palestinianPhoneRegex = /^(\+?970|0)?5[96]\d{7}$/;
 
 export const loginSchema = z.object({
-  identifier: z
+  email: z
     .string()
     .trim()
-    .min(1, 'يرجى إدخال رقم الجوال أو البريد الإلكتروني')
-    .refine(
-      (val) => palestinianPhoneRegex.test(val.replace(/[\s-]/g, '')) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
-      'يرجى إدخال رقم جوال فلسطيني صالح (059xxxxxxx) أو بريد إلكتروني صحيح'
-    ),
+    .min(1, 'يرجى إدخال البريد الإلكتروني')
+    .email('يرجى إدخال بريد إلكتروني صالح (مثال: name@example.com)'),
   password: z
     .string()
     .min(6, 'كلمة المرور يجب ألا تقل عن 6 خانات'),
@@ -23,14 +20,11 @@ export const registerSchema = z.object({
     .string()
     .trim()
     .min(2, 'الاسم الكامل يجب ألا يقل عن حرفين'),
-  identifier: z
+  email: z
     .string()
     .trim()
-    .min(1, 'يرجى إدخال رقم الجوال أو البريد الإلكتروني')
-    .refine(
-      (val) => palestinianPhoneRegex.test(val.replace(/[\s-]/g, '')) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val),
-      'يرجى إدخال رقم جوال فلسطيني صالح (059xxxxxxx) أو بريد إلكتروني'
-    ),
+    .min(1, 'يرجى إدخال البريد الإلكتروني')
+    .email('يرجى إدخال بريد إلكتروني صالح (مثال: name@example.com)'),
   password: z
     .string()
     .min(6, 'كلمة المرور يجب ألا تقل عن 6 خانات'),
@@ -59,9 +53,8 @@ export const merchantJoinSchema = z
     email: z
       .string()
       .trim()
-      .email('البريد الإلكتروني غير صحيح')
-      .optional()
-      .or(z.literal('')),
+      .min(1, 'يرجى إدخال البريد الإلكتروني للدخول وإدارة المتجر')
+      .email('البريد الإلكتروني غير صحيح (مثال: store@example.com)'),
     password: z
       .string()
       .min(6, 'كلمة المرور يجب ألا تقل عن 6 خانات'),

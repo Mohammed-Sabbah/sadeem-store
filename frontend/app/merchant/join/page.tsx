@@ -20,128 +20,150 @@ export default function MerchantJoinPage() {
   } = useMerchantJoin();
 
   return (
-    <main className="max-w-[1240px] mx-auto px-4 pt-6 pb-24 md:pb-16 font-almarai text-right">
-      {/* Page Header */}
-      <div className="flex items-center justify-between gap-4 pb-4 mb-6 border-b border-brand-border">
+    <main className="max-w-[1240px] mx-auto px-4 pt-6 sm:pt-8 pb-24 md:pb-16 font-almarai text-right">
+      {/* Top Editorial Breadcrumb / Header Strip */}
+      <div className="flex items-center justify-between gap-4 pb-4 mb-6 sm:mb-8 border-b border-brand-border">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-brand-dark tracking-tight">
-            انضم كتاجر معتمد في سَدِيم
-          </h1>
-          <span className="text-xs md:text-sm text-brand-muted mt-1 block">
-            وسّع مبيعاتك في المحافظة الوسطى بشراكة لوجستية وتسويقية متكاملة
+          <span className="text-xs font-bold text-brand-primary tracking-wide block mb-1">
+            شراكة المتاجر والحرفيين
           </span>
+          <h1 className="text-xl sm:text-2xl font-black text-brand-dark tracking-tight m-0">
+            انضمام تاجر جديد في سَدِيم
+          </h1>
         </div>
 
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-xs md:text-sm font-bold text-brand-muted hover:text-brand-dark transition-colors py-1.5 px-3 rounded-lg border border-brand-border bg-white shrink-0 no-underline"
+          className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-brand-muted hover:text-brand-dark transition-colors py-2 px-3.5 rounded-lg border border-brand-border bg-white shrink-0 no-underline"
         >
-          <span>←</span>
           <span>الرئيسية</span>
+          <span className="text-xs">←</span>
         </Link>
       </div>
 
-      {/* Two-Column Responsive Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* COLUMN 1: VALUE PROPOSITION & QUIET LUXURY TRUST PILLARS */}
-        <div className="lg:col-span-5 flex flex-col gap-5">
-          <div className="bg-white border border-brand-border/80 rounded-2xl p-6 sm:p-7 shadow-[0_4px_20px_rgba(28,25,23,0.03)]">
-            <span className="text-xs font-black text-brand-primary bg-[var(--brand-primary-soft)] border border-[var(--brand-primary-border)] px-3 py-1 rounded-full inline-block mb-3.5">
-              ● شراكة حقيقية لمتاجر وحرفيي الوسطى
+      {/* Two-Column Balanced Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
+        {/* ===================================================================
+            COLUMN 1: EDITORIAL VALUE PROPOSITION (Quiet Luxury & Zero Boxiness)
+            =================================================================== */}
+        <div className="lg:col-span-5 flex flex-col gap-6 lg:sticky lg:top-24">
+          <div className="space-y-4">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold text-brand-trust bg-[var(--brand-trust-soft)] border border-[var(--brand-trust-border)]">
+              المحافظة الوسطى · قطاع غزة
             </span>
-            <h2 className="text-base sm:text-lg font-black text-brand-dark mb-3 leading-snug">
-              ركّز على جودة بضاعتك وصناعتك، ونحن نتولى التسويق المتقن والتوصيل الميداني للزبائن
+
+            <h2 className="text-xl sm:text-2xl font-black text-brand-dark leading-snug tracking-tight m-0">
+              ركّز على جودة بضاعتك، ونحن نتولى التسويق المتقن والتوصيل الميداني للزبائن
             </h2>
-            <p className="text-xs sm:text-sm text-brand-muted leading-relaxed mb-6">
-              سَدِيم تدمج مبيعاتك ضمن شبكة متاجر معتمدة في المحافظة الوسطى. نوفر واجهة عرض فاخرة، نظام طرد موحد، وتسوية مالية فورية عند تسليم كل طلب.
+
+            <p className="text-xs sm:text-sm text-brand-muted leading-relaxed m-0">
+              تدمج سَدِيم مبيعاتك ضمن شبكة المتاجر المعتمدة في دير البلح والنصيرات والزوايدة والمغازي والبريج، مع إدارة لوجستية متكاملة تضمن راحة التاجر ورضا الزبون.
             </p>
+          </div>
 
-            {/* 3 Pillars */}
-            <div className="flex flex-col gap-3">
-              <div className="bg-brand-bg/50 border border-brand-border/60 rounded-xl p-3.5 flex gap-3.5 items-center">
-                <div className="w-10 h-10 rounded-xl bg-white border border-brand-border flex items-center justify-center text-brand-primary shrink-0 font-bold">
-                  📦
-                </div>
-                <div>
-                  <strong className="text-xs sm:text-sm text-brand-dark block">
-                    أسطول توصيل يستلم من باب محلك
-                  </strong>
-                  <span className="text-[11px] text-brand-muted block mt-0.5">
-                    مندوبو سَدِيم يستلمون المنتج منك ويجمعونه في طرد موحد للزبون.
-                  </span>
-                </div>
+          {/* Serene 3 Pillars (Clean list without nested boxes) */}
+          <div className="space-y-5 pt-2">
+            {/* Pillar 1 */}
+            <div className="flex items-start gap-3.5">
+              <div className="w-9 h-9 rounded-lg bg-[var(--brand-primary-soft)] text-brand-primary border border-[var(--brand-primary-border)] flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 16h6v-5.5a1.5 1.5 0 0 0-1.5-1.5H16" />
+                  <rect x="2" y="6" width="14" height="10" rx="1.5" />
+                  <circle cx="6" cy="18" r="2" />
+                  <circle cx="18" cy="18" r="2" />
+                </svg>
               </div>
-
-              <div className="bg-brand-bg/50 border border-brand-border/60 rounded-xl p-3.5 flex gap-3.5 items-center">
-                <div className="w-10 h-10 rounded-xl bg-white border border-brand-border flex items-center justify-center text-brand-trust shrink-0 font-bold">
-                  💰
-                </div>
-                <div>
-                  <strong className="text-xs sm:text-sm text-brand-dark block">
-                    تسويات مالية دورية وموثقة
-                  </strong>
-                  <span className="text-[11px] text-brand-muted block mt-0.5">
-                    تحصيل المبالغ كاش أو جوال باي وتسليم أرباحك دورياً دون تأخير.
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-brand-bg/50 border border-brand-border/60 rounded-xl p-3.5 flex gap-3.5 items-center">
-                <div className="w-10 h-10 rounded-xl bg-white border border-brand-border flex items-center justify-center text-brand-primary shrink-0 font-bold">
-                  ✨
-                </div>
-                <div>
-                  <strong className="text-xs sm:text-sm text-brand-dark block">
-                    واجهة رقمية بمعايير المجلات العالمية
-                  </strong>
-                  <span className="text-[11px] text-brand-muted block mt-0.5">
-                    تصوير منسق للمنتجات يعكس موثوقية وفخامة علامتك التجارية.
-                  </span>
-                </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-extrabold text-brand-dark m-0">
+                  استلام مباشر من باب محلك
+                </h3>
+                <p className="text-xs text-brand-muted leading-relaxed m-0">
+                  مندوبو سَدِيم يتولون استلام القطع المحجوزة من محلك وتجميعها في طرد موحد للزبون دون أي عناء عليك.
+                </p>
               </div>
             </div>
 
-            {/* Operational Note */}
-            <div className="mt-6 pt-4 border-t border-brand-border/70 text-xs text-brand-muted leading-relaxed">
-              <strong className="text-brand-dark block mb-1">كيف تتم مراجعة وتفعيل الحساب؟</strong>
-              بعد تقديم الطلب، يقوم فريق توثيق سَدِيم في الوسطى بالتحقق من البيانات والتواصل معك هاتفياً لترتيب زيارة المحل والتأكد من مطابقة شروط الجودة قبل تفعيل المتجر.
+            {/* Pillar 2 */}
+            <div className="flex items-start gap-3.5">
+              <div className="w-9 h-9 rounded-lg bg-[var(--brand-trust-soft)] text-brand-trust border border-[var(--brand-trust-border)] flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="5" width="20" height="14" rx="2" />
+                  <line x1="2" y1="10" x2="22" y2="10" />
+                  <circle cx="7" cy="15" r="1" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-extrabold text-brand-dark m-0">
+                  تسويات مالية دورية وموثقة
+                </h3>
+                <p className="text-xs text-brand-muted leading-relaxed m-0">
+                  تحصيل مستحقات مبيعاتك نقداً عند تسليم الشحنات أو بحوالة منتظمة بحسب تفضيلك دون تأخير.
+                </p>
+              </div>
             </div>
+
+            {/* Pillar 3 */}
+            <div className="flex items-start gap-3.5">
+              <div className="w-9 h-9 rounded-lg bg-stone-100 text-stone-700 border border-stone-200 flex items-center justify-center shrink-0 mt-0.5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-extrabold text-brand-dark m-0">
+                  واجهة عرض فاخرة ومعتمدة
+                </h3>
+                <p className="text-xs text-brand-muted leading-relaxed m-0">
+                  إبراز علامتك التجارية ومنتجاتك بتصوير منظم يعكس مكانة متجرك وموثوقيته أمام آلاف المتسوقين.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Operational Review Policy */}
+          <div className="pt-4 border-t border-brand-border/70 text-xs text-brand-muted leading-relaxed">
+            <span className="font-extrabold text-brand-dark block mb-1">مسار التحقق والاعتماد:</span>
+            يراجع فريق التوثيق في سَدِيم الطلب خلال 24 ساعة، ثم نتواصل معك هاتفياً لترتيب الزيارة الميدانية وتفعيل حسابك رسمياً.
           </div>
         </div>
 
-        {/* COLUMN 2: REGISTRATION FORM */}
-        <div className="lg:col-span-7 bg-white border border-brand-border/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(28,25,23,0.04)]">
+        {/* ===================================================================
+            COLUMN 2: REGISTRATION FORM (Pristine White Surface & Quiet Luxury)
+            =================================================================== */}
+        <div className="lg:col-span-7 bg-white border border-brand-border/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(28,25,23,0.03)]">
           {submitted ? (
             <div className="text-center py-10 px-4">
-              <div className="w-16 h-16 rounded-full bg-[var(--brand-trust-soft)] border-2 border-brand-trust flex items-center justify-center mx-auto mb-4 text-brand-trust text-2xl font-black">
-                ✓
+              <div className="w-14 h-14 rounded-full bg-[var(--brand-trust-soft)] border border-[var(--brand-trust-border)] flex items-center justify-center mx-auto mb-4 text-brand-trust">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               </div>
-              <h3 className="text-lg md:text-xl font-black text-brand-dark mb-2">
-                تم استلام طلب انضمام «{registeredStoreName || 'متجرك'}» بنجاح!
+              <h3 className="text-lg sm:text-xl font-black text-brand-dark mb-2">
+                تم استلام طلب انضمام «{registeredStoreName || 'متجرك'}» بنجاح
               </h3>
-              <p className="text-xs md:text-sm text-brand-muted max-w-md mx-auto mb-6 leading-relaxed">
-                حسابك مسجل حالياً بحالة <strong>قيد المراجعة والاعتماد</strong> من قبل إدارة سَدِيم. سيتواصل معك فريق التوثيق خلال 24 ساعة عبر الهاتف أو الواتساب ({registeredPhone}) لترتيب الزيارة الميدانية وتفعيل حساب متجرك في المنصة.
+              <p className="text-xs sm:text-sm text-brand-muted max-w-md mx-auto mb-6 leading-relaxed">
+                حسابك مسجل حالياً بحالة <strong>قيد المراجعة والاعتماد</strong> من قبل إدارة سَدِيم. سيتواصل معك فريق التوثيق قريباً عبر الهاتف أو الواتساب ({registeredPhone}) لإتمام التحقق وتفعيل لوحة التحكم.
               </p>
-              <div className="p-3.5 rounded-xl bg-brand-bg/60 border border-brand-border text-xs text-brand-muted max-w-md mx-auto mb-6 text-right">
-                <span className="font-bold text-brand-dark block mb-1">ملاحظة مهمة:</span>
-                لن تتمكن من تسجيل الدخول كتاجر فاعل في لوحة التحكم إلا بعد إتمام مكالمة التحقق واعتماد المتجر من الإدارة.
+              <div className="p-3.5 rounded-lg bg-brand-surface border border-brand-border text-xs text-brand-muted max-w-md mx-auto mb-6 text-right">
+                <span className="font-bold text-brand-dark block mb-0.5">تنويه الدخول:</span>
+                يمكنك تسجيل الدخول لحساب التاجر فور اكتمال مكالمة التحقق واعتماد المتجر من الإدارة.
               </div>
               <Link
                 href="/"
-                className="inline-flex items-center justify-center bg-brand-primary text-white hover:brightness-105 px-6 py-3 rounded-lg text-xs md:text-sm font-extrabold shadow-xs transition-all no-underline"
+                className="inline-flex items-center justify-center bg-brand-primary text-white hover:brightness-105 px-6 py-2.5 rounded-lg text-xs sm:text-sm font-extrabold shadow-xs transition-all no-underline"
               >
                 العودة للتسوق في سَدِيم
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Header inside form */}
-              <div>
-                <h3 className="text-base sm:text-lg font-black text-brand-dark mb-1">
-                  طلب انضمام وتوثيق متجر جديد
+              {/* Form Intro Header */}
+              <div className="pb-3 border-b border-brand-border/60">
+                <h3 className="text-base sm:text-lg font-black text-brand-dark m-0">
+                  طلب انضمام متجر معتمد
                 </h3>
-                <p className="text-xs text-brand-muted m-0">
-                  الحساب لن يتفعل تلقائياً، بل يُعتمد بعد مراجعة الإدارة والتأكد من مطابقة شروط الجودة الميدانية.
+                <p className="text-xs text-brand-muted mt-1 m-0">
+                  يُفعل الحساب بلوحة التحكم فور مراجعة واعتماد فريق التوثيق في المحافظة الوسطى.
                 </p>
               </div>
 
@@ -154,11 +176,12 @@ export default function MerchantJoinPage() {
                 </div>
               )}
 
-              {/* SECTION 1: هوية المتجر وموقعه في الوسطى */}
-              <div className="space-y-4 pt-1">
-                <div className="flex items-center gap-2 pb-1.5 border-b border-brand-border/60">
-                  <span className="w-5 h-5 rounded-full bg-[var(--brand-primary-soft)] text-brand-primary text-xs font-black flex items-center justify-center">1</span>
-                  <h4 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">بيانات المتجر وموقعه في المحافظة الوسطى</h4>
+              {/* SECTION 1: بيانات المتجر وموقعه في الوسطى */}
+              <div className="space-y-4">
+                <div className="pb-1 border-b border-brand-border/40">
+                  <h4 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
+                    1. هوية المتجر وموقعه في المحافظة الوسطى
+                  </h4>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -203,23 +226,23 @@ export default function MerchantJoinPage() {
                   {/* Part 1: Governorate */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      1. المحافظة <span className="text-brand-primary">*</span>
+                      المحافظة <span className="text-brand-primary">*</span>
                     </label>
                     <select
                       {...register('governorate')}
-                      className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-brand-bg/50 text-xs sm:text-sm text-brand-dark outline-none font-almarai font-bold"
+                      className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-brand-surface text-xs sm:text-sm text-brand-dark outline-none font-almarai font-bold"
                     >
                       <option value="المحافظة الوسطى">المحافظة الوسطى (المرحلة الأولى)</option>
                     </select>
                     <span className="text-[10px] text-brand-muted mt-1 block">
-                      * التوصيل والطرد الموحد محصور بالوسطى حالياً لضمان توصيل 8 ₪.
+                      التوصيل الموحد محصور بالوسطى حالياً (8 ₪ ثابت).
                     </span>
                   </div>
 
                   {/* Part 2: City / Camp */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      2. المدينة / المخيم <span className="text-brand-primary">*</span>
+                      المدينة / المخيم <span className="text-brand-primary">*</span>
                     </label>
                     <select
                       {...register('city')}
@@ -240,7 +263,7 @@ export default function MerchantJoinPage() {
                 {/* Part 3: Detailed Address */}
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                    3. العنوان التفصيلي ونقطة الاستلام <span className="text-brand-primary">*</span>
+                    العنوان التفصيلي ونقطة الاستلام <span className="text-brand-primary">*</span>
                   </label>
                   <input
                     type="text"
@@ -254,16 +277,17 @@ export default function MerchantJoinPage() {
                     <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.storeAddress.message}</p>
                   )}
                   <span className="text-[10px] text-brand-muted mt-1 block">
-                    يستخدم هذا العنوان لوصول مندوب سَدِيم لاستلام الطرد وتنسيق التسليم.
+                    يستخدم هذا العنوان لوصول مناديب سَدِيم واستلام الطرود من محلك.
                   </span>
                 </div>
               </div>
 
               {/* SECTION 2: بيانات المسؤول وتأمين الحساب */}
               <div className="space-y-4 pt-3 border-t border-brand-border/60">
-                <div className="flex items-center gap-2 pb-1.5 border-b border-brand-border/60">
-                  <span className="w-5 h-5 rounded-full bg-[var(--brand-primary-soft)] text-brand-primary text-xs font-black flex items-center justify-center">2</span>
-                  <h4 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">بيانات المسؤول وحماية الحساب</h4>
+                <div className="pb-1 border-b border-brand-border/40">
+                  <h4 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
+                    2. بيانات المسؤول وحماية الحساب
+                  </h4>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -286,7 +310,7 @@ export default function MerchantJoinPage() {
                   {/* Primary Phone */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      رقم الجوال الأساسي <span className="text-brand-primary">*</span>
+                      رقم الجوال الأساسي للتواصل <span className="text-brand-primary">*</span>
                     </label>
                     <input
                       type="tel"
@@ -302,21 +326,7 @@ export default function MerchantJoinPage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* WhatsApp */}
-                  <div>
-                    <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      رقم الواتساب للتنسيق واستلام الطلبات
-                    </label>
-                    <input
-                      type="tel"
-                      dir="ltr"
-                      placeholder="اتركه فارغاً إن كان نفس رقم الجوال"
-                      {...register('whatsapp')}
-                      className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-white text-xs sm:text-sm text-brand-dark outline-none focus:border-brand-primary transition-all font-almarai placeholder:text-brand-subtle"
-                    />
-                  </div>
-
-                  {/* Email */}
+                  {/* Email (Required for login) */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
                       البريد الإلكتروني (لتسجيل الدخول) <span className="text-brand-primary">*</span>
@@ -332,9 +342,23 @@ export default function MerchantJoinPage() {
                     />
                     {errors.email && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.email.message}</p>}
                   </div>
+
+                  {/* WhatsApp */}
+                  <div>
+                    <label className="block text-xs font-bold text-brand-dark mb-1.5">
+                      رقم الواتساب للتنسيق التشغيلي
+                    </label>
+                    <input
+                      type="tel"
+                      dir="ltr"
+                      placeholder="اتركه فارغاً إن كان نفس رقم الجوال"
+                      {...register('whatsapp')}
+                      className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-white text-xs sm:text-sm text-brand-dark outline-none focus:border-brand-primary transition-all font-almarai placeholder:text-brand-subtle"
+                    />
+                  </div>
                 </div>
 
-                {/* Password & Confirm Password (2 Fields) */}
+                {/* Password & Confirm Password (2 Fields with SVG Eye toggles) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Password */}
                   <div>
@@ -353,10 +377,20 @@ export default function MerchantJoinPage() {
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-dark cursor-pointer bg-transparent border-0 p-1 flex items-center justify-center"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-dark cursor-pointer bg-transparent border-0 p-1 flex items-center justify-center transition-colors"
                         aria-label={showPassword ? 'إخفاء كلمة المرور' : 'إظهار كلمة المرور'}
                       >
-                        {showPassword ? '👁️' : '👁️‍🗨️'}
+                        {showPassword ? (
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
                       </button>
                     </div>
                     {errors.password && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.password.message}</p>}
@@ -379,10 +413,20 @@ export default function MerchantJoinPage() {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-dark cursor-pointer bg-transparent border-0 p-1 flex items-center justify-center"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-muted hover:text-brand-dark cursor-pointer bg-transparent border-0 p-1 flex items-center justify-center transition-colors"
                         aria-label={showConfirmPassword ? 'إخفاء تأكيد كلمة المرور' : 'إظهار تأكيد كلمة المرور'}
                       >
-                        {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
+                        {showConfirmPassword ? (
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="1" x2="23" y2="23" />
+                          </svg>
+                        ) : (
+                          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                        )}
                       </button>
                     </div>
                     {errors.confirmPassword && (
@@ -392,21 +436,24 @@ export default function MerchantJoinPage() {
                 </div>
               </div>
 
-              {/* Submit Button */}
-              <div className="pt-3">
+              {/* Submit Action */}
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full h-12 bg-brand-primary text-white hover:brightness-105 active:scale-[0.99] rounded-lg text-sm sm:text-base font-extrabold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-60"
+                  className="w-full h-11 sm:h-12 bg-brand-primary text-white hover:brightness-105 active:scale-[0.99] rounded-lg text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-60"
                 >
                   {isSubmitting ? (
-                    <span>جاري إرسال طلب الانضمام...</span>
+                    <span>جاري إرسال الطلب...</span>
                   ) : (
-                    <span>تقديم طلب الانضمام لشبكة سَدِيم ←</span>
+                    <>
+                      <span>تقديم طلب الانضمام لشبكة سَدِيم</span>
+                      <span className="text-sm">←</span>
+                    </>
                   )}
                 </button>
-                <p className="text-[11px] text-brand-muted text-center mt-2.5 m-0">
-                  بتقديم الطلب، فإنك توافق على سياسة التوثيق وفحص الجودة لشبكة سَدِيم في المحافظة الوسطى.
+                <p className="text-[11px] text-brand-muted text-center mt-2.5 m-0 leading-relaxed">
+                  يخضع الطلب لمعايير الجودة والمطابقة الميدانية لمتاجر المحافظة الوسطى.
                 </p>
               </div>
             </form>

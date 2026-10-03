@@ -20,10 +20,12 @@ app.use(cookieParser());
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require("./routes/user.route")
 const categoryRoutes = require('./routes/categoryRoutes');
+const storeRoutes = require('./routes/storeRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/stores', storeRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

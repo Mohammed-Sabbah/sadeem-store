@@ -134,7 +134,7 @@ async function registerSeller(req, res, next) {
                             address: storeInput.address || '',
                             phoneNumber: storeInput.phoneNumber || userInput.phoneNumber,
                             balance: 0,
-                            status: STATUS.ACTIVE,
+                            status: STATUS.PENDING_APPROVAL,
                             isDeleted: false,
                         },
                     ],

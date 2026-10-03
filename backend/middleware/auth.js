@@ -18,11 +18,15 @@ async function authenticate(req, res, next) {
         }
 
         const user = await User.findById(payload.userId);
+        if (!user || user.isDeleted) {
+            return error(res, 401, 'User is inactive or deleted');
+        }
+
         if (user.status === STATUS.PENDING_APPROVAL) {
             return error(res, 403, 'User is pending approval');
         }
 
-        if (!user || user.isDeleted || user.status !== STATUS.ACTIVE) {
+        if (user.status !== STATUS.ACTIVE) {
             return error(res, 401, 'User is inactive or deleted');
         }
 

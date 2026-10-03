@@ -16,6 +16,15 @@ export interface UserResponse {
     status?: 'active' | 'pending_approval' | 'suspended';
     city?: string;
     address?: string;
+    addresses?: Array<{
+      _id?: string;
+      label?: string;
+      governorate?: string;
+      city?: string;
+      detailedAddress: string;
+      phone?: string;
+      isDefault?: boolean;
+    }>;
     walletBalance?: number;
     ordersCount?: number;
     merchantId?: any;

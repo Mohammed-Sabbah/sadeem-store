@@ -34,6 +34,11 @@ app.get('/api/health', (req, res) => {
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/merchants', require('./routes/merchant.routes'));
+app.use('/api/categories', require('./routes/category.routes'));
+
+// Seed default categories asynchronously
+const { seedDefaultCategories } = require('./controllers/category.controller');
+seedDefaultCategories();
 
 // 404 Handler
 app.use((req, res) => {

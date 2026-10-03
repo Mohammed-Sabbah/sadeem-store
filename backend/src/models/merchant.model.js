@@ -13,6 +13,25 @@ const merchantSchema = new mongoose.Schema(
       required: [true, 'يرجى كتابة اسم المتجر'],
       trim: true,
     },
+    logo: {
+      type: String,
+      default: '',
+    },
+    description: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    balance: {
+      type: Number,
+      default: 0,
+      min: [0, 'لا يمكن أن يكون رصيد المتجر بالسالب'],
+    },
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+      default: null,
+    },
     category: {
       type: String,
       required: [true, 'يرجى تحديد تصنيف المتجر'],
@@ -93,6 +112,10 @@ const merchantSchema = new mongoose.Schema(
     rejectionReason: {
       type: String,
       default: null,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
     },
   },
   {

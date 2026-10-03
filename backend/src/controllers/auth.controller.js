@@ -1,5 +1,6 @@
 const User = require('../models/user.model');
 const Merchant = require('../models/merchant.model');
+const Category = require('../models/category.model');
 const RefreshToken = require('../models/refreshToken.model');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
@@ -120,10 +121,14 @@ exports.register = async (req, res) => {
           id: user._id,
           name: user.name,
           email: user.email,
+          phone: user.phone || '',
           role: user.role,
           status: user.status,
           city: user.city,
+          address: user.address || '',
+          addresses: user.addresses || [],
           walletBalance: user.walletBalance,
+          merchantId: user.merchantId || null,
         },
       },
       'تم إنشاء الحساب بنجاح'
@@ -190,11 +195,20 @@ exports.registerMerchant = async (req, res) => {
       walletBalance: 0,
     });
 
+    // Look up category for relationship linking
+    let categoryDoc = null;
+    if (category) {
+      categoryDoc = await Category.findOne({
+        $or: [{ title: category.trim() }, { slug: category.trim() }],
+      });
+    }
+
     // Create Merchant Profile
     const merchant = await Merchant.create({
       ownerId: user._id,
       storeName: storeName.trim(),
       category: category || 'أزياء وملابس',
+      categoryId: categoryDoc ? categoryDoc._id : null,
       governorate: req.body.governorate || 'المحافظة الوسطى',
       city: city || 'دير البلح',
       storeAddress: storeAddress || '',
@@ -280,11 +294,14 @@ exports.login = async (req, res) => {
           id: user._id,
           name: user.name,
           email: user.email,
-          phone: user.phone,
+          phone: user.phone || '',
           role: user.role,
           status: user.status,
           city: user.city,
+          address: user.address || '',
+          addresses: user.addresses || [],
           walletBalance: user.walletBalance,
+          merchantId: user.merchantId || null,
         },
       },
       'تم تسجيل الدخول بنجاح'

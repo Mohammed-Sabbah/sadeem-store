@@ -198,9 +198,23 @@ export default function AccountPage() {
                 <div>
                   <div className="flex items-center gap-2">
                     <h2 className="text-base sm:text-lg font-extrabold text-brand-dark m-0">{user.name}</h2>
-                    <span className="text-[11px] font-bold text-brand-trust bg-[var(--brand-trust-soft)] px-2 py-0.5 rounded-full border border-[var(--brand-trust-border)]">
-                      ● حساب زبون موثق
-                    </span>
+                    {user.role === 'merchant' ? (
+                      <span className="text-[11px] font-bold text-brand-primary bg-[var(--brand-primary-soft)] px-2 py-0.5 rounded-full border border-[var(--brand-primary-border)]">
+                        ● متجر شريك معتمد
+                      </span>
+                    ) : user.role === 'admin' ? (
+                      <span className="text-[11px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                        ● مسؤول منصة سَدِيم
+                      </span>
+                    ) : user.role === 'courier' ? (
+                      <span className="text-[11px] font-bold text-sky-800 bg-sky-50 px-2 py-0.5 rounded-full border border-sky-200">
+                        ● كابتن توصيل موحد
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-bold text-brand-trust bg-[var(--brand-trust-soft)] px-2 py-0.5 rounded-full border border-[var(--brand-trust-border)]">
+                        ● حساب زبون موثق
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-brand-muted mt-1 m-0">
                     {user.phone} {user.email ? `• ${user.email}` : ''} • {user.city} (المحافظة الوسطى)

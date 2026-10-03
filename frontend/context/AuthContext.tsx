@@ -10,6 +10,15 @@ export interface UserProfile {
   email?: string;
   city?: string;
   address?: string;
+  addresses?: Array<{
+    _id?: string;
+    label?: string;
+    governorate?: string;
+    city?: string;
+    detailedAddress: string;
+    phone?: string;
+    isDefault?: boolean;
+  }>;
   role: 'customer' | 'merchant' | 'courier' | 'admin';
   status: 'active' | 'pending_approval' | 'suspended';
   walletBalance: number;
@@ -48,6 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: u.email,
           city: u.city || 'دير البلح',
           address: u.address,
+          addresses: u.addresses || [],
           role: u.role || 'customer',
           status: u.status || 'active',
           walletBalance: u.walletBalance || 0,
@@ -100,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email: rawUser.email,
       city: rawUser.city || 'دير البلح',
       address: rawUser.address,
+      addresses: rawUser.addresses || [],
       role: rawUser.role || 'customer',
       status: rawUser.status || 'active',
       walletBalance: rawUser.walletBalance || 0,

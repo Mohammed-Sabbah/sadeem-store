@@ -45,6 +45,35 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    addresses: [
+      {
+        label: {
+          type: String,
+          default: 'البيت',
+        },
+        governorate: {
+          type: String,
+          default: 'المحافظة الوسطى',
+        },
+        city: {
+          type: String,
+          default: 'دير البلح',
+          enum: ['دير البلح', 'مخيم النصيرات', 'الزوايدة', 'مخيم البريج', 'مخيم المغازي'],
+        },
+        detailedAddress: {
+          type: String,
+          required: true,
+        },
+        phone: {
+          type: String,
+          default: '',
+        },
+        isDefault: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    ],
     walletBalance: {
       type: Number,
       default: 0,

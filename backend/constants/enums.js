@@ -2,6 +2,7 @@ const ROLE = {
     ADMIN: 'admin',
     USER: 'user',
     SELLER: 'seller',
+    COURIER: 'courier',
 };
 
 const STATUS = {

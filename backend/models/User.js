@@ -19,10 +19,18 @@ const userSchema = new mongoose.Schema(
             type: String,
             select: false,
         },
-        addresses: {
-            type: [Object],
-            default: [],
-        },
+        addresses: [
+            {
+                governorate: { type: String, default: 'central' },
+                city: { type: String, default: 'deir_albalah' },
+                detailedAddress: { type: String, default: '' },
+                coordinates: {
+                    lat: { type: Number },
+                    lng: { type: Number },
+                },
+                isDefault: { type: Boolean, default: false },
+            },
+        ],
         role: {
             type: String,
             enum: Object.values(ROLE),
@@ -37,14 +45,10 @@ const userSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
-        createdAt: {
-            type: Date,
-            default: Date.now,
-        },
     },
     {
         versionKey: false,
-        timestamps: false,
+        timestamps: true,
     }
 );
 

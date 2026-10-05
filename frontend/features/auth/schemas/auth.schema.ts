@@ -28,10 +28,11 @@ export const registerSchema = z
       .email('يرجى إدخال بريد إلكتروني صالح (مثال: name@example.com)'),
     password: z
       .string()
-      .min(6, 'كلمة المرور يجب ألا تقل عن 6 خانات'),
+      .min(8, 'كلمة المرور يجب ألا تقل عن 8 خانات')
+      .regex(/^(?=.*[A-Za-z])(?=.*\d)/, 'كلمة المرور يجب أن تحتوي على حرف واحد ورقم واحد على الأقل'),
     confirmPassword: z
       .string()
-      .min(6, 'يرجى تأكيد كلمة المرور'),
+      .min(8, 'يرجى تأكيد كلمة المرور'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'كلمتا المرور غير متطابقتين، يرجى التأكد',
@@ -65,10 +66,11 @@ export const merchantJoinSchema = z
       .email('البريد الإلكتروني غير صحيح (مثال: store@example.com)'),
     password: z
       .string()
-      .min(6, 'كلمة المرور يجب ألا تقل عن 6 خانات'),
+      .min(8, 'كلمة المرور يجب ألا تقل عن 8 خانات')
+      .regex(/^(?=.*[A-Za-z])(?=.*\d)/, 'كلمة المرور يجب أن تحتوي على حرف واحد ورقم واحد على الأقل'),
     confirmPassword: z
       .string()
-      .min(6, 'يرجى تأكيد كلمة المرور'),
+      .min(8, 'يرجى تأكيد كلمة المرور'),
     storeName: z
       .string()
       .trim()

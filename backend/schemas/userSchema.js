@@ -9,9 +9,8 @@ const registerUserSchema = [
         .withMessage('Name must be between 2 and 100 characters'),
 
     body('phoneNumber')
+        .optional({ checkFalsy: true })
         .trim()
-        .notEmpty()
-        .withMessage('Phone number is required')
         .matches(/^\+?[0-9\s()-]{8,20}$/)
         .withMessage('Phone number is invalid'),
 
@@ -27,7 +26,9 @@ const registerUserSchema = [
         .notEmpty()
         .withMessage('Password is required')
         .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters long'),
+        .withMessage('Password must be at least 8 characters long')
+        .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
+        .withMessage('Password must contain at least one letter and one number'),
 ];
 
 const sellerRegistrationUserSchema = [
@@ -57,7 +58,9 @@ const sellerRegistrationUserSchema = [
         .notEmpty()
         .withMessage('Seller password is required')
         .isLength({ min: 8 })
-        .withMessage('Seller password must be at least 8 characters long'),
+        .withMessage('Seller password must be at least 8 characters long')
+        .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
+        .withMessage('Password must contain at least one letter and one number'),
 ];
 
 const loginSchema = [
@@ -110,7 +113,9 @@ const resetPasswordSchema = [
         .notEmpty()
         .withMessage('Password is required')
         .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters long'),
+        .withMessage('Password must be at least 8 characters long')
+        .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
+        .withMessage('Password must contain at least one letter and one number'),
 ];
 
 const refreshTokenSchema = [

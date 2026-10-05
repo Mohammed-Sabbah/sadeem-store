@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { HybridAddressPicker, type AddressFormData } from '@/features/checkout/components/HybridAddressPicker';
+import { getGoogleMapsUrl, calculateHaversineDistance, GAZA_REGIONS_CLIENT } from '@/shared/lib/geolocation';
 
 interface Governorate {
   id: string;
@@ -20,7 +22,7 @@ const PALESTINE_GAZA_GOVERNORATES: Governorate[] = [
     id: 'central',
     name: 'المحافظة الوسطى',
     active: true,
-    badge: 'طرد موحد 8 ₪ · تغطية فورية',
+    badge: 'طرد موحد · تغطية فورية',
     cities: [
       'دير البلح',
       'مخيم النصيرات',
@@ -32,30 +34,30 @@ const PALESTINE_GAZA_GOVERNORATES: Governorate[] = [
   {
     id: 'khanyounis',
     name: 'محافظة خان يونس',
-    active: false,
-    badge: 'قريباً',
-    cities: ['خان يونس المدينة', 'القرارة', 'بني سهيلا', 'عبسان الكبيرة', 'خزاعة'],
+    active: true,
+    badge: 'تغطية متوفرة',
+    cities: ['مدينة خان يونس والبلد', 'مخيم خان يونس والأمل', 'القرارة', 'بني سهيلا والشرقية', 'المواصي - خان يونس'],
   },
   {
     id: 'gaza_city',
     name: 'محافظة غزة',
-    active: false,
-    badge: 'قريباً',
-    cities: ['الرمال', 'الصبرة', 'الشجاعية', 'الزيتون', 'تل الهوا', 'النصر'],
+    active: true,
+    badge: 'تغطية متوفرة',
+    cities: ['الرمال وتل الهوا', 'الشجاعية والدرج والتفاح', 'الزيتون والصبرة', 'الشيخ رضوان والنصر'],
   },
   {
     id: 'north',
     name: 'محافظة شمال غزة',
-    active: false,
-    badge: 'قريباً',
-    cities: ['جباليا البلد', 'مخيم جباليا', 'بيت لاهيا', 'بيت حانون'],
+    active: true,
+    badge: 'تغطية متوفرة',
+    cities: ['جباليا ومخيمها', 'بيت لاهيا', 'بيت حانون'],
   },
   {
     id: 'rafah',
     name: 'محافظة رفح',
-    active: false,
-    badge: 'قريباً',
-    cities: ['رفح البلد', 'مخيم الشابورة', 'مخيم تل السلطان', 'حي الجنينة'],
+    active: true,
+    badge: 'تغطية متوفرة',
+    cities: ['مدينة رفح والبلد', 'تل السلطان والمخيم', 'الشابورة والبرازيل', 'المواصي - رفح'],
   },
 ];
 
@@ -68,6 +70,8 @@ interface SavedAddress {
   governorateName: string;
   city: string;
   details: string;
+  coordinates?: { lat: number; lng: number };
+  isGpsVerified?: boolean;
   isDefault?: boolean;
 }
 
@@ -81,6 +85,8 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     governorateName: 'المحافظة الوسطى',
     city: 'دير البلح',
     details: 'شارع النخيل، بجوار مسجد الفرقان (منزل عائلة سلامة)',
+    coordinates: { lat: 31.418, lng: 34.351 },
+    isGpsVerified: true,
     isDefault: true,
   },
   {
@@ -92,6 +98,8 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
     governorateName: 'المحافظة الوسطى',
     city: 'مخيم النصيرات',
     details: 'شارع صلاح الدين، بالقرب من المدخل الرئيسي والمخبز الآلي',
+    coordinates: { lat: 31.448, lng: 34.391 },
+    isGpsVerified: true,
     isDefault: false,
   },
 ];
@@ -123,10 +131,11 @@ export default function CheckoutPage() {
   const [selectedCity, setSelectedCity] = useState<string>(user?.city || 'دير البلح');
   const [newAddressDetails, setNewAddressDetails] = useState<string>('');
   const [newTag, setNewTag] = useState<string>('المنزل');
-  const [saveToSavedList, setSaveToSavedList] = useState<boolean>(true);
+  // Form State for Adding New Address with Hybrid GPS Picker
+  const [pickerData, setPickerData] = useState<AddressFormData | null>(null);
 
-  // Payment & Bill States
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'wallet' | 'jawwal'>('cod');
+  // Payment & Bill States - PREPAID ONLY (No COD)
+  const [paymentMethod, setPaymentMethod] = useState<'jawwal' | 'wallet'>('jawwal');
   const [billSheetOpen, setBillSheetOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(user?.walletBalance ?? 0);
   const [jawwalPhone, setJawwalPhone] = useState(user?.phone || '0599123456');
@@ -135,22 +144,20 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (user) {
       if (user.walletBalance !== undefined) setWalletBalance(user.walletBalance);
-      if (user.name) setNewRecipientName(user.name);
       if (user.phone) {
-        setNewPhone(user.phone);
         setJawwalPhone(user.phone);
       }
-      if (user.city) setSelectedCity(user.city);
       if (user.addresses && user.addresses.length > 0) {
         const mapped: SavedAddress[] = user.addresses.map((a, idx) => ({
           id: a._id || `user-addr-${idx}`,
           tag: a.label || 'المنزل',
           recipientName: user.name,
           phone: a.phone || user.phone || '',
-          governorateId: 'central',
+          governorateId: a.governorate || 'central',
           governorateName: a.governorate || 'المحافظة الوسطى',
           city: a.city || 'دير البلح',
           details: a.detailedAddress,
+          coordinates: (a as any).coordinates,
           isDefault: a.isDefault,
         }));
         setSavedAddresses(mapped);
@@ -166,13 +173,26 @@ export default function CheckoutPage() {
   const [countdown, setCountdown] = useState<number>(3);
   const [timerId, setTimerId] = useState<NodeJS.Timeout | null>(null);
 
-  const baseTotal = subtotal + deliveryFee;
+  // Active address & dynamic distance delivery fee
+  const activeSelectedAddress = savedAddresses.find((a) => a.id === selectedAddressId) || savedAddresses[0];
+
+  // Central hub coordinates (Deir al-Balah hub: 31.418, 34.351)
+  const HUB_CENTER = { lat: 31.418, lng: 34.351 };
+  const targetCoord = activeSelectedAddress?.coordinates || HUB_CENTER;
+  const distanceKm = calculateHaversineDistance(
+    HUB_CENTER.lat,
+    HUB_CENTER.lng,
+    targetCoord.lat,
+    targetCoord.lng
+  );
+
+  // Dynamic fee: 2 ₪ per km, min 7 ₪, max 80 ₪ (matches delivery.config.js)
+  const dynamicDeliveryFee = items.length > 0 ? Math.max(7, Math.min(80, Math.round(distanceKm * 2))) : 0;
+
+  const baseTotal = subtotal + dynamicDeliveryFee;
   const gatewayFee = paymentMethod === 'jawwal' ? Math.round(baseTotal * 0.03) : 0;
   const grandTotal = baseTotal + gatewayFee;
   const isWalletSufficient = walletBalance >= grandTotal;
-
-  const currentGov = PALESTINE_GAZA_GOVERNORATES.find((g) => g.id === selectedGovId) || PALESTINE_GAZA_GOVERNORATES[0];
-  const activeSelectedAddress = savedAddresses.find((a) => a.id === selectedAddressId) || savedAddresses[0];
 
   useEffect(() => {
     return () => {
@@ -182,30 +202,29 @@ export default function CheckoutPage() {
 
   const handleSaveNewAddress = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!newRecipientName.trim() || !newPhone.trim() || !newAddressDetails.trim()) {
+    if (!pickerData || !pickerData.recipientName.trim() || !pickerData.phone.trim() || !pickerData.detailedAddress.trim()) {
       alert('يرجى ملء جميع الحقول الإلزامية للعنوان (الاسم، الهاتف، والعنوان بالتفصيل)');
       return;
     }
 
     const newAddr: SavedAddress = {
       id: `addr-${Date.now()}`,
-      tag: newTag || 'عنوان إضافي',
-      recipientName: newRecipientName.trim(),
-      phone: newPhone.trim(),
-      governorateId: selectedGovId,
-      governorateName: currentGov.name,
-      city: selectedCity,
-      details: newAddressDetails.trim(),
+      tag: pickerData.tag || 'المنزل',
+      recipientName: pickerData.recipientName.trim(),
+      phone: pickerData.phone.trim(),
+      governorateId: pickerData.governorateId,
+      governorateName: pickerData.governorateName,
+      city: pickerData.cityName,
+      details: pickerData.detailedAddress.trim(),
+      coordinates: pickerData.coordinates,
+      isGpsVerified: pickerData.isGpsVerified,
       isDefault: false,
     };
 
-    if (saveToSavedList) {
-      setSavedAddresses((prev) => [newAddr, ...prev]);
-    }
+    setSavedAddresses((prev) => [newAddr, ...prev]);
     setSelectedAddressId(newAddr.id);
     setAddressDrawerOpen(false);
     setDrawerMode('list');
-    setNewAddressDetails('');
   };
 
   const handleStartOrder = () => {
@@ -219,6 +238,7 @@ export default function CheckoutPage() {
       governorate: activeSelectedAddress.governorateName,
       town: activeSelectedAddress.city,
       detailedAddress: activeSelectedAddress.details,
+      coordinates: activeSelectedAddress.coordinates,
     };
 
     const orderData = {
@@ -228,7 +248,7 @@ export default function CheckoutPage() {
       paymentMethod,
       items,
       subtotal,
-      deliveryFee,
+      deliveryFee: dynamicDeliveryFee,
       gatewayFee,
       grandTotal,
     };
@@ -399,8 +419,22 @@ export default function CheckoutPage() {
                 {activeSelectedAddress.recipientName} · <span dir="ltr">{activeSelectedAddress.phone}</span>
               </div>
 
-              <div className="text-xs text-brand-muted leading-relaxed">
-                {activeSelectedAddress.governorateName} · {activeSelectedAddress.city} — {activeSelectedAddress.details}
+              <div className="flex items-center justify-between flex-wrap gap-2 text-xs text-brand-muted leading-relaxed">
+                <span>
+                  {activeSelectedAddress.governorateName} · {activeSelectedAddress.city} — {activeSelectedAddress.details}
+                </span>
+                {activeSelectedAddress.coordinates && (
+                  <a
+                    href={getGoogleMapsUrl(activeSelectedAddress.coordinates.lat, activeSelectedAddress.coordinates.lng)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] font-extrabold text-brand-primary hover:underline bg-brand-surface px-2 py-0.5 rounded border border-brand-border"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span>📍</span>
+                    <span>الموقع على خرائط جوجل</span>
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -410,38 +444,37 @@ export default function CheckoutPage() {
             <div className="flex items-center justify-between pb-3 border-b border-brand-border">
               <h2 className="flex items-center gap-2 text-sm sm:text-base font-extrabold text-brand-dark m-0">
                 <span className="w-5 h-5 rounded-full bg-brand-primary text-white text-xs font-bold flex items-center justify-center">2</span>
-                <span>طريقة السداد المعتمدة</span>
+                <span>طريقة السداد المعتمدة (دفع مسبق)</span>
               </h2>
               <span className="text-xs font-bold text-brand-muted">
-                {paymentMethod === 'cod' && 'الدفع عند الاستلام'}
-                {paymentMethod === 'wallet' && 'محفظة سَدِيم'}
                 {paymentMethod === 'jawwal' && 'جوال باي'}
+                {paymentMethod === 'wallet' && 'محفظة سَدِيم'}
               </span>
             </div>
 
-            {/* Payment Options Grid */}
+            {/* Payment Options Grid (Prepaid Only) */}
             <div className="space-y-2.5">
-              {/* Option 1: COD */}
+              {/* Option 1: Jawwal Pay */}
               <div
                 className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
-                  paymentMethod === 'cod'
+                  paymentMethod === 'jawwal'
                     ? 'bg-brand-primary-soft/40 border-brand-primary shadow-xs'
                     : 'bg-white border-brand-border hover:border-brand-primary/30'
                 }`}
-                onClick={() => setPaymentMethod('cod')}
+                onClick={() => setPaymentMethod('jawwal')}
               >
                 <div className={`w-4 h-4 rounded-full border flex items-center justify-center mt-0.5 flex-shrink-0 ${
-                  paymentMethod === 'cod' ? 'border-brand-primary bg-brand-primary' : 'border-brand-border bg-white'
+                  paymentMethod === 'jawwal' ? 'border-brand-primary bg-brand-primary' : 'border-brand-border bg-white'
                 }`}>
-                  {paymentMethod === 'cod' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  {paymentMethod === 'jawwal' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs sm:text-sm font-extrabold text-brand-dark">الدفع عند الاستلام (كاش)</span>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-trust-soft text-brand-trust border border-brand-trust/20">معاينة وفحص أولاً</span>
+                    <span className="text-xs sm:text-sm font-extrabold text-brand-dark">جوال باي (Jawwal Pay)</span>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-surface text-brand-dark border border-brand-border">محفظة إلكترونية</span>
                   </div>
                   <div className="text-[11px] text-brand-muted mt-0.5 leading-relaxed">
-                    افحص وعاين كافة محتويات طردك عند باب بيتك قبل دفع أي شيكل
+                    سداد مسبق فوري وآمن عبر تطبيق جوال باي بهاتفك (+3% رسوم بوابة)
                   </div>
                 </div>
               </div>
@@ -466,49 +499,11 @@ export default function CheckoutPage() {
                     <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-primary-soft text-brand-primary border border-brand-primary/20">رصيدك: {walletBalance} ₪</span>
                   </div>
                   <div className="text-[11px] text-brand-muted mt-0.5 leading-relaxed">
-                    دفع فوري بنقرة واحدة بدون أي عمولات إضافية
-                  </div>
-                </div>
-              </div>
-
-              {/* Option 3: Jawwal Pay */}
-              <div
-                className={`p-3 rounded-xl border transition-all cursor-pointer flex items-start gap-3 ${
-                  paymentMethod === 'jawwal'
-                    ? 'bg-brand-primary-soft/40 border-brand-primary shadow-xs'
-                    : 'bg-white border-brand-border hover:border-brand-primary/30'
-                }`}
-                onClick={() => setPaymentMethod('jawwal')}
-              >
-                <div className={`w-4 h-4 rounded-full border flex items-center justify-center mt-0.5 flex-shrink-0 ${
-                  paymentMethod === 'jawwal' ? 'border-brand-primary bg-brand-primary' : 'border-brand-border bg-white'
-                }`}>
-                  {paymentMethod === 'jawwal' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs sm:text-sm font-extrabold text-brand-dark">جوال باي (Jawwal Pay)</span>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-surface text-brand-dark border border-brand-border">محفظة إلكترونية</span>
-                  </div>
-                  <div className="text-[11px] text-brand-muted mt-0.5 leading-relaxed">
-                    سداد فوري وآمن عبر تطبيق جوال باي بهاتفك (+3% رسوم بوابة)
+                    سداد مسبق بنقرة واحدة بدون أي عمولات إضافية
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Sub-Panel 1: COD */}
-            {paymentMethod === 'cod' && (
-              <div className="p-3 rounded-xl bg-brand-trust-soft border border-brand-trust/20 flex items-start gap-2.5">
-                <div className="w-5 h-5 rounded-full bg-brand-trust text-white flex items-center justify-center flex-shrink-0 mt-0.5 text-xs font-bold">
-                  ✓
-                </div>
-                <div className="text-xs text-brand-dark leading-relaxed">
-                  <strong className="text-brand-trust block mb-0.5">ميثاق المعاينة والفحص عند الباب:</strong>
-                  يحق لك فحص وتجربة جميع محتويات طردك عند باب بيتك قبل دفع أي شيكل للمندوب. أجر التوصيل 8 ₪ ثابت لكافة المحافظة الوسطى.
-                </div>
-              </div>
-            )}
 
             {/* Sub-Panel 2: Wallet */}
             {paymentMethod === 'wallet' && (
@@ -622,7 +617,7 @@ export default function CheckoutPage() {
 
               <div className="flex items-center justify-between">
                 <span className="text-brand-muted">أجر طرد سَدِيم الموحد:</span>
-                <span className="font-bold text-brand-dark">{deliveryFee} ₪</span>
+                <span className="font-bold text-brand-dark">{dynamicDeliveryFee} ₪</span>
               </div>
 
               {gatewayFee > 0 && (
@@ -780,141 +775,19 @@ export default function CheckoutPage() {
             </button>
           </div>
         ) : (
-          /* VIEW 2: 3-TIER ADDRESS FORM */
-          <form onSubmit={handleSaveNewAddress} className="flex flex-col gap-3 text-right font-almarai">
-            {/* Recipient Details Row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-brand-dark">
-                  الاسم الكامل للمستلم <span className="text-brand-primary">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-brand-border bg-white text-brand-dark focus:outline-none focus:border-brand-primary"
-                  value={newRecipientName}
-                  onChange={(e) => setNewRecipientName(e.target.value)}
-                  placeholder="الاسم الثلاثي للمستلم"
-                  required
-                />
-              </div>
+          /* VIEW 2: HYBRID GPS & DROPDOWN ADDRESS PICKER */
+          <form onSubmit={handleSaveNewAddress} className="flex flex-col gap-4 text-right font-almarai">
+            <HybridAddressPicker
+              initialData={{
+                recipientName: user?.name || '',
+                phone: user?.phone || '',
+                governorateId: 'central',
+                cityId: 'deir_albalah',
+              }}
+              onAddressChange={(data) => setPickerData(data)}
+            />
 
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-bold text-brand-dark">
-                  رقم الهاتف للتواصل <span className="text-brand-primary">*</span>
-                </label>
-                <input
-                  type="tel"
-                  dir="ltr"
-                  className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-brand-border bg-white text-brand-dark focus:outline-none focus:border-brand-primary text-right"
-                  value={newPhone}
-                  onChange={(e) => setNewPhone(e.target.value)}
-                  placeholder="059xxxxxxx"
-                  required
-                />
-              </div>
-            </div>
-
-            {/* 3-TIER HIERARCHICAL ADDRESS SELECTOR */}
-            <div className="p-3 rounded-xl bg-brand-surface border border-brand-border-subtle flex flex-col gap-2.5">
-              <div className="text-xs font-extrabold text-brand-dark">
-                تحديد العنوان الجغرافي (3 مستويات):
-              </div>
-
-              {/* Tier 1: Governorate Select */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-brand-muted">
-                  1. المحافظة <span className="text-brand-primary">*</span>
-                </label>
-                <select
-                  className="w-full h-10 px-3 text-xs sm:text-sm rounded-lg border border-brand-border bg-white text-brand-dark focus:outline-none focus:border-brand-primary"
-                  value={selectedGovId}
-                  onChange={(e) => {
-                    const govId = e.target.value;
-                    setSelectedGovId(govId);
-                    const gov = PALESTINE_GAZA_GOVERNORATES.find((g) => g.id === govId);
-                    if (gov && gov.cities.length > 0) {
-                      setSelectedCity(gov.cities[0]);
-                    }
-                  }}
-                >
-                  {PALESTINE_GAZA_GOVERNORATES.map((gov) => (
-                    <option key={gov.id} value={gov.id} disabled={!gov.active}>
-                      {gov.name} {!gov.active ? `(${gov.badge})` : `(${gov.badge})`}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Tier 2: City / Camp Select */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-brand-muted">
-                  2. المدينة أو المخيم <span className="text-brand-primary">*</span>
-                </label>
-                <select
-                  className="w-full h-10 px-3 text-xs sm:text-sm rounded-lg border border-brand-border bg-white text-brand-dark focus:outline-none focus:border-brand-primary"
-                  value={selectedCity}
-                  onChange={(e) => setSelectedCity(e.target.value)}
-                >
-                  {currentGov.cities.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Tier 3: Detailed Address (Text Input) */}
-              <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-bold text-brand-muted">
-                  3. العنوان بالتفصيل وأقرب معلم بارز <span className="text-brand-primary">*</span>
-                </label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 text-xs sm:text-sm rounded-lg border border-brand-border bg-white text-brand-dark focus:outline-none focus:border-brand-primary"
-                  value={newAddressDetails}
-                  onChange={(e) => setNewAddressDetails(e.target.value)}
-                  placeholder="الشارع، الحي، بجوار مدرسة / مسجد / صيدلية معروفة..."
-                  required
-                />
-                <span className="text-[10px] text-brand-muted">
-                  يصل المندوب مباشرة إلى باب بيتك مع حق المعاينة والفحص قبل دفع أي شيكل.
-                </span>
-              </div>
-            </div>
-
-            {/* Address Tag Choice & Checkbox */}
-            <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[11px] font-bold text-brand-muted">التصنيف:</span>
-                {['المنزل', 'العمل', 'أخرى'].map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setNewTag(t)}
-                    className={`px-2 py-0.5 rounded text-xs font-bold transition-colors cursor-pointer border ${
-                      newTag === t
-                        ? 'bg-brand-primary-soft border-brand-primary text-brand-primary'
-                        : 'bg-white border-brand-border text-brand-dark'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-
-              <label className="flex items-center gap-1.5 text-xs text-brand-dark cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={saveToSavedList}
-                  onChange={(e) => setSaveToSavedList(e.target.checked)}
-                  className="accent-brand-primary"
-                />
-                <span>حفظ في عناويني الدائمة</span>
-              </label>
-            </div>
-
-            {/* Drawer Actions */}
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-2 pt-2 border-t border-brand-border">
               <button
                 type="submit"
                 className="flex-1 py-2.5 rounded-lg bg-brand-primary text-white text-xs sm:text-sm font-extrabold hover:bg-brand-primary-hover transition-colors cursor-pointer border-0 shadow-sm"
@@ -947,7 +820,7 @@ export default function CheckoutPage() {
           </div>
           <div className="flex justify-between text-brand-dark">
             <span>أجر طرد سَدِيم الموحد:</span>
-            <span className="font-bold">{deliveryFee} ₪</span>
+            <span className="font-bold">{dynamicDeliveryFee} ₪</span>
           </div>
           {gatewayFee > 0 && (
             <div className="flex justify-between text-brand-primary font-bold">

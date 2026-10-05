@@ -37,11 +37,28 @@ export const authService = {
   register: (data: RegisterFormValues | { name: string; email: string; password: string }) =>
     postRequest<UserResponse>('/api/auth/register', data),
 
-  registerMerchant: (data: MerchantJoinFormValues) =>
-    postRequest<{ merchantId: string; status: string; storeName: string }>(
+  registerMerchant: (data: MerchantJoinFormValues) => {
+    const payload = {
+      user: {
+        name: data.name,
+        email: data.email,
+        phoneNumber: data.phone,
+        password: data.password,
+      },
+      store: {
+        name: data.storeName,
+        categoryId: data.category,
+        governorate: data.governorate,
+        city: data.city,
+        address: data.storeAddress,
+        phoneNumber: data.phone,
+      },
+    };
+    return postRequest<{ merchantId: string; status: string; storeName: string }>(
       '/api/auth/register/seller',
-      data
-    ),
+      payload
+    );
+  },
 
   logout: () => postRequest<void>('/api/auth/logout'),
 

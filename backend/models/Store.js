@@ -36,6 +36,18 @@ const storeSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        governorate: {
+            type: String,
+            default: 'central',
+        },
+        city: {
+            type: String,
+            default: 'deir_albalah',
+        },
+        location: {
+            lat: { type: Number, default: 31.418 },
+            lng: { type: Number, default: 34.351 },
+        },
         status: {
             type: String,
             enum: Object.values(STATUS),
@@ -45,14 +57,10 @@ const storeSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
-        createdAt: {
-            type: Date,
-            default: Date.now,
-        },
     },
     {
         versionKey: false,
-        timestamps: false,
+        timestamps: true,
     }
 );
 

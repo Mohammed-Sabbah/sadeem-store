@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Store = require('../models/Store');
 const Category = require('../models/Category');
+const Wallet = require('../models/Wallet');
 const Otp = require('../models/otp.model');
 const RefreshToken = require('../models/refreshToken.model');
 const { ROLE, STATUS } = require('../constants/enums');
@@ -57,13 +58,16 @@ async function register(req, res, next) {
         const hashedPassword = await bcrypt.hash(password, 12);
         const user = await User.create({
             name: String(name).trim(),
-            phoneNumber: String(phoneNumber).trim(),
+            phoneNumber: phoneNumber ? String(phoneNumber).trim() : '',
             email: normalizedEmail,
             password: hashedPassword,
             role: ROLE.USER,
             status: STATUS.ACTIVE,
             isDeleted: false,
         });
+
+        // Automatically create wallet for user
+        await Wallet.create({ userId: user._id, balance: 0, currency: 'ILS' });
 
         await createSession(user, res);
 
@@ -88,20 +92,34 @@ async function registerSeller(req, res, next) {
             return error(res, 409, 'Email already exists');
         }
 
-        const category = await Category.findById(storeInput.categoryId);
+        // Resolve Category by ObjectId or slug/title
+        let category = null;
+        if (storeInput.categoryId) {
+            if (mongoose.Types.ObjectId.isValid(storeInput.categoryId)) {
+                category = await Category.findById(storeInput.categoryId);
+            }
+            if (!category) {
+                category = await Category.findOne({
+                    $or: [
+                        { slug: String(storeInput.categoryId).toLowerCase().trim() },
+                        { title: String(storeInput.categoryId).trim() },
+                    ],
+                });
+            }
+        }
 
         if (!category) {
             return error(res, 400, 'Invalid store category');
         }
 
-        const session = await mongoose.startSession();
+        const hashedPassword = await bcrypt.hash(userInput.password, 12);
         let createdUser = null;
         let createdStore = null;
 
+        const session = await mongoose.startSession();
+
         try {
             await session.withTransaction(async () => {
-                const hashedPassword = await bcrypt.hash(userInput.password, 12);
-
                 const [newUser] = await User.create(
                     [
                         {
@@ -110,7 +128,7 @@ async function registerSeller(req, res, next) {
                             email: normalizedEmail,
                             password: hashedPassword,
                             role: ROLE.SELLER,
-                            status: STATUS.ACTIVE,
+                            status: STATUS.PENDING_APPROVAL,
                             isDeleted: false,
                         },
                     ],
@@ -127,10 +145,12 @@ async function registerSeller(req, res, next) {
                     [
                         {
                             ownerId: newUser._id,
-                            categoryId: storeInput.categoryId,
+                            categoryId: category._id,
                             name: String(storeInput.name).trim(),
                             logo: storeInput.logo || '',
                             description: storeInput.description || '',
+                            governorate: storeInput.governorate || 'central',
+                            city: storeInput.city || 'deir_albalah',
                             address: storeInput.address || '',
                             phoneNumber: storeInput.phoneNumber || userInput.phoneNumber,
                             balance: 0,
@@ -141,23 +161,63 @@ async function registerSeller(req, res, next) {
                     { session }
                 );
 
+                await Wallet.create([{ userId: newUser._id, balance: 0, currency: 'ILS' }], { session });
+
                 createdUser = newUser;
                 createdStore = newStore;
             });
-        } catch (error) {
-            if (error && error.statusCode) {
-                return error(res, error.statusCode, error.message);
-            }
+        } catch (txError) {
+            // Check if error is because standalone local MongoDB doesn't support replica set transactions
+            const isNoReplicaSet = txError && txError.message && (
+                txError.message.includes('replica set') || 
+                txError.message.includes('Transaction numbers are only allowed')
+            );
 
-            return next(error);
+            if (isNoReplicaSet) {
+                // Standalone local MongoDB safe fallback
+                createdUser = await User.create({
+                    name: String(userInput.name).trim(),
+                    phoneNumber: String(userInput.phoneNumber).trim(),
+                    email: normalizedEmail,
+                    password: hashedPassword,
+                    role: ROLE.SELLER,
+                    status: STATUS.PENDING_APPROVAL,
+                    isDeleted: false,
+                });
+
+                try {
+                    createdStore = await Store.create({
+                        ownerId: createdUser._id,
+                        categoryId: category._id,
+                        name: String(storeInput.name).trim(),
+                        logo: storeInput.logo || '',
+                        description: storeInput.description || '',
+                        governorate: storeInput.governorate || 'central',
+                        city: storeInput.city || 'deir_albalah',
+                        address: storeInput.address || '',
+                        phoneNumber: storeInput.phoneNumber || userInput.phoneNumber,
+                        balance: 0,
+                        status: STATUS.PENDING_APPROVAL,
+                        isDeleted: false,
+                    });
+
+                    await Wallet.create({ userId: createdUser._id, balance: 0, currency: 'ILS' });
+                } catch (storeErr) {
+                    await User.findByIdAndDelete(createdUser._id);
+                    throw storeErr;
+                }
+            } else {
+                if (txError && txError.statusCode) {
+                    return error(res, txError.statusCode, txError.message);
+                }
+                return next(txError);
+            }
         } finally {
             await session.endSession();
         }
 
-        await createSession(createdUser, res);
-
         return success(res, 201, {
-            message: 'Seller registered successfully',
+            message: 'Seller registered successfully and is pending admin approval',
             user: sanitizeUser(createdUser),
             store: createdStore.toObject ? createdStore.toObject() : createdStore,
         });
@@ -180,8 +240,19 @@ async function login(req, res, next) {
             return error(res, 401, 'User account has been deleted');
         }
 
+        if (user.status === STATUS.PENDING_APPROVAL) {
+            return error(res, 403, 'Your account is pending admin approval');
+        }
+
         if (user.status !== STATUS.ACTIVE) {
-            return error(res, 401, 'User is inactive');
+            return error(res, 401, 'User account is inactive');
+        }
+
+        if (user.role === ROLE.SELLER) {
+            const store = await Store.findOne({ ownerId: user._id });
+            if (store && store.status === STATUS.PENDING_APPROVAL) {
+                return error(res, 403, 'Your merchant store is pending admin approval');
+            }
         }
 
         const isPasswordValid = await bcrypt.compare(password, user.password);

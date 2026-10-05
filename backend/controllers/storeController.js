@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Store = require('../models/Store');
+const User = require('../models/User');
 const { ROLE, STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 
@@ -29,6 +30,11 @@ async function approveStore(req, res, next) {
             }
 
             return error(res, 409, 'Store is not pending approval');
+        }
+
+        // Activate owner user account
+        if (store.ownerId) {
+            await User.findByIdAndUpdate(store.ownerId, { $set: { status: STATUS.ACTIVE } });
         }
 
         return success(res, 200, {

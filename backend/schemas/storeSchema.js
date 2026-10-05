@@ -11,12 +11,12 @@ const storeSchema = [
     body('store.categoryId')
         .trim()
         .notEmpty()
-        .withMessage('Store category is required')
-        .isMongoId()
-        .withMessage('Store categoryId must be a valid Mongo id'),
+        .withMessage('Store category is required'),
 
     body('store.logo').optional().isString().withMessage('Store logo must be a string'),
     body('store.description').optional().isString().withMessage('Store description must be a string'),
+    body('store.governorate').optional().isString().withMessage('Store governorate must be a string'),
+    body('store.city').optional().isString().withMessage('Store city must be a string'),
     body('store.address').optional().isString().withMessage('Store address must be a string'),
     body('store.phoneNumber')
         .optional()

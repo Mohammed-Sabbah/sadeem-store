@@ -4,6 +4,28 @@ const categorySchema = new mongoose.Schema(
     {
         title: {
             type: String,
+            required: true,
+            trim: true,
+        },
+        slug: {
+            type: String,
+            required: true,
+            unique: true,
+            lowercase: true,
+            trim: true,
+            index: true,
+        },
+        icon: {
+            type: String,
+            default: '',
+        },
+        order: {
+            type: Number,
+            default: 0,
+        },
+        isActive: {
+            type: Boolean,
+            default: true,
         },
         topCategoryId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -13,7 +35,7 @@ const categorySchema = new mongoose.Schema(
     },
     {
         versionKey: false,
-        timestamps: false,
+        timestamps: true,
     }
 );
 

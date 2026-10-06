@@ -94,11 +94,13 @@ async function runVerification() {
             ownerId: merchantUser._id,
             categoryId: category._id,
             name: 'متجر سديم التجريبي',
-            governorate: 'central',
-            city: 'deir_albalah',
-            address: 'دير البلح - شارع النخيل بجوار البلدية',
+            address: {
+                governorate: 'central',
+                city: 'deir_albalah',
+                detailedAddress: 'دير البلح - شارع النخيل بجوار البلدية',
+                coordinates: { lat: 31.418, lng: 34.351 },
+            },
             phoneNumber: '0599123456',
-            location: { lat: 31.418, lng: 34.351 },
             status: STATUS.PENDING_APPROVAL,
         });
 

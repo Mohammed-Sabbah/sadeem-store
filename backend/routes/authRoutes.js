@@ -9,7 +9,6 @@ const {
     verifyOtp,
     resetPassword,
 } = require('../controllers/authController');
-const { authenticate } = require('../middleware/auth');
 const {
     validateRegisterUser,
     validateSellerRegistration,
@@ -18,8 +17,8 @@ const {
     validateVerifyOtp,
     validateResetPassword,
     validateRefreshToken,
-} = require('../middleware/validateUser');
-const { validateSellerStore } = require('../middleware/validateStore');
+} = require('../schemas/userSchema');
+const { validateSellerStore } = require('../schemas/storeSchema');
 
 router.post('/register', validateRegisterUser, register);
 router.post('/register/seller', [...validateSellerRegistration, ...validateSellerStore], registerSeller);

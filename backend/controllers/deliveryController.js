@@ -1,6 +1,6 @@
 const { calculateDeliveryFee } = require('../utils/deliveryCalculator');
 const { GAZA_REGIONS } = require('../constants/gaza-regions');
-const { success, error } = require('../utils/responses');
+const { success } = require('../utils/responses');
 
 async function getRegions(req, res, next) {
     try {
@@ -15,10 +15,6 @@ async function getRegions(req, res, next) {
 async function calculateFee(req, res, next) {
     try {
         const { stores, address } = req.body;
-
-        if (!stores || !Array.isArray(stores)) {
-            return error(res, 400, 'Stores list is required');
-        }
 
         const calculation = calculateDeliveryFee(stores, address);
 

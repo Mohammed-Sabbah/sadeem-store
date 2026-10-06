@@ -1,4 +1,3 @@
-const mongoose = require('mongoose');
 const Store = require('../models/Store');
 const User = require('../models/User');
 const { ROLE, STATUS } = require('../constants/enums');
@@ -7,10 +6,6 @@ const { success, error } = require('../utils/responses');
 async function approveStore(req, res, next) {
     try {
         const { storeId } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(storeId)) {
-            return error(res, 400, 'Invalid store ID');
-        }
 
         const store = await Store.findOneAndUpdate(
             {

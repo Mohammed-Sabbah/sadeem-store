@@ -1,8 +1,3 @@
-/**
- * سَدِيم (Sadeem) — Centralized Delivery & Pricing Configuration
- * وحدة إعدادات تسعير ورسوم التوصيل المركزية لمنصة سَدِيم
- */
-
 module.exports = {
     // سعر الكيلومتر الواحد بالشيكل
     RATE_PER_KM: 2,

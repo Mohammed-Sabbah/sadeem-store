@@ -1,4 +1,4 @@
-const { RATE_PER_KM, MIN_FEE, MAX_FEE, ADDITIONAL_STORE_FEE, CURRENCY } = require('../config/delivery.config');
+const { RATE_PER_KM, MIN_FEE, MAX_FEE, ADDITIONAL_STORE_FEE, CURRENCY } = require('../constants/delivery');
 const { GAZA_REGIONS } = require('../constants/gaza-regions');
 
 /**
@@ -14,9 +14,9 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
     const a =
         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
         Math.cos((lat1 * Math.PI) / 180) *
-            Math.cos((lat2 * Math.PI) / 180) *
-            Math.sin(dLon / 2) *
-            Math.sin(dLon / 2);
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const d = R * c;
 
@@ -78,7 +78,8 @@ function calculateDeliveryFee(stores, customerAddress) {
     // تجميع المتاجر حسب المحافظة
     const storesByGovernorate = {};
     stores.forEach((store) => {
-        const gov = store.governorate || 'central';
+        const address = store.address && typeof store.address === 'object' ? store.address : store;
+        const gov = address.governorate || 'central';
         if (!storesByGovernorate[gov]) {
             storesByGovernorate[gov] = [];
         }
@@ -96,7 +97,10 @@ function calculateDeliveryFee(stores, customerAddress) {
         let farthestStore = null;
 
         govStores.forEach((store) => {
-            const storeCoord = resolveCoordinates(store.location || store);
+            const storeLocation = store.address && typeof store.address === 'object'
+                ? store.address
+                : store.location || store;
+            const storeCoord = resolveCoordinates(storeLocation);
             const dist = calculateHaversineDistance(
                 storeCoord.lat,
                 storeCoord.lng,

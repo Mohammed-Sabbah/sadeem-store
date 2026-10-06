@@ -1,12 +1,15 @@
 const { body, cookie } = require('express-validator');
+const validateRequest = require('./validateRequest');
 
-const registerUserSchema = [
+const validateRegisterUser = [
     body('name')
         .trim()
         .notEmpty()
         .withMessage('Name is required')
         .isLength({ min: 2, max: 100 })
         .withMessage('Name must be between 2 and 100 characters'),
+
+    body('phoneNumber').default(''),
 
     body('phoneNumber')
         .optional({ checkFalsy: true })
@@ -31,7 +34,7 @@ const registerUserSchema = [
         .withMessage('Password must contain at least one letter and one number'),
 ];
 
-const sellerRegistrationUserSchema = [
+const validateSellerRegistration = [
     body('user.name')
         .trim()
         .notEmpty()
@@ -63,7 +66,7 @@ const sellerRegistrationUserSchema = [
         .withMessage('Password must contain at least one letter and one number'),
 ];
 
-const loginSchema = [
+const validateLoginUser = [
     body('email')
         .trim()
         .notEmpty()
@@ -77,7 +80,7 @@ const loginSchema = [
         .withMessage('Password is required'),
 ];
 
-const forgotPasswordSchema = [
+const validateForgotPassword = [
     body('email')
         .trim()
         .notEmpty()
@@ -87,7 +90,7 @@ const forgotPasswordSchema = [
         .normalizeEmail(),
 ];
 
-const verifyOtpSchema = [
+const validateVerifyOtp = [
     cookie('passwordResetToken')
         .exists()
         .withMessage('Password reset session is required')
@@ -102,7 +105,7 @@ const verifyOtpSchema = [
         .withMessage('OTP must be 6 digits'),
 ];
 
-const resetPasswordSchema = [
+const validateResetPassword = [
     cookie('passwordResetToken')
         .exists()
         .withMessage('Reset token is required')
@@ -118,7 +121,7 @@ const resetPasswordSchema = [
         .withMessage('Password must contain at least one letter and one number'),
 ];
 
-const refreshTokenSchema = [
+const validateRefreshToken = [
     cookie('refreshToken')
         .exists()
         .withMessage('Refresh token is required')
@@ -126,12 +129,20 @@ const refreshTokenSchema = [
         .withMessage('Refresh token is required'),
 ];
 
+validateRegisterUser.push(validateRequest);
+validateSellerRegistration.push(validateRequest);
+validateLoginUser.push(validateRequest);
+validateForgotPassword.push(validateRequest);
+validateVerifyOtp.push(validateRequest);
+validateResetPassword.push(validateRequest);
+validateRefreshToken.push(validateRequest);
+
 module.exports = {
-    registerUserSchema,
-    sellerRegistrationUserSchema,
-    loginSchema,
-    forgotPasswordSchema,
-    verifyOtpSchema,
-    resetPasswordSchema,
-    refreshTokenSchema,
+    validateRegisterUser,
+    validateSellerRegistration,
+    validateLoginUser,
+    validateForgotPassword,
+    validateVerifyOtp,
+    validateResetPassword,
+    validateRefreshToken,
 };

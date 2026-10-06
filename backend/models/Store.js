@@ -1,5 +1,45 @@
 const mongoose = require('mongoose');
 const { STATUS } = require('../constants/enums');
+const { GAZA_REGIONS } = require('../constants/gaza-regions');
+
+const validCities = Object.values(GAZA_REGIONS).flatMap((region) => region.cities.map((city) => city.id));
+const addressSchema = new mongoose.Schema(
+    {
+        governorate: {
+            type: String,
+            enum: Object.keys(GAZA_REGIONS),
+            default: 'central',
+        },
+        city: {
+            type: String,
+            enum: validCities,
+            default: 'deir_albalah',
+            validate: {
+                validator(city) {
+                    const address = this.address || this.parent()?.address;
+                    const region = address && GAZA_REGIONS[address.governorate];
+                    return Boolean(region && region.cities.some((regionCity) => regionCity.id === city));
+                },
+                message: 'City must belong to the selected governorate',
+            },
+        },
+        detailedAddress: {
+            type: String,
+            default: '',
+            reqyuired: true,
+        },
+        coordinates: {
+            lat: { type: Number, min: -90, max: 90 },
+            lng: { type: Number, min: -180, max: 180 },
+            required: true,
+        },
+        isDefault: {
+            type: Boolean,
+            default: false,
+        },
+    },
+    { _id: false }
+);
 
 const storeSchema = new mongoose.Schema(
     {
@@ -24,29 +64,10 @@ const storeSchema = new mongoose.Schema(
             type: String,
             default: '',
         },
-        address: {
-            type: String,
-            default: '',
-        },
-        phoneNumber: {
-            type: String,
-            default: '',
-        },
+        address: { type: addressSchema, default: () => ({}) },
         balance: {
             type: Number,
             default: 0,
-        },
-        governorate: {
-            type: String,
-            default: 'central',
-        },
-        city: {
-            type: String,
-            default: 'deir_albalah',
-        },
-        location: {
-            lat: { type: Number, default: 31.418 },
-            lng: { type: Number, default: 34.351 },
         },
         status: {
             type: String,

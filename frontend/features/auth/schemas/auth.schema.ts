@@ -80,10 +80,17 @@ export const merchantJoinSchema = z
       .min(1, 'يرجى تحديد التصنيف الرئيسي للمنتجات'),
     governorate: z
       .string()
-      .min(1, 'يرجى تحديد المحافظة'),
+      .superRefine((value, context) => {
+        if (value !== 'central') {
+          context.addIssue({ code: 'custom', message: 'يرجى تحديد محافظة متاحة' });
+        }
+      }),
     city: z
       .string()
-      .min(1, 'يرجى تحديد المدينة أو المخيم في الوسطى'),
+      .refine(
+        (value) => ['deir_albalah', 'nuseirat', 'zawayda', 'maghazi', 'bureij'].includes(value),
+        'يرجى تحديد مدينة صالحة في المحافظة الوسطى'
+      ),
     storeAddress: z
       .string()
       .trim()

@@ -30,8 +30,8 @@ export function useMerchantJoin() {
       confirmPassword: '',
       storeName: '',
       category: 'أزياء وملابس',
-      governorate: 'المحافظة الوسطى',
-      city: 'دير البلح',
+      governorate: 'central',
+      city: 'deir_albalah',
       storeAddress: '',
     },
   });

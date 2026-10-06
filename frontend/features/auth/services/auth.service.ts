@@ -48,9 +48,11 @@ export const authService = {
       store: {
         name: data.storeName,
         categoryId: data.category,
-        governorate: data.governorate,
-        city: data.city,
-        address: data.storeAddress,
+        address: {
+          governorate: data.governorate,
+          city: data.city,
+          detailedAddress: data.storeAddress,
+        },
         phoneNumber: data.phone,
       },
     };

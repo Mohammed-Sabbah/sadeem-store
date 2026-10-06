@@ -4,12 +4,12 @@ const {
     getCategoryBySlug,
     createCategory,
 } = require('../controllers/categoryController');
-const { validateCategory } = require('../middleware/validateCategory');
+const { validateCategory, validateCategorySlug } = require('../schemas/categorySchema');
 
 const router = express.Router();
 
 router.get('/', getAllCategories);
-router.get('/:slug', getCategoryBySlug);
+router.get('/:slug', validateCategorySlug, getCategoryBySlug);
 router.post('/', validateCategory, createCategory);
 
 module.exports = router;

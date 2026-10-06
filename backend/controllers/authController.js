@@ -34,40 +34,54 @@ async function createSession(user, res) {
     setAuthCookies(res, accessToken, refresh.token);
 }
 
-function normalizeEmail(email) {
-    return String(email || '').trim().toLowerCase();
+async function checkRegistrationConflicts(email, phoneNumber) {
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+        return 'Email already exists';
+    }
+
+    if (phoneNumber && await User.findOne({ phoneNumber })) {
+        return 'Phone number already exists';
+    }
+
+    return null;
 }
 
-function createError(message, statusCode = 400) {
-    const error = new Error(message);
-    error.statusCode = statusCode;
-    return error;
+async function createUserWithWallet(userData, session) {
+    const [user] = await User.create([userData], { session });
+    await Wallet.create([{ userId: user._id, balance: 0, currency: 'ILS' }], { session });
+    return user;
+}
+
+async function withMongoTransaction(callback) {
+    const session = await mongoose.startSession();
+
+    try {
+        return await session.withTransaction(() => callback(session));
+    } finally {
+        await session.endSession();
+    }
 }
 
 async function register(req, res, next) {
     try {
         const { name, phoneNumber, email, password } = req.body;
-        const normalizedEmail = normalizeEmail(email);
 
-        const existingUser = await User.findOne({ email: normalizedEmail });
+        const conflict = await checkRegistrationConflicts(email, phoneNumber);
 
-        if (existingUser) {
-            return error(res, 409, 'Email already exists');
+        if (conflict) {
+            return error(res, 409, conflict);
         }
 
         const hashedPassword = await bcrypt.hash(password, 12);
-        const user = await User.create({
-            name: String(name).trim(),
-            phoneNumber: phoneNumber ? String(phoneNumber).trim() : '',
-            email: normalizedEmail,
+        const user = await withMongoTransaction((session) => createUserWithWallet({
+            name,
+            phoneNumber,
+            email,
             password: hashedPassword,
             role: ROLE.USER,
-            status: STATUS.ACTIVE,
-            isDeleted: false,
-        });
-
-        // Automatically create wallet for user
-        await Wallet.create({ userId: user._id, balance: 0, currency: 'ILS' });
+        }, session));
 
         await createSession(user, res);
 
@@ -82,29 +96,27 @@ async function register(req, res, next) {
 
 async function registerSeller(req, res, next) {
     try {
-        const userInput = req.body && req.body.user ? req.body.user : {};
-        const storeInput = req.body && req.body.store ? req.body.store : {};
-        const normalizedEmail = normalizeEmail(userInput.email);
+        const { user: userInput, store: storeInput } = req.body;
 
-        const existingUser = await User.findOne({ email: normalizedEmail });
+        const conflict = await checkRegistrationConflicts(userInput.email, userInput.phoneNumber);
 
-        if (existingUser) {
-            return error(res, 409, 'Email already exists');
+        if (conflict) {
+            return error(res, 409, conflict);
         }
 
         // Resolve Category by ObjectId or slug/title
         let category = null;
         if (storeInput.categoryId) {
-            if (mongoose.Types.ObjectId.isValid(storeInput.categoryId)) {
+            if (storeInput.categoryIdIsObjectId) {
                 category = await Category.findById(storeInput.categoryId);
             }
             if (!category) {
                 category = await Category.findOne({
                     $or: [
-                        { slug: String(storeInput.categoryId).toLowerCase().trim() },
-                        { title: String(storeInput.categoryId).trim() },
+                        { slug: storeInput.categoryId },
+                        { title: storeInput.categoryId },
                     ],
-                });
+                }).collation({ locale: 'en', strength: 2 });
             }
         }
 
@@ -113,108 +125,36 @@ async function registerSeller(req, res, next) {
         }
 
         const hashedPassword = await bcrypt.hash(userInput.password, 12);
-        let createdUser = null;
-        let createdStore = null;
-
-        const session = await mongoose.startSession();
-
-        try {
-            await session.withTransaction(async () => {
-                const [newUser] = await User.create(
-                    [
-                        {
-                            name: String(userInput.name).trim(),
-                            phoneNumber: String(userInput.phoneNumber).trim(),
-                            email: normalizedEmail,
-                            password: hashedPassword,
-                            role: ROLE.SELLER,
-                            status: STATUS.PENDING_APPROVAL,
-                            isDeleted: false,
-                        },
-                    ],
-                    { session }
-                );
-
-                const existingStore = await Store.findOne({ ownerId: newUser._id }).session(session);
-
-                if (existingStore) {
-                    throw createError('Store already exists', 409);
-                }
-
-                const [newStore] = await Store.create(
-                    [
-                        {
-                            ownerId: newUser._id,
-                            categoryId: category._id,
-                            name: String(storeInput.name).trim(),
-                            logo: storeInput.logo || '',
-                            description: storeInput.description || '',
-                            governorate: storeInput.governorate || 'central',
-                            city: storeInput.city || 'deir_albalah',
-                            address: storeInput.address || '',
-                            phoneNumber: storeInput.phoneNumber || userInput.phoneNumber,
-                            balance: 0,
-                            status: STATUS.PENDING_APPROVAL,
-                            isDeleted: false,
-                        },
-                    ],
-                    { session }
-                );
-
-                await Wallet.create([{ userId: newUser._id, balance: 0, currency: 'ILS' }], { session });
-
-                createdUser = newUser;
-                createdStore = newStore;
-            });
-        } catch (txError) {
-            // Check if error is because standalone local MongoDB doesn't support replica set transactions
-            const isNoReplicaSet = txError && txError.message && (
-                txError.message.includes('replica set') || 
-                txError.message.includes('Transaction numbers are only allowed')
-            );
-
-            if (isNoReplicaSet) {
-                // Standalone local MongoDB safe fallback
-                createdUser = await User.create({
-                    name: String(userInput.name).trim(),
-                    phoneNumber: String(userInput.phoneNumber).trim(),
-                    email: normalizedEmail,
+        const { user: createdUser, store: createdStore } = await withMongoTransaction(async (session) => {
+            const user = await createUserWithWallet(
+                {
+                    name: userInput.name,
+                    phoneNumber: userInput.phoneNumber,
+                    email: userInput.email,
                     password: hashedPassword,
                     role: ROLE.SELLER,
                     status: STATUS.PENDING_APPROVAL,
-                    isDeleted: false,
-                });
+                },
+                session
+            );
 
-                try {
-                    createdStore = await Store.create({
-                        ownerId: createdUser._id,
+            const [store] = await Store.create(
+                [
+                    {
+                        ownerId: user._id,
                         categoryId: category._id,
-                        name: String(storeInput.name).trim(),
-                        logo: storeInput.logo || '',
-                        description: storeInput.description || '',
-                        governorate: storeInput.governorate || 'central',
-                        city: storeInput.city || 'deir_albalah',
-                        address: storeInput.address || '',
-                        phoneNumber: storeInput.phoneNumber || userInput.phoneNumber,
-                        balance: 0,
-                        status: STATUS.PENDING_APPROVAL,
-                        isDeleted: false,
-                    });
+                        name: storeInput.name,
+                        logo: storeInput.logo,
+                        description: storeInput.description,
+                        address: storeInput.address,
+                        phoneNumber: storeInput.phoneNumber,
+                    },
+                ],
+                { session }
+            );
 
-                    await Wallet.create({ userId: createdUser._id, balance: 0, currency: 'ILS' });
-                } catch (storeErr) {
-                    await User.findByIdAndDelete(createdUser._id);
-                    throw storeErr;
-                }
-            } else {
-                if (txError && txError.statusCode) {
-                    return error(res, txError.statusCode, txError.message);
-                }
-                return next(txError);
-            }
-        } finally {
-            await session.endSession();
-        }
+            return { user, store };
+        });
 
         return success(res, 201, {
             message: 'Seller registered successfully and is pending admin approval',
@@ -229,8 +169,7 @@ async function registerSeller(req, res, next) {
 async function login(req, res, next) {
     try {
         const { email, password } = req.body;
-        const normalizedEmail = normalizeEmail(email);
-        const user = await User.findOne({ email: normalizedEmail }).select('+password');
+        const user = await User.findOne({ email }).select('+password');
 
         if (!user) {
             return error(res, 401, 'Invalid credentials');
@@ -275,10 +214,6 @@ async function login(req, res, next) {
 async function refresh(req, res, next) {
     try {
         const refreshToken = req.cookies && req.cookies.refreshToken;
-
-        if (!refreshToken) {
-            return error(res, 401, 'Invalid or expired refresh token');
-        }
 
         let payload;
 
@@ -409,8 +344,8 @@ async function logout(req, res, next) {
 
 async function forgotPassword(req, res, next) {
     try {
-        const normalizedEmail = normalizeEmail(req.body.email);
-        const user = await User.findOne({ email: normalizedEmail });
+        const { email } = req.body;
+        const user = await User.findOne({ email });
         const sessionToken = crypto.randomBytes(32).toString('hex');
 
         if (user && !user.isDeleted && user.status === STATUS.ACTIVE) {
@@ -423,7 +358,7 @@ async function forgotPassword(req, res, next) {
                 { userId: user._id },
                 {
                     $set: {
-                        sentTo: normalizedEmail,
+                        sentTo: email,
                         hashedOtp,
                         sessionTokenHash,
                         resetTokenHash: null,
@@ -435,7 +370,7 @@ async function forgotPassword(req, res, next) {
                 { upsert: true, new: true, setDefaultsOnInsert: true, runValidators: true }
             );
 
-            await sendEmail(normalizedEmail, otp);
+            await sendEmail(email, otp);
         }
 
         res.cookie('passwordResetToken', sessionToken, getCookieOptions(10 * 60));
@@ -449,13 +384,9 @@ async function forgotPassword(req, res, next) {
 
 async function verifyOtp(req, res, next) {
     try {
-        const sessionToken = req.cookies && req.cookies.passwordResetToken;
+        const sessionToken = req.cookies.passwordResetToken;
 
-        if (!sessionToken) {
-            return error(res, 400, 'Invalid or expired OTP');
-        }
-
-        const sessionTokenHash = crypto.createHash('sha256').update(String(sessionToken)).digest('hex');
+        const sessionTokenHash = crypto.createHash('sha256').update(sessionToken).digest('hex');
         const otpRecord = await Otp.findOne({
             sessionTokenHash,
             expiresAt: { $gt: new Date() },
@@ -473,7 +404,7 @@ async function verifyOtp(req, res, next) {
             return error(res, 400, 'Invalid or expired OTP');
         }
 
-        const isOtpValid = await bcrypt.compare(String(req.body.otp), otpRecord.hashedOtp);
+        const isOtpValid = await bcrypt.compare(req.body.otp, otpRecord.hashedOtp);
 
         if (!isOtpValid) {
             await Otp.updateOne(
@@ -520,13 +451,9 @@ async function verifyOtp(req, res, next) {
 async function resetPassword(req, res, next) {
     try {
         const { password } = req.body;
-        const resetToken = req.cookies && req.cookies.passwordResetToken;
+        const resetToken = req.cookies.passwordResetToken;
 
-        if (!resetToken) {
-            return error(res, 400, 'Invalid or expired reset token');
-        }
-
-        const resetTokenHash = crypto.createHash('sha256').update(String(resetToken)).digest('hex');
+        const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
         const otpRecord = await Otp.findOne({
             resetTokenHash,
             expiresAt: { $gt: new Date() },

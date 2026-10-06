@@ -219,7 +219,7 @@ export default function MerchantJoinPage() {
                       {...register('governorate')}
                       className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-brand-surface text-xs sm:text-sm text-brand-dark outline-none font-almarai font-bold"
                     >
-                      <option value="المحافظة الوسطى">المحافظة الوسطى (المرحلة الأولى)</option>
+                      <option value="central">المحافظة الوسطى (المرحلة الأولى)</option>
                     </select>
                   </div>
 
@@ -234,11 +234,11 @@ export default function MerchantJoinPage() {
                         errors.city ? 'border-red-400 focus:border-red-500' : 'border-brand-border focus:border-brand-primary'
                       }`}
                     >
-                      <option value="دير البلح">دير البلح</option>
-                      <option value="مخيم النصيرات">مخيم النصيرات</option>
-                      <option value="الزوايدة">الزوايدة</option>
-                      <option value="مخيم المغازي">مخيم المغازي</option>
-                      <option value="مخيم البريج">مخيم البريج</option>
+                      <option value="deir_albalah">دير البلح</option>
+                      <option value="nuseirat">مخيم النصيرات</option>
+                      <option value="zawayda">الزوايدة</option>
+                      <option value="maghazi">مخيم المغازي</option>
+                      <option value="bureij">مخيم البريج</option>
                     </select>
                     {errors.city && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.city.message}</p>}
                   </div>

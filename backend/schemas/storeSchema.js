@@ -30,6 +30,12 @@ const validateSellerStore = [
         .isString()
         .withMessage('Store description must be a string')
         .trim(),
+    body('store.phoneNumber')
+        .optional()
+        .trim()
+        .matches(/^\+?[0-9\s()-]{8,20}$/)
+        .withMessage('Store phone number is invalid'),
+
     body('store.address')
         .isObject()
         .withMessage('Store address must be an object'),
@@ -51,31 +57,31 @@ const validateSellerStore = [
         .withMessage('Detailed store address is required')
         .isLength({ min: 5 })
         .withMessage('Detailed store address must be at least 5 characters'),
+
+    // Mandatory GPS Coordinates within Gaza Bounds
     body('store.address.coordinates')
-        .optional()
+        .notEmpty()
+        .withMessage('Store GPS coordinates are mandatory')
         .isObject()
-        .withMessage('Store coordinates must be an object')
-        .custom((coordinates) => Boolean(
-            coordinates &&
-            coordinates.lat !== undefined &&
-            coordinates.lng !== undefined
-        ))
-        .withMessage('Both latitude and longitude are required when coordinates are provided'),
+        .withMessage('Store coordinates must be an object'),
     body('store.address.coordinates.lat')
-        .optional()
-        .isFloat({ min: -90, max: 90 })
-        .withMessage('Latitude must be between -90 and 90')
+        .notEmpty()
+        .withMessage('Store GPS latitude is mandatory')
+        .isFloat({ min: 31.18, max: 31.62 })
+        .withMessage('Latitude must be within Gaza Strip (31.18 - 31.62)')
         .toFloat(),
     body('store.address.coordinates.lng')
-        .optional()
-        .isFloat({ min: -180, max: 180 })
-        .withMessage('Longitude must be between -180 and 180')
+        .notEmpty()
+        .withMessage('Store GPS longitude is mandatory')
+        .isFloat({ min: 34.15, max: 34.60 })
+        .withMessage('Longitude must be within Gaza Strip (34.15 - 34.60)')
         .toFloat(),
     body('store.address.isDefault')
         .optional()
         .isBoolean()
         .withMessage('Address isDefault must be a boolean')
         .toBoolean(),
+
     body('store').customSanitizer((store, { req }) => {
         const storeInput = store || {};
         const userInput = req.body.user || {};
@@ -102,10 +108,9 @@ const validateStoreId = [
     validateRequest,
 ];
 
-
 validateSellerStore.push(validateRequest);
 
 module.exports = {
     validateSellerStore,
-    validateStoreId
+    validateStoreId,
 };

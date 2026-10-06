@@ -26,12 +26,11 @@ const addressSchema = new mongoose.Schema(
         detailedAddress: {
             type: String,
             default: '',
-            reqyuired: true,
+            required: true,
         },
         coordinates: {
-            lat: { type: Number, min: -90, max: 90 },
-            lng: { type: Number, min: -180, max: 180 },
-            required: true,
+            lat: { type: Number, min: 31.18, max: 31.62, required: true },
+            lng: { type: Number, min: 34.15, max: 34.60, required: true },
         },
         isDefault: {
             type: Boolean,

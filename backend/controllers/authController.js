@@ -49,8 +49,9 @@ async function checkRegistrationConflicts(email, phoneNumber) {
 }
 
 async function createUserWithWallet(userData, session) {
-    const [user] = await User.create([userData], { session });
-    await Wallet.create([{ userId: user._id, balance: 0, currency: 'ILS' }], { session });
+    const options = session ? { session } : {};
+    const [user] = await User.create([userData], options);
+    await Wallet.create([{ userId: user._id, balance: 0, currency: 'ILS' }], options);
     return user;
 }
 
@@ -59,6 +60,16 @@ async function withMongoTransaction(callback) {
 
     try {
         return await session.withTransaction(() => callback(session));
+    } catch (txError) {
+        const isNoReplicaSet = txError && txError.message && (
+            txError.message.includes('replica set') || 
+            txError.message.includes('Transaction numbers are only allowed')
+        );
+
+        if (isNoReplicaSet) {
+            return await callback(null);
+        }
+        throw txError;
     } finally {
         await session.endSession();
     }
@@ -126,6 +137,7 @@ async function registerSeller(req, res, next) {
 
         const hashedPassword = await bcrypt.hash(userInput.password, 12);
         const { user: createdUser, store: createdStore } = await withMongoTransaction(async (session) => {
+            const options = session ? { session } : {};
             const user = await createUserWithWallet(
                 {
                     name: userInput.name,
@@ -148,9 +160,10 @@ async function registerSeller(req, res, next) {
                         description: storeInput.description,
                         address: storeInput.address,
                         phoneNumber: storeInput.phoneNumber,
+                        status: STATUS.PENDING_APPROVAL,
                     },
                 ],
-                { session }
+                options
             );
 
             return { user, store };

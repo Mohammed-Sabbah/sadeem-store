@@ -2,10 +2,10 @@
   "name": "sadeem-backend",
   "version": "1.0.0",
   "description": "Sadeem Central Gaza E-Commerce Backend (Express + MongoDB)",
-  "main": "src/server.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "start": "node index.js",
+    "dev": "node --watch index.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

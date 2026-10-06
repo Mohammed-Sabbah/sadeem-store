@@ -17,6 +17,8 @@ export function useMerchantJoin() {
     register,
     handleSubmit,
     setError,
+    setValue,
+    clearErrors,
     watch,
     formState: { errors, isSubmitting },
   } = useForm<MerchantJoinFormValues>({
@@ -24,23 +26,37 @@ export function useMerchantJoin() {
     defaultValues: {
       name: '',
       phone: '',
-      whatsapp: '',
       email: '',
       password: '',
       confirmPassword: '',
-      storeName: '',
-      category: 'أزياء وملابس',
+      category: '',
       governorate: 'central',
       city: 'deir_albalah',
       storeAddress: '',
+      lat: undefined as unknown as number,
+      lng: undefined as unknown as number,
     },
   });
+
+  const selectedLat = watch('lat');
+  const selectedLng = watch('lng');
+  const selectedGovernorate = watch('governorate');
+  const selectedCity = watch('city');
+
+  const setLocation = (lat: number, lng: number, suggestedCity?: string) => {
+    setValue('lat', lat, { shouldValidate: true });
+    setValue('lng', lng, { shouldValidate: true });
+    clearErrors(['lat', 'lng']);
+    if (suggestedCity) {
+      setValue('city', suggestedCity, { shouldValidate: true });
+    }
+  };
 
   const onSubmit = async (data: MerchantJoinFormValues) => {
     const res = await authService.registerMerchant(data);
 
     if (!res.success) {
-      setError('root', { message: res.message || 'تعذر إرسال طلب الانضمام' });
+      setError('root', { message: res.message || 'تعذر إرسال طلب الانضمام، يرجى المحاولة لاحقاً' });
       return;
     }
 
@@ -62,5 +78,11 @@ export function useMerchantJoin() {
     showConfirmPassword,
     setShowConfirmPassword,
     watch,
+    setValue,
+    selectedLat,
+    selectedLng,
+    selectedGovernorate,
+    selectedCity,
+    setLocation,
   };
 }

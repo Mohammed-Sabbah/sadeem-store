@@ -3,6 +3,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { useMerchantJoin } from '@/features/auth/hooks/useMerchantJoin';
+import { useStoreTaxonomy } from '@/features/store/hooks/useStoreTaxonomy';
+import StoreMapPicker from '@/features/store/components/StoreMapPicker';
 
 export default function MerchantJoinPage() {
   const {
@@ -17,7 +19,21 @@ export default function MerchantJoinPage() {
     setShowPassword,
     showConfirmPassword,
     setShowConfirmPassword,
+    selectedLat,
+    selectedLng,
+    selectedGovernorate,
+    setLocation,
   } = useMerchantJoin();
+
+  const {
+    categories,
+    availableGovernorates,
+    getCitiesForGovernorate,
+    isLoading: isLoadingTaxonomy,
+  } = useStoreTaxonomy();
+
+  // Dynamic cities based on current governorate
+  const currentCities = getCitiesForGovernorate(selectedGovernorate || 'central');
 
   return (
     <main className="max-w-[1240px] mx-auto px-4 pt-6 sm:pt-8 pb-24 md:pb-16 font-almarai text-right">
@@ -53,11 +69,11 @@ export default function MerchantJoinPage() {
             </h2>
 
             <p className="text-xs sm:text-sm text-brand-muted leading-relaxed m-0">
-              سَدِيم تدمج مبيعاتك ضمن شبكة المتاجر المعتمدة في المحافظة الوسطى، مع إدارة لوجستية متكاملة تضمن راحة التاجر وتوصيل 8 ₪ موحد للزبون.
+              سَدِيم تدمج متجرك ضمن شبكة المتاجر المعتمدة في غزة، مع إدارة لوجستية متكاملة تضمن راحة التاجر واستلام الطرود من موقع محلك مباشرة.
             </p>
           </div>
 
-          {/* Serene 3 Pillars (Pure minimalist line icons, no chromatic clutter) */}
+          {/* Serene 3 Pillars (Pure minimalist line icons) */}
           <div className="space-y-4 pt-1">
             {/* Pillar 1 */}
             <div className="flex items-start gap-3.5">
@@ -71,10 +87,10 @@ export default function MerchantJoinPage() {
               </span>
               <div className="space-y-0.5">
                 <h3 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
-                  استلام مباشر من باب محلك
+                  استلام مباشر من باب محلك عبر الـ GPS
                 </h3>
                 <p className="text-xs text-brand-muted leading-relaxed m-0">
-                  يتولى مناديب سَدِيم استلام القطع من متجرك وتجميعها في طرد موحد للزبون.
+                  يتولى مناديب سَدِيم استلام القطع من موقعك الجغرافي المسجل وتوصيلها للزبائن بطرد موحد.
                 </p>
               </div>
             </div>
@@ -89,10 +105,10 @@ export default function MerchantJoinPage() {
               </span>
               <div className="space-y-0.5">
                 <h3 className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
-                  تسويات مالية دورية وموثقة
+                  تسويات مالية موثقة ودورية
                 </h3>
                 <p className="text-xs text-brand-muted leading-relaxed m-0">
-                  تحصيل مستحقات مبيعاتك نقداً أو بحوالة منتظمة بحسب رغبتك دون تأخير.
+                  تحصيل مستحقات مبيعاتك فورياً عبر محفظة سَدِيم ومحفظة جوال باي أو حوالة دورية دون تأخير.
                 </p>
               </div>
             </div>
@@ -109,25 +125,25 @@ export default function MerchantJoinPage() {
                   واجهة عرض فاخرة ومعتمدة
                 </h3>
                 <p className="text-xs text-brand-muted leading-relaxed m-0">
-                  إبراز علامتك التجارية ومنتجاتك بتنسيق راقٍ يعكس مكانة متجرك وموثوقيته.
+                  إبراز علامتك التجارية ومنتجاتك بتنسيق راقٍ يعكس جودة بضاعتك ومكانتها.
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Reassurance Footnote (Clean & seamless) */}
+          {/* Reassurance Footnote */}
           <div className="text-xs text-brand-muted leading-relaxed space-y-1">
             <span className="font-extrabold text-brand-dark block">
               مسار الاعتماد الميداني:
             </span>
             <p className="m-0">
-              يراجع فريق التوثيق في سَدِيم الطلب خلال 24 ساعة، ثم نتواصل معك هاتفياً لترتيب الزيارة الميدانية وتفعيل حساب متجرك.
+              يراجع فريق التوثيق في سَدِيم الطلب خلال 24 ساعة، ثم نتواصل معك هاتفياً لترتيب الزيارة الميدانية واعتماد حساب متجرك في المنصة.
             </p>
           </div>
         </div>
 
         {/* ===================================================================
-            COLUMN 2: ULTRA-CLEAN REGISTRATION FORM (Zero Boxiness & Zero Noise)
+            COLUMN 2: ULTRA-CLEAN REGISTRATION FORM (Production-Ready)
             =================================================================== */}
         <div className="lg:col-span-7 bg-white border border-brand-border/80 rounded-2xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(28,25,23,0.03)]">
           {submitted ? (
@@ -141,7 +157,7 @@ export default function MerchantJoinPage() {
                 تم استلام طلب انضمام «{registeredStoreName || 'متجرك'}» بنجاح
               </h3>
               <p className="text-xs sm:text-sm text-brand-muted max-w-md mx-auto mb-6 leading-relaxed">
-                حسابك مسجل حالياً بحالة <strong>قيد المراجعة والاعتماد</strong> من قبل إدارة سَدِيم. سيتواصل معك فريق التوثيق قريباً عبر الهاتف أو الواتساب ({registeredPhone}) لإتمام التحقق وتفعيل لوحة التحكم.
+                حسابك مسجل حالياً بحالة <strong>قيد المراجعة والاعتماد</strong> من قبل إدارة سَدِيم. سيتواصل معك فريق التوثيق قريباً عبر الهاتف ({registeredPhone}) لإتمام التحقق الميداني وتفعيل لوحة التحكم.
               </p>
               <div className="p-3.5 rounded-lg bg-brand-surface border border-brand-border text-xs text-brand-muted max-w-md mx-auto mb-6 text-right">
                 <span className="font-bold text-brand-dark block mb-0.5">تنويه الدخول:</span>
@@ -151,7 +167,7 @@ export default function MerchantJoinPage() {
                 href="/"
                 className="inline-flex items-center justify-center bg-brand-primary text-white hover:brightness-105 px-6 py-2.5 rounded-lg text-xs sm:text-sm font-extrabold shadow-xs transition-all no-underline"
               >
-                العودة للتسوق في سَدِيم
+                العودة للرئيسية
               </Link>
             </div>
           ) : (
@@ -165,10 +181,10 @@ export default function MerchantJoinPage() {
                 </div>
               )}
 
-              {/* Group 1: بيانات المتجر والموقع */}
+              {/* Group 1: بيانات المتجر والتصنيف */}
               <div className="space-y-3.5">
                 <span className="text-xs font-bold text-brand-muted block">
-                  بيانات المتجر والموقع
+                  بيانات المتجر والتصنيف
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -188,29 +204,34 @@ export default function MerchantJoinPage() {
                     {errors.storeName && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.storeName.message}</p>}
                   </div>
 
-                  {/* Category */}
+                  {/* Category (Dynamic from DB) */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
                       تصنيف المنتجات الأساسي <span className="text-brand-primary">*</span>
                     </label>
                     <select
                       {...register('category')}
-                      className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-white text-xs sm:text-sm text-brand-dark outline-none focus:border-brand-primary transition-all font-almarai"
+                      disabled={isLoadingTaxonomy}
+                      className={`w-full h-11 px-3.5 rounded-lg border bg-white text-xs sm:text-sm text-brand-dark outline-none transition-all font-almarai ${
+                        errors.category ? 'border-red-400 focus:border-red-500' : 'border-brand-border focus:border-brand-primary'
+                      }`}
                     >
-                      <option value="أزياء وملابس">أزياء وملابس</option>
-                      <option value="مؤونة وضيافة">مؤونة وضيافة وزيوت بلدية</option>
-                      <option value="طاقة وإلكترونيات">طاقة وإنارة وبدائل وبطاريات</option>
-                      <option value="عطور وعناية">عطور وعناية وصابون طبيعي</option>
-                      <option value="حرف وخزف">حرف وخزف وفخار يدوي</option>
-                      <option value="أغذية ومعجنات">أغذية ومعجنات طازجة</option>
-                      <option value="أخرى">أخرى</option>
+                      <option value="">
+                        {isLoadingTaxonomy ? 'جاري تحميل التصنيفات...' : '-- اختر تصنيف المتجر --'}
+                      </option>
+                      {categories.map((cat) => (
+                        <option key={cat._id} value={cat._id}>
+                          {cat.title}
+                        </option>
+                      ))}
                     </select>
+                    {errors.category && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.category.message}</p>}
                   </div>
                 </div>
 
-                {/* Address: 3 Precise parts */}
+                {/* Governorates & Cities (Dynamic from DB) */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Part 1: Governorate */}
+                  {/* Governorate */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
                       المحافظة <span className="text-brand-primary">*</span>
@@ -219,11 +240,20 @@ export default function MerchantJoinPage() {
                       {...register('governorate')}
                       className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-brand-surface text-xs sm:text-sm text-brand-dark outline-none font-almarai font-bold"
                     >
-                      <option value="central">المحافظة الوسطى (المرحلة الأولى)</option>
+                      {availableGovernorates.length > 0 ? (
+                        availableGovernorates.map((gov) => (
+                          <option key={gov.code} value={gov.code}>
+                            {gov.name} (المرحلة الأولى)
+                          </option>
+                        ))
+                      ) : (
+                        <option value="central">المحافظة الوسطى (المرحلة الأولى)</option>
+                      )}
                     </select>
+                    {errors.governorate && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.governorate.message}</p>}
                   </div>
 
-                  {/* Part 2: City / Camp */}
+                  {/* City */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
                       المدينة / المخيم <span className="text-brand-primary">*</span>
@@ -234,17 +264,27 @@ export default function MerchantJoinPage() {
                         errors.city ? 'border-red-400 focus:border-red-500' : 'border-brand-border focus:border-brand-primary'
                       }`}
                     >
-                      <option value="deir_albalah">دير البلح</option>
-                      <option value="nuseirat">مخيم النصيرات</option>
-                      <option value="zawayda">الزوايدة</option>
-                      <option value="maghazi">مخيم المغازي</option>
-                      <option value="bureij">مخيم البريج</option>
+                      {currentCities.length > 0 ? (
+                        currentCities.map((city) => (
+                          <option key={city.id} value={city.id}>
+                            {city.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="deir_albalah">دير البلح</option>
+                          <option value="nuseirat">مخيم النصيرات</option>
+                          <option value="zawayda">الزوايدة</option>
+                          <option value="maghazi">مخيم المغازي</option>
+                          <option value="bureij">مخيم البريج</option>
+                        </>
+                      )}
                     </select>
                     {errors.city && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.city.message}</p>}
                   </div>
                 </div>
 
-                {/* Part 3: Detailed Address */}
+                {/* Detailed Address */}
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1.5">
                     العنوان التفصيلي ونقطة الاستلام <span className="text-brand-primary">*</span>
@@ -261,12 +301,24 @@ export default function MerchantJoinPage() {
                     <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.storeAddress.message}</p>
                   )}
                 </div>
+
+                {/* MANDATORY STORE MAP PICKER */}
+                <div className="pt-2">
+                  <StoreMapPicker
+                    initialLat={selectedLat}
+                    initialLng={selectedLng}
+                    onLocationSelect={({ lat, lng, suggestedCityName }) => {
+                      setLocation(lat, lng, suggestedCityName);
+                    }}
+                    error={errors.lat?.message || errors.lng?.message}
+                  />
+                </div>
               </div>
 
-              {/* Group 2: بيانات الدخول والتواصل (Separated only by clean whitespace) */}
-              <div className="space-y-3.5 pt-2">
+              {/* Group 2: بيانات المسؤول والدخول (Without WhatsApp) */}
+              <div className="space-y-3.5 pt-3 border-t border-brand-border/60">
                 <span className="text-xs font-bold text-brand-muted block">
-                  بيانات المسؤول والدخول
+                  بيانات المسؤول وحساب الدخول
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -289,7 +341,7 @@ export default function MerchantJoinPage() {
                   {/* Primary Phone */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      رقم الجوال الأساسي للتواصل <span className="text-brand-primary">*</span>
+                      رقم الجوال الأساسي للتواصل والتحقق <span className="text-brand-primary">*</span>
                     </label>
                     <input
                       type="tel"
@@ -304,40 +356,24 @@ export default function MerchantJoinPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  {/* Email (Required for login) */}
-                  <div>
-                    <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      البريد الإلكتروني (لتسجيل الدخول) <span className="text-brand-primary">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      dir="ltr"
-                      placeholder="store@example.com"
-                      {...register('email')}
-                      className={`w-full h-11 px-3.5 rounded-lg border bg-white text-xs sm:text-sm text-brand-dark outline-none transition-all font-almarai placeholder:text-brand-subtle ${
-                        errors.email ? 'border-red-400 focus:border-red-500' : 'border-brand-border focus:border-brand-primary'
-                      }`}
-                    />
-                    {errors.email && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.email.message}</p>}
-                  </div>
-
-                  {/* WhatsApp */}
-                  <div>
-                    <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                      رقم الواتساب للتنسيق
-                    </label>
-                    <input
-                      type="tel"
-                      dir="ltr"
-                      placeholder="059xxxxxxx (اختياري)"
-                      {...register('whatsapp')}
-                      className="w-full h-11 px-3.5 rounded-lg border border-brand-border bg-white text-xs sm:text-sm text-brand-dark outline-none focus:border-brand-primary transition-all font-almarai placeholder:text-brand-subtle"
-                    />
-                  </div>
+                {/* Email (Full row or clean width) */}
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark mb-1.5">
+                    البريد الإلكتروني (لتسجيل الدخول وإدارة المتجر) <span className="text-brand-primary">*</span>
+                  </label>
+                  <input
+                    type="email"
+                    dir="ltr"
+                    placeholder="store@example.com"
+                    {...register('email')}
+                    className={`w-full h-11 px-3.5 rounded-lg border bg-white text-xs sm:text-sm text-brand-dark outline-none transition-all font-almarai placeholder:text-brand-subtle ${
+                      errors.email ? 'border-red-400 focus:border-red-500' : 'border-brand-border focus:border-brand-primary'
+                    }`}
+                  />
+                  {errors.email && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.email.message}</p>}
                 </div>
 
-                {/* Password & Confirm Password (2 Fields with SVG Eye toggles) */}
+                {/* Password & Confirm Password */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Password */}
                   <div>
@@ -347,7 +383,7 @@ export default function MerchantJoinPage() {
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="6 خانات على الأقل"
+                        placeholder="8 خانات على الأقل (أحرف وأرقام)"
                         {...register('password')}
                         className={`w-full h-11 pr-3.5 pl-11 rounded-lg border bg-white text-xs sm:text-sm text-brand-dark outline-none transition-all font-almarai placeholder:text-brand-subtle ${
                           errors.password ? 'border-red-400 focus:border-red-500' : 'border-brand-border focus:border-brand-primary'
@@ -423,7 +459,10 @@ export default function MerchantJoinPage() {
                   className="w-full h-11 sm:h-12 bg-brand-primary text-white hover:brightness-105 active:scale-[0.99] rounded-lg text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-60"
                 >
                   {isSubmitting ? (
-                    <span>جاري إرسال الطلب...</span>
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>جاري إرسال طلب الانضمام...</span>
+                    </span>
                   ) : (
                     <>
                       <span>تقديم طلب الانضمام لشبكة سَدِيم</span>

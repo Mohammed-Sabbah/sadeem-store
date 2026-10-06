@@ -52,8 +52,16 @@ export const authService = {
           governorate: data.governorate,
           city: data.city,
           detailedAddress: data.storeAddress,
+          coordinates: {
+            lat: data.lat,
+            lng: data.lng,
+          },
         },
         phoneNumber: data.phone,
+        location: {
+          lat: data.lat,
+          lng: data.lng,
+        },
       },
     };
     return postRequest<{ merchantId: string; status: string; storeName: string }>(

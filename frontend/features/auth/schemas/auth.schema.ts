@@ -54,11 +54,6 @@ export const merchantJoinSchema = z
         (val) => palestinianPhoneRegex.test(val.replace(/[\s-]/g, '')),
         'يرجى إدخال رقم جوال فلسطيني صالح للتواصل (059xxxxxxx أو 056xxxxxxx)'
       ),
-    whatsapp: z
-      .string()
-      .trim()
-      .optional()
-      .or(z.literal('')),
     email: z
       .string()
       .trim()
@@ -77,24 +72,25 @@ export const merchantJoinSchema = z
       .min(2, 'يرجى إدخال الاسم التجاري لمتجرك'),
     category: z
       .string()
-      .min(1, 'يرجى تحديد التصنيف الرئيسي للمنتجات'),
+      .min(1, 'يرجى اختيار تصنيف المتجر من القائمة المعتمدة'),
     governorate: z
       .string()
-      .superRefine((value, context) => {
-        if (value !== 'central') {
-          context.addIssue({ code: 'custom', message: 'يرجى تحديد محافظة متاحة' });
-        }
-      }),
+      .min(1, 'يرجى تحديد المحافظة'),
     city: z
       .string()
-      .refine(
-        (value) => ['deir_albalah', 'nuseirat', 'zawayda', 'maghazi', 'bureij'].includes(value),
-        'يرجى تحديد مدينة صالحة في المحافظة الوسطى'
-      ),
+      .min(1, 'يرجى تحديد المدينة أو المخيم'),
     storeAddress: z
       .string()
       .trim()
-      .min(5, 'يرجى كتابة العنوان بالتفصيل (اسم الشارع، ومعلَم بارز بجوار المحل)'),
+      .min(5, 'يرجى كتابة العنوان بالتفصيل (اسم الشارع ومعلَم بارز)'),
+    lat: z
+      .number({ message: 'تحديد موقع المتجر على الخريطة إلزامي للتوصيل' })
+      .min(31.18, 'موقع المتجر خارج حدود قطاع غزة')
+      .max(31.62, 'موقع المتجر خارج حدود قطاع غزة'),
+    lng: z
+      .number({ message: 'تحديد موقع المتجر على الخريطة إلزامي للتوصيل' })
+      .min(34.15, 'موقع المتجر خارج حدود قطاع غزة')
+      .max(34.60, 'موقع المتجر خارج حدود قطاع غزة'),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'كلمتا المرور غير متطابقتين، يرجى التأكد',

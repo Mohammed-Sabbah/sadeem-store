@@ -32,9 +32,6 @@ async function authenticate(req, res, next) {
             if (!store) {
                 return error(res, 401, 'Store not found');
             }
-            if (store.status !== STATUS.ACTIVE) {
-                return error(res, 403, 'Store is not active');
-            }
             if (store.approveStatus !== STORE_APPROVE_STATUS.APPROVED) {
                 return error(res, 403, 'Store is not approved');
             }
@@ -61,7 +58,16 @@ function authorize(...allowedRoles) {
     };
 }
 
+async function verifyActiveStore(req, res, next) {
+    const store = req.store;
+    if (!store || store.status !== STATUS.ACTIVE) {
+        return error(res, 403, 'Store is not active');
+    }
+    next();
+}
+
 module.exports = {
     authenticate,
     authorize,
+    verifyActiveStore
 };

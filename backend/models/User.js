@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { ROLE, STATUS, STATUS_VALUES, ROLE_VALUES } = require('../constants/enums');
+const { createAddressSchema } = require('./address');
 
 const userSchema = new mongoose.Schema(
     {
@@ -18,18 +19,10 @@ const userSchema = new mongoose.Schema(
             type: String,
             select: false,
         },
-        addresses: [
-            {
-                governorate: { type: String, default: 'central' },
-                city: { type: String, default: 'deir_albalah' },
-                detailedAddress: { type: String, default: '' },
-                coordinates: {
-                    lat: { type: Number },
-                    lng: { type: Number },
-                },
-                isDefault: { type: Boolean, default: false },
-            },
-        ],
+        addresses: {
+            type: [createAddressSchema()],
+            default: [],
+        },
         role: {
             type: String,
             enum: ROLE_VALUES,

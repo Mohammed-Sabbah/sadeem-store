@@ -1,5 +1,6 @@
 const { body, cookie } = require('express-validator');
 const validateRequest = require('./validateRequest');
+const { createAddressesValidator } = require('./addressValidator');
 
 const validateRegisterUser = [
     body('name')
@@ -32,6 +33,8 @@ const validateRegisterUser = [
         .withMessage('Password must be at least 8 characters long')
         .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
         .withMessage('Password must contain at least one letter and one number'),
+
+    ...createAddressesValidator('addresses'),
 ];
 
 const validateSellerRegistration = [
@@ -64,6 +67,8 @@ const validateSellerRegistration = [
         .withMessage('Seller password must be at least 8 characters long')
         .matches(/^(?=.*[A-Za-z])(?=.*\d)/)
         .withMessage('Password must contain at least one letter and one number'),
+
+    ...createAddressesValidator('user.addresses'),
 ];
 
 const validateLoginUser = [

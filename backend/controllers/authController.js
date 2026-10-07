@@ -58,7 +58,7 @@ async function withMongoTransaction(callback) {
 
 async function register(req, res, next) {
     try {
-        const { name, phoneNumber, email, password } = req.body;
+        const { name, phoneNumber, email, password, addresses } = req.body;
 
         const conflict = await checkRegistrationConflicts(email, phoneNumber);
 
@@ -72,6 +72,7 @@ async function register(req, res, next) {
             phoneNumber,
             email,
             password: hashedPassword,
+            addresses,
             role: ROLE.USER,
         }, session));
 
@@ -125,6 +126,7 @@ async function registerSeller(req, res, next) {
                     phoneNumber: userInput.phoneNumber,
                     email: userInput.email,
                     password: hashedPassword,
+                    addresses: userInput.addresses,
                     role: ROLE.SELLER,
                     status: STATUS.IN_ACTIVE,
                 },
@@ -189,6 +191,9 @@ async function login(req, res, next) {
 
             if (store.approveStatus === STORE_APPROVE_STATUS.REJECTED) {
                 return error(res, 403, 'Your merchant store has been rejected by admin');
+            }
+            if (store.status !== STATUS.ACTIVE) {
+                return error(res, 403, 'Your merchant store is inactive');
             }
         }
 

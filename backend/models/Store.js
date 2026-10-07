@@ -1,44 +1,8 @@
 const mongoose = require('mongoose');
 const { STATUS, STATUS_VALUES, STORE_APPROVE_STATUS_VALUES, STORE_APPROVE_STATUS } = require('../constants/enums');
-const { GAZA_REGIONS } = require('../constants/gaza-regions');
+const { createAddressSchema } = require('./address');
 
-const validCities = Object.values(GAZA_REGIONS).flatMap((region) => region.cities.map((city) => city.id));
-const addressSchema = new mongoose.Schema(
-    {
-        governorate: {
-            type: String,
-            enum: Object.keys(GAZA_REGIONS),
-            default: 'central',
-        },
-        city: {
-            type: String,
-            enum: validCities,
-            default: 'deir_albalah',
-            validate: {
-                validator(city) {
-                    const address = this.address || this.parent()?.address;
-                    const region = address && GAZA_REGIONS[address.governorate];
-                    return Boolean(region && region.cities.some((regionCity) => regionCity.id === city));
-                },
-                message: 'City must belong to the selected governorate',
-            },
-        },
-        detailedAddress: {
-            type: String,
-            default: '',
-            required: true,
-        },
-        coordinates: {
-            lat: { type: Number, min: 31.18, max: 31.62, required: true },
-            lng: { type: Number, min: 34.15, max: 34.60, required: true },
-        },
-        isDefault: {
-            type: Boolean,
-            default: false,
-        },
-    },
-    { _id: false }
-);
+const addressSchema = createAddressSchema({ detailedAddressRequired: true, coordinatesRequired: true });
 
 const storeSchema = new mongoose.Schema(
     {

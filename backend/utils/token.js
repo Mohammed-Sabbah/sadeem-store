@@ -1,6 +1,8 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { accessTokenTTL, refreshTokenTTL } = require('../config/cookies');
+const RefreshToken = require('../models/refreshToken.model');
+const { setAuthCookies } = require('../config/cookies');
 
 const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' ? null : 'dev-secret-change-me');
 

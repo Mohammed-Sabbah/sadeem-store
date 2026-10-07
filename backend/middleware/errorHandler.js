@@ -1,6 +1,7 @@
 const { error, serverError } = require('../utils/responses');
 
 function errorHandler(err, req, res, next) {
+    console.error(err);
     if (res.headersSent) {
         return next(err);
     }
@@ -11,7 +12,6 @@ function errorHandler(err, req, res, next) {
     if (statusCode === 500) {
         return serverError(res, message);
     }
-
     return error(res, statusCode, message);
 }
 

@@ -112,6 +112,30 @@ async function runStoreRegistrationVerification() {
         throw new Error('تم رفض إحداثيات صالحة داخل الوسطى!');
     }
 
+    // D: GPS inside Gaza City (should be rejected because only central is allowed for stores)
+    const reqGazaCity = {
+        body: {
+            user: { name: 'تاجر تجريبي', phoneNumber: '0599111222', email: 'test@sadeem.ps', password: 'Password123' },
+            store: {
+                name: 'متجر في مدينة غزة',
+                categoryId: sampleCategory._id.toString(),
+                address: {
+                    governorate: 'central',
+                    city: 'deir_albalah',
+                    detailedAddress: 'شارع عمر المختار',
+                    coordinates: { lat: 31.505, lng: 34.463 }, // Gaza City coordinates!
+                },
+            },
+        },
+    };
+    const errorsGazaCity = await validateMock(reqGazaCity);
+    const hasSpatialError = errorsGazaCity.array().some((e) => e.msg.includes('المحافظة الوسطى') || e.path.includes('coordinates'));
+    if (hasSpatialError) {
+        console.log('✔ [PASS] رفض إحداثيات في مدينة غزة بنجاح (فحص مكاني دقيق)');
+    } else {
+        throw new Error('فشل الفحص المكاني - تم قبول إحداثيات تقع في مدينة غزة!');
+    }
+
     // 4. Persistence Test in MongoDB
     const testEmail = `seller_gps_${Date.now()}@sadeem.ps`;
     const testUser = await User.create({

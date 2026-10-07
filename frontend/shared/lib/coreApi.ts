@@ -77,7 +77,7 @@ export async function sendRequest<T>(path: string, options: RequestOptions = {})
     clearTimeout(timeoutId);
 
     // Silent refresh on 401 (if not already retried and not the login/refresh itself)
-    if (res.status === 401 && !_retry && !cleanPath.includes('/api/auth/login') && !cleanPath.includes('/api/auth/refresh-token')) {
+    if (res.status === 401 && !_retry && !cleanPath.includes('/api/auth/login') && !cleanPath.includes('/api/auth/refresh')) {
       const refreshed = await handleSilentRefresh();
       if (refreshed) {
         return sendRequest<T>(path, { ...options, _retry: true });

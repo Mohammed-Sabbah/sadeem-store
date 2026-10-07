@@ -24,9 +24,17 @@ const regionSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
+        status: {
+            type: String,
+            enum: ['closed', 'delivery_only', 'hub'],
+            default: 'closed',
+            index: true,
+        },
         isActive: {
             type: Boolean,
-            default: true,
+            default: function () {
+                return this.status !== 'closed';
+            },
         },
         center: {
             lat: { type: Number, required: true },
@@ -43,5 +51,14 @@ const regionSchema = new mongoose.Schema(
         versionKey: false,
     }
 );
+
+// Virtual helpers
+regionSchema.virtual('isHub').get(function () {
+    return this.status === 'hub';
+});
+
+regionSchema.virtual('isDeliveryAllowed').get(function () {
+    return this.status !== 'closed';
+});
 
 module.exports = mongoose.model('Region', regionSchema);

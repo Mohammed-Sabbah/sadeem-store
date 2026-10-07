@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { matchNearestGazaCity } from '@/shared/lib/geolocation';
 
 const palestinianPhoneRegex = /^(\+?970|0)?5[96]\d{7}$/;
 
@@ -95,6 +96,57 @@ export const merchantJoinSchema = z
   .refine((data) => data.password === data.confirmPassword, {
     message: 'كلمتا المرور غير متطابقتين، يرجى التأكد',
     path: ['confirmPassword'],
-  });
+  })
+  .refine(
+    (data) => {
+      if (typeof data.lat !== 'number' || typeof data.lng !== 'number') return false;
+      const matched = matchNearestGazaCity(data.lat, data.lng);
+      return matched.governorateId === data.governorate;
+    },
+    {
+      message: 'الموقع المحدد على الخريطة لا يتطابق مع المحافظة المختارة',
+      path: ['lat'],
+    }
+  );
 
 export type MerchantJoinFormValues = z.infer<typeof merchantJoinSchema>;
+
+// استعادة كلمة المرور: الخطوة 1 (طلب الرمز)
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(1, 'يرجى إدخال البريد الإلكتروني المسجل')
+    .email('يرجى إدخال بريد إلكتروني صالح'),
+});
+
+export type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+
+// استعادة كلمة المرور: الخطوة 2 (التحقق من OTP)
+export const verifyOtpSchema = z.object({
+  otp: z
+    .string()
+    .trim()
+    .length(6, 'رمز التحقق يتكون من 6 أرقام')
+    .regex(/^\d{6}$/, 'رمز التحقق يجب أن يحتوي على أرقام فقط'),
+});
+
+export type VerifyOtpFormValues = z.infer<typeof verifyOtpSchema>;
+
+// استعادة كلمة المرور: الخطوة 3 (إعادة تعيين كلمة المرور)
+export const resetPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(8, 'كلمة المرور يجب ألا تقل عن 8 خانات')
+      .regex(/^(?=.*[A-Za-z])(?=.*\d)/, 'كلمة المرور يجب أن تحتوي على حرف واحد ورقم واحد على الأقل'),
+    confirmPassword: z
+      .string()
+      .min(8, 'يرجى تأكيد كلمة المرور الجديدة'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'كلمتا المرور غير متطابقتين',
+    path: ['confirmPassword'],
+  });
+
+export type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;

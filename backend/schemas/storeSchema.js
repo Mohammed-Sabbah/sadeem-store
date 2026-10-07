@@ -1,11 +1,36 @@
 const { body, param } = require('express-validator');
 const mongoose = require('mongoose');
 const validateRequest = require('./validateRequest');
+const Region = require('../models/Region');
 const { GAZA_REGIONS } = require('../constants/gaza-regions');
+const { calculateHaversineDistance } = require('../utils/deliveryCalculator');
 
-const activeGovernorates = Object.values(GAZA_REGIONS)
-    .filter((region) => region.isActive)
-    .map((region) => region.id);
+async function getDynamicHubGovernorates() {
+    try {
+        const hubs = await Region.find({ status: 'hub' }).select('code').lean();
+        if (hubs && hubs.length > 0) {
+            return hubs.map((h) => h.code);
+        }
+    } catch {}
+    return Object.values(GAZA_REGIONS)
+        .filter((region) => region.status === 'hub')
+        .map((region) => region.id);
+}
+
+function matchNearestGovernorate(lat, lng) {
+    let minDistance = Infinity;
+    let matchedGov = null;
+    Object.values(GAZA_REGIONS).forEach((gov) => {
+        gov.cities.forEach((city) => {
+            const d = calculateHaversineDistance(lat, lng, city.center.lat, city.center.lng);
+            if (d < minDistance) {
+                minDistance = d;
+                matchedGov = gov.id;
+            }
+        });
+    });
+    return matchedGov;
+}
 
 const validateSellerStore = [
     body('store.name')
@@ -41,16 +66,28 @@ const validateSellerStore = [
         .withMessage('Store address must be an object'),
     body('store.address.governorate')
         .trim()
-        .isIn(activeGovernorates)
-        .withMessage('Store governorate is invalid or unavailable for registration'),
+        .custom(async (gov) => {
+            const allowedHubs = await getDynamicHubGovernorates();
+            if (!allowedHubs.includes(gov)) {
+                throw new Error('تسجيل المتاجر متاح حالياً للمحافظات ذات المركز المعتمد فقط');
+            }
+            return true;
+        }),
     body('store.address.city')
         .trim()
-        .custom((city, { req }) => {
-            const governorate = req.body.store?.address?.governorate;
-            const region = GAZA_REGIONS[governorate];
-            return Boolean(region && region.cities.some((regionCity) => regionCity.id === city));
-        })
-        .withMessage('Store city must belong to an available governorate'),
+        .custom(async (city, { req }) => {
+            const governorateCode = req.body.store?.address?.governorate;
+            let region = null;
+            try {
+                region = await Region.findOne({ code: governorateCode }).lean();
+            } catch {}
+            if (!region) region = GAZA_REGIONS[governorateCode];
+            const isValidCity = Boolean(region && region.cities.some((regionCity) => regionCity.id === city));
+            if (!isValidCity) {
+                throw new Error('المدينة أو المخيم المحدد لا يتبع للمحافظة المختارة');
+            }
+            return true;
+        }),
     body('store.address.detailedAddress')
         .trim()
         .notEmpty()
@@ -58,23 +95,35 @@ const validateSellerStore = [
         .isLength({ min: 5 })
         .withMessage('Detailed store address must be at least 5 characters'),
 
-    // Mandatory GPS Coordinates within Gaza Bounds
+    // Mandatory GPS Coordinates within Gaza Bounds and within Active Hub
     body('store.address.coordinates')
         .notEmpty()
         .withMessage('Store GPS coordinates are mandatory')
         .isObject()
-        .withMessage('Store coordinates must be an object'),
+        .withMessage('Store coordinates must be an object')
+        .custom(async (coords) => {
+            const lat = Number(coords.lat);
+            const lng = Number(coords.lng);
+            if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+                throw new Error('إحداثيات الـ GPS غير مكتملة');
+            }
+            if (lat < 31.18 || lat > 31.62 || lng < 34.15 || lng > 34.60) {
+                throw new Error('إحداثيات المتجر تقع خارج نطاق قطاع غزة');
+            }
+            const nearestGov = matchNearestGovernorate(lat, lng);
+            const allowedHubs = await getDynamicHubGovernorates();
+            if (!allowedHubs.includes(nearestGov)) {
+                throw new Error('موقع المتجر الجغرافي يقع خارج نطاق المحافظات ذات المركز المعتمد حالياً');
+            }
+            return true;
+        }),
     body('store.address.coordinates.lat')
         .notEmpty()
         .withMessage('Store GPS latitude is mandatory')
-        .isFloat({ min: 31.18, max: 31.62 })
-        .withMessage('Latitude must be within Gaza Strip (31.18 - 31.62)')
         .toFloat(),
     body('store.address.coordinates.lng')
         .notEmpty()
         .withMessage('Store GPS longitude is mandatory')
-        .isFloat({ min: 34.15, max: 34.60 })
-        .withMessage('Longitude must be within Gaza Strip (34.15 - 34.60)')
         .toFloat(),
     body('store.address.isDefault')
         .optional()

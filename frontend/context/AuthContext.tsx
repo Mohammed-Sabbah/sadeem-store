@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authService } from '@/features/auth/services/auth.service';
 
 export interface UserProfile {
@@ -153,18 +153,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const contextValue = useMemo<AuthContextType>(
+    () => ({
+      user,
+      isAuthenticated: !!user && user.status === 'active',
+      isLoading,
+      setSessionUser,
+      logout,
+      updateUser,
+      checkSession,
+    }),
+    [user, isLoading, setSessionUser, logout, updateUser, checkSession]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user && user.status === 'active',
-        isLoading,
-        setSessionUser,
-        logout,
-        updateUser,
-        checkSession,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

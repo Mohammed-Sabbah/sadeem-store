@@ -29,14 +29,28 @@ export interface UserResponse {
     ordersCount?: number;
     merchantId?: any;
   };
+  store?: any;
+}
+
+export interface AuthMessageResponse {
+  message: string;
 }
 
 export const authService = {
+  /**
+   * تسجيل دخول المستخدم (Customer / Merchant / Courier / Admin)
+   */
   login: (data: LoginFormValues) => postRequest<UserResponse>('/api/auth/login', data),
 
+  /**
+   * تسجيل حساب زبون جديد مع إنشاء محفظة إلكترونية فورية
+   */
   register: (data: RegisterFormValues | { name: string; email: string; password: string }) =>
     postRequest<UserResponse>('/api/auth/register', data),
 
+  /**
+   * تسجيل متجر تاجر جديد مع ربط الـ GPS ونقطة التوصيل وتصنيف المتجر
+   */
   registerMerchant: (data: MerchantJoinFormValues) => {
     const payload = {
       user: {
@@ -70,7 +84,37 @@ export const authService = {
     );
   },
 
-  logout: () => postRequest<void>('/api/auth/logout'),
+  /**
+   * جلب بيانات الجلسة والمستخدم الحالي
+   */
+  getMe: () => getRequest<UserResponse>('/api/auth/me'),
 
-  getMe: () => getRequest<UserResponse>('/api/user/me'),
+  /**
+   * طلب إرسال رمز التحقق (OTP) لاستعادة كلمة المرور
+   */
+  forgotPassword: (email: string) =>
+    postRequest<AuthMessageResponse>('/api/auth/forgot-password', { email }),
+
+  /**
+   * التحقق من صحة كود الـ OTP
+   */
+  verifyOtp: (otp: string) =>
+    postRequest<AuthMessageResponse>('/api/auth/verify-otp', { otp }),
+
+  /**
+   * إعادة تعيين كلمة المرور الجديدة
+   */
+  resetPassword: (password: string) =>
+    postRequest<AuthMessageResponse>('/api/auth/reset-password', { password }),
+
+  /**
+   * تجديد التوكن الصامت
+   */
+  refreshToken: () =>
+    postRequest<AuthMessageResponse>('/api/auth/refresh'),
+
+  /**
+   * تسجيل الخروج وإلغاء صلاحية التوكنات
+   */
+  logout: () => postRequest<AuthMessageResponse>('/api/auth/logout'),
 } as const;

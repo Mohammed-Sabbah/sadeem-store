@@ -102,7 +102,7 @@ const validateSellerStore = [
 ];
 
 const validateStoreId = [
-    param('storeId')
+    param('id')
         .isMongoId()
         .withMessage('Invalid store ID'),
     validateRequest,

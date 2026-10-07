@@ -1,24 +1,31 @@
 const Store = require('../models/Store');
 const User = require('../models/User');
-const { ROLE, STATUS } = require('../constants/enums');
+const { STATUS, STORE_APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 
 async function approveStore(req, res, next) {
+    const { id } = req.params;
+    if (!id) return error(res, 400, 'Store ID is required');
+
     try {
-        const { storeId } = req.params;
 
         const store = await Store.findOneAndUpdate(
             {
-                _id: storeId,
+                _id: id,
                 isDeleted: false,
-                status: STATUS.PENDING_APPROVAL,
+                approveStatus: STORE_APPROVE_STATUS.PENDING,
             },
-            { $set: { status: STATUS.ACTIVE } },
+            {
+                $set: {
+                    approveStatus: STORE_APPROVE_STATUS.APPROVED,
+                    status: STATUS.ACTIVE
+                }
+            },
             { new: true, runValidators: true }
         );
 
         if (!store) {
-            const existingStore = await Store.findById(storeId).select('status isDeleted');
+            const existingStore = await Store.findById(id).select('status isDeleted');
 
             if (!existingStore || existingStore.isDeleted) {
                 return error(res, 404, 'Store not found');
@@ -27,7 +34,6 @@ async function approveStore(req, res, next) {
             return error(res, 409, 'Store is not pending approval');
         }
 
-        // Activate owner user account
         if (store.ownerId) {
             await User.findByIdAndUpdate(store.ownerId, { $set: { status: STATUS.ACTIVE } });
         }

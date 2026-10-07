@@ -42,10 +42,32 @@ function verifyToken(token) {
     return jwt.verify(token, JWT_SECRET);
 }
 
+function hashRefreshToken(token) {
+    return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function createSession(user, res) {
+    const accessToken = issueAccessToken(user);
+    const refresh = issueRefreshToken(user);
+    const payload = verifyToken(refresh.token);
+
+    await RefreshToken.create({
+        userId: user._id,
+        tokenHash: hashRefreshToken(refresh.token),
+        jti: refresh.jti,
+        familyId: refresh.familyId,
+        expiresAt: new Date(payload.exp * 1000),
+    });
+
+    setAuthCookies(res, accessToken, refresh.token);
+}
+
 module.exports = {
     JWT_SECRET,
     signToken,
     issueAccessToken,
     issueRefreshToken,
     verifyToken,
+    hashRefreshToken,
+    createSession,
 };

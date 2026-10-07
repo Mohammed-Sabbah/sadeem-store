@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { STATUS } = require('../constants/enums');
+const { STATUS, STATUS_VALUES, STORE_APPROVE_STATUS_VALUES, STORE_APPROVE_STATUS } = require('../constants/enums');
 const { GAZA_REGIONS } = require('../constants/gaza-regions');
 
 const validCities = Object.values(GAZA_REGIONS).flatMap((region) => region.cities.map((city) => city.id));
@@ -70,8 +70,13 @@ const storeSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: Object.values(STATUS),
+            enum: STATUS_VALUES,
             default: STATUS.ACTIVE,
+        },
+        approveStatus: {
+            type: String,
+            enum: STORE_APPROVE_STATUS_VALUES,
+            default: STORE_APPROVE_STATUS.PENDING,
         },
         isDeleted: {
             type: Boolean,

@@ -4,6 +4,6 @@ const { authenticate, authorize } = require('../middleware/auth');
 const { ROLE } = require('../constants/enums');
 const { validateStoreId } = require('../schemas/storeSchema');
 
-router.patch('/:storeId/approve', authenticate, authorize(ROLE.ADMIN), validateStoreId, approveStore);
+router.patch('/:id/approve', authenticate, authorize(ROLE.ADMIN), validateStoreId, approveStore);
 
 module.exports = router;

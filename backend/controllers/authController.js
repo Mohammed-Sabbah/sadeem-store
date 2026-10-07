@@ -7,32 +7,13 @@ const Category = require('../models/Category');
 const Wallet = require('../models/Wallet');
 const Otp = require('../models/otp.model');
 const RefreshToken = require('../models/refreshToken.model');
-const { ROLE, STATUS } = require('../constants/enums');
+const { ROLE, STATUS, STORE_APPROVE_STATUS } = require('../constants/enums');
 const { setAuthCookies, clearAuthCookies, getCookieOptions, cookieOptions } = require('../config/cookies');
-const { issueAccessToken, issueRefreshToken, verifyToken } = require('../utils/token');
+const { issueAccessToken, issueRefreshToken, verifyToken, hashRefreshToken, createSession } = require('../utils/token');
 const { generateOtp, sendEmail } = require('../utils/email');
 const { success, error } = require('../utils/responses');
 const { sanitizeUser } = require("../utils/user")
 
-function hashRefreshToken(token) {
-    return crypto.createHash('sha256').update(token).digest('hex');
-}
-
-async function createSession(user, res) {
-    const accessToken = issueAccessToken(user);
-    const refresh = issueRefreshToken(user);
-    const payload = verifyToken(refresh.token);
-
-    await RefreshToken.create({
-        userId: user._id,
-        tokenHash: hashRefreshToken(refresh.token),
-        jti: refresh.jti,
-        familyId: refresh.familyId,
-        expiresAt: new Date(payload.exp * 1000),
-    });
-
-    setAuthCookies(res, accessToken, refresh.token);
-}
 
 async function checkRegistrationConflicts(email, phoneNumber) {
     const existingUser = await User.findOne({ email });
@@ -62,7 +43,7 @@ async function withMongoTransaction(callback) {
         return await session.withTransaction(() => callback(session));
     } catch (txError) {
         const isNoReplicaSet = txError && txError.message && (
-            txError.message.includes('replica set') || 
+            txError.message.includes('replica set') ||
             txError.message.includes('Transaction numbers are only allowed')
         );
 
@@ -145,7 +126,7 @@ async function registerSeller(req, res, next) {
                     email: userInput.email,
                     password: hashedPassword,
                     role: ROLE.SELLER,
-                    status: STATUS.PENDING_APPROVAL,
+                    status: STATUS.IN_ACTIVE,
                 },
                 session
             );
@@ -160,7 +141,8 @@ async function registerSeller(req, res, next) {
                         description: storeInput.description,
                         address: storeInput.address,
                         phoneNumber: storeInput.phoneNumber,
-                        status: STATUS.PENDING_APPROVAL,
+                        status: STATUS.IN_ACTIVE,
+                        approveStatus: STORE_APPROVE_STATUS.PENDING,
                     },
                 ],
                 options
@@ -192,18 +174,21 @@ async function login(req, res, next) {
             return error(res, 401, 'User account has been deleted');
         }
 
-        if (user.status === STATUS.PENDING_APPROVAL) {
-            return error(res, 403, 'Your account is pending admin approval');
-        }
-
         if (user.status !== STATUS.ACTIVE) {
             return error(res, 401, 'User account is inactive');
         }
 
         if (user.role === ROLE.SELLER) {
             const store = await Store.findOne({ ownerId: user._id });
-            if (store && store.status === STATUS.PENDING_APPROVAL) {
+            if (!store)
+                return error(res, 401, 'Store not found');
+
+            if (store.approveStatus === STORE_APPROVE_STATUS.PENDING) {
                 return error(res, 403, 'Your merchant store is pending admin approval');
+            }
+
+            if (store.approveStatus === STORE_APPROVE_STATUS.REJECTED) {
+                return error(res, 403, 'Your merchant store has been rejected by admin');
             }
         }
 

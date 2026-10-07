@@ -9,6 +9,9 @@ const {
     verifyOtp,
     resetPassword,
 } = require('../controllers/authController');
+const { getMe } = require('../controllers/user.controller');
+const { authenticate } = require('../middleware/auth');
+const { authLimiter, passwordResetLimiter } = require('../middleware/rateLimiter');
 const {
     validateRegisterUser,
     validateSellerRegistration,
@@ -20,15 +23,21 @@ const {
 } = require('../schemas/userSchema');
 const { validateSellerStore } = require('../schemas/storeSchema');
 
-router.post('/register', validateRegisterUser, register);
-router.post('/register/seller', [...validateSellerRegistration, ...validateSellerStore], registerSeller);
-router.post('/login', validateLoginUser, login);
+// 1. Current User Profile Session
+router.get('/me', authenticate, getMe);
+
+// 2. Authentication & Registration (Protected by authLimiter)
+router.post('/register', authLimiter, validateRegisterUser, register);
+router.post('/register/seller', authLimiter, [...validateSellerRegistration, ...validateSellerStore], registerSeller);
+router.post('/login', authLimiter, validateLoginUser, login);
 router.post('/logout', logout);
 
-router.post('/forgot-password', validateForgotPassword, forgotPassword);
-router.post('/verify-otp', validateVerifyOtp, verifyOtp);
-router.post('/reset-password', validateResetPassword, resetPassword);
+// 3. Password Recovery Flow (Protected by strict passwordResetLimiter)
+router.post('/forgot-password', passwordResetLimiter, validateForgotPassword, forgotPassword);
+router.post('/verify-otp', passwordResetLimiter, validateVerifyOtp, verifyOtp);
+router.post('/reset-password', passwordResetLimiter, validateResetPassword, resetPassword);
 
+// 4. Token Refresh
 router.post('/refresh', validateRefreshToken, refresh);
 
 module.exports = router;

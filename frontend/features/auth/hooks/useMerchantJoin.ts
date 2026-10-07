@@ -43,12 +43,20 @@ export function useMerchantJoin() {
   const selectedGovernorate = watch('governorate');
   const selectedCity = watch('city');
 
-  const setLocation = (lat: number, lng: number, suggestedCity?: string) => {
+  const setLocation = (
+    lat: number,
+    lng: number,
+    suggestedCityId?: string,
+    suggestedGovId?: string
+  ) => {
     setValue('lat', lat, { shouldValidate: true });
     setValue('lng', lng, { shouldValidate: true });
     clearErrors(['lat', 'lng']);
-    if (suggestedCity) {
-      setValue('city', suggestedCity, { shouldValidate: true });
+    if (suggestedGovId) {
+      setValue('governorate', suggestedGovId, { shouldValidate: true });
+    }
+    if (suggestedCityId) {
+      setValue('city', suggestedCityId, { shouldValidate: true });
     }
   };
 

@@ -4,16 +4,24 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
-  GAZA_BOUNDS,
   isInsideGaza,
   getCurrentGpsPosition,
   matchNearestGazaCity,
 } from '@/shared/lib/geolocation';
 
+export interface LocationSelectPayload {
+  lat: number;
+  lng: number;
+  suggestedCityId: string;
+  suggestedCityName: string;
+  suggestedGovernorateId: string;
+  suggestedGovernorateName: string;
+}
+
 interface StoreMapPickerInnerProps {
   initialLat?: number;
   initialLng?: number;
-  onLocationSelect: (coords: { lat: number; lng: number; suggestedCityName?: string }) => void;
+  onLocationSelect: (payload: LocationSelectPayload) => void;
   error?: string;
 }
 
@@ -26,6 +34,9 @@ export default function StoreMapPickerInner({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+
+  // Map is collapsed by default to save screen space
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
   const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(
     initialLat && initialLng ? { lat: initialLat, lng: initialLng } : null
@@ -81,7 +92,10 @@ export default function StoreMapPickerInner({
           onLocationSelect({
             lat: Number(markerPos.lat.toFixed(6)),
             lng: Number(markerPos.lng.toFixed(6)),
+            suggestedCityId: m.cityId,
             suggestedCityName: m.cityName,
+            suggestedGovernorateId: m.governorateId,
+            suggestedGovernorateName: m.governorateName,
           });
         } else {
           setBoundsError('الموقع يقع خارج حدود قطاع غزة');
@@ -96,62 +110,64 @@ export default function StoreMapPickerInner({
     onLocationSelect({
       lat: Number(lat.toFixed(6)),
       lng: Number(lng.toFixed(6)),
+      suggestedCityId: matched.cityId,
       suggestedCityName: matched.cityName,
+      suggestedGovernorateId: matched.governorateId,
+      suggestedGovernorateName: matched.governorateName,
     });
 
     return true;
   };
 
-  // Initialize Map
+  // Initialize or re-render map when container opens
   useEffect(() => {
-    if (!mapContainerRef.current || mapInstanceRef.current) return;
+    if (!isMapOpen || !mapContainerRef.current) return;
 
-    // Center on Central Gaza (Deir al-Balah) by default
-    const defaultLat = initialLat || 31.418;
-    const defaultLng = initialLng || 34.351;
-    const defaultZoom = initialLat && initialLng ? 15 : 13;
+    if (!mapInstanceRef.current) {
+      const defaultLat = currentCoords?.lat || initialLat || 31.418;
+      const defaultLng = currentCoords?.lng || initialLng || 34.351;
+      const defaultZoom = currentCoords ? 15 : 13;
 
-    const map = L.map(mapContainerRef.current, {
-      center: [defaultLat, defaultLng],
-      zoom: defaultZoom,
-      zoomControl: false,
-    });
+      const map = L.map(mapContainerRef.current, {
+        center: [defaultLat, defaultLng],
+        zoom: defaultZoom,
+        zoomControl: false,
+      });
 
-    // Elegant Light Tile Layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
-    }).addTo(map);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors',
+        maxZoom: 19,
+      }).addTo(map);
 
-    // Zoom control at bottom right
-    L.control.zoom({ position: 'bottomleft' }).addTo(map);
+      L.control.zoom({ position: 'bottomleft' }).addTo(map);
 
-    // Click handler to select location
-    map.on('click', (e: L.LeafletMouseEvent) => {
-      updateMarker(e.latlng.lat, e.latlng.lng, map);
-    });
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        updateMarker(e.latlng.lat, e.latlng.lng, map);
+      });
 
-    mapInstanceRef.current = map;
+      mapInstanceRef.current = map;
 
-    // Place initial marker if passed
-    if (initialLat && initialLng) {
-      updateMarker(initialLat, initialLng, map);
+      if (defaultLat && defaultLng) {
+        updateMarker(defaultLat, defaultLng, map);
+      }
+    } else {
+      setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 150);
     }
+  }, [isMapOpen]);
 
+  // Clean up on unmount
+  useEffect(() => {
     return () => {
-      map.remove();
-      mapInstanceRef.current = null;
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
     };
   }, []);
 
-  // Update marker if initial props change
-  useEffect(() => {
-    if (initialLat && initialLng && mapInstanceRef.current) {
-      updateMarker(initialLat, initialLng, mapInstanceRef.current);
-    }
-  }, [initialLat, initialLng]);
-
-  // GPS Geolocation trigger
+  // 1-Tap GPS Trigger
   const handleGetGps = async () => {
     setIsLocating(true);
     setGpsMessage(null);
@@ -159,15 +175,29 @@ export default function StoreMapPickerInner({
 
     try {
       const pos = await getCurrentGpsPosition();
+      setCurrentCoords(pos.coordinates);
+
+      onLocationSelect({
+        lat: Number(pos.coordinates.lat.toFixed(6)),
+        lng: Number(pos.coordinates.lng.toFixed(6)),
+        suggestedCityId: pos.cityId,
+        suggestedCityName: pos.cityName,
+        suggestedGovernorateId: pos.governorateId,
+        suggestedGovernorateName: pos.governorateName,
+      });
+
       if (mapInstanceRef.current) {
         mapInstanceRef.current.flyTo([pos.coordinates.lat, pos.coordinates.lng], 16, {
           duration: 1.2,
         });
         updateMarker(pos.coordinates.lat, pos.coordinates.lng, mapInstanceRef.current);
-        setGpsMessage(`تم التقاط موقعك بدقة (هامش ±${pos.accuracyMeters} متر)`);
       }
+
+      setGpsMessage(`تم التقاط موقع المتجر بنجاح (دقة ±${pos.accuracyMeters}م) وانعكاس المدينة تلقائياً`);
     } catch (err: any) {
-      setGpsMessage(err?.message || 'تعذر جلب موقعك عبر الـ GPS، يرجى النقر يدوياً على الخريطة');
+      setGpsMessage(err?.message || 'تعذر جلب موقعك عبر الـ GPS، يرجى فتح الخريطة والنقر يدوياً');
+      // If GPS fails, automatically offer to open the map
+      setIsMapOpen(true);
     } finally {
       setIsLocating(false);
     }
@@ -179,80 +209,102 @@ export default function StoreMapPickerInner({
 
   return (
     <div className="space-y-3 font-almarai">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <label className="block text-xs font-bold text-brand-dark">
-            موقع المتجر الجغرافي على الخريطة (GPS) <span className="text-brand-primary">*</span>
-          </label>
-          <span className="text-[11px] text-brand-muted block">
-            انقر على الخريطة أو اسحب العلامة لتحديد الموقع الدقيق لاستلام الطرود من محلك
-          </span>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleGetGps}
-          disabled={isLocating}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-brand-primary/40 bg-brand-primary-soft text-brand-primary hover:bg-brand-primary hover:text-white transition-all text-xs font-bold cursor-pointer disabled:opacity-60 shadow-xs"
-        >
-          {isLocating ? (
-            <span className="inline-block w-3.5 h-3.5 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></span>
-          ) : (
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
-            </svg>
-          )}
-          <span>{isLocating ? 'جاري التقاط الإحداثيات...' : 'تحديد موقعي الحالي (GPS)'}</span>
-        </button>
-      </div>
-
-      {/* Map Container */}
-      <div className="relative rounded-xl overflow-hidden border border-brand-border shadow-xs bg-brand-surface">
-        <div
-          ref={mapContainerRef}
-          style={{ height: '260px', width: '100%', zIndex: 1 }}
-          className="cursor-crosshair"
-        />
-
-        {/* Floating helper hint */}
-        <div className="absolute top-2.5 right-2.5 z-[400] bg-white/95 backdrop-blur-xs px-2.5 py-1 rounded-md border border-brand-border text-[11px] font-bold text-brand-dark shadow-xs flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-brand-primary"></span>
-          <span>انقر لتثبيت موقع المحل</span>
-        </div>
-      </div>
-
-      {/* Coordinate & Match Badge */}
-      {currentCoords ? (
-        <div className="p-3 rounded-lg bg-emerald-50/70 border border-emerald-200/80 flex items-center justify-between flex-wrap gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
-              ✓
-            </span>
-            <div>
-              <span className="font-bold text-emerald-950 block">
-                تم اعتماد إحداثيات المتجر: {matchedCity?.cityName} ({matchedCity?.governorateName})
-              </span>
-              <span className="text-[11px] text-emerald-700 font-mono">
-                {currentCoords.lat.toFixed(5)}, {currentCoords.lng.toFixed(5)}
+      {/* 1. Header & Primary GPS Trigger (Placed above address dropdowns) */}
+      <div className="p-4 rounded-xl border border-brand-border bg-brand-surface/60 space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-0.5">
+              <label className="text-xs sm:text-sm font-extrabold text-brand-dark m-0">
+                موقع المتجر الجغرافي (GPS)
+              </label>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-primary-soft text-brand-primary border border-brand-primary/30">
+                إلزامي للتوصيل
               </span>
             </div>
+            <p className="text-[11px] text-brand-muted m-0 leading-relaxed">
+              انقر لتحديد موقع محلك بدقة؛ سيتم استخراج المحافظة والمدينة تلقائياً في القوائم أدناه مع إمكانية تعديلها.
+            </p>
           </div>
-          <span className="text-[11px] text-emerald-800 bg-white/80 px-2 py-0.5 rounded border border-emerald-200">
-            جاهز للاستلام والتوصيل
-          </span>
+
+          <button
+            type="button"
+            onClick={handleGetGps}
+            disabled={isLocating}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-brand-primary text-white hover:brightness-105 active:scale-[0.99] transition-all text-xs sm:text-sm font-extrabold cursor-pointer disabled:opacity-60 shadow-xs"
+          >
+            {isLocating ? (
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+            ) : (
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+              </svg>
+            )}
+            <span>{isLocating ? 'جاري التقاط الإحداثيات...' : '📍 تحديد موقع المتجر بدقة بالـ GPS'}</span>
+          </button>
         </div>
-      ) : (
-        <div className="p-3 rounded-lg bg-amber-50/70 border border-amber-200/80 text-amber-900 text-xs flex items-center gap-2">
-          <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
-            !
-          </span>
-          <span>
-            تحديد موقع المتجر إلزامي لنتمكن من ربط محلك بمنظومة التوصيل والمناديب في سَدِيم.
-          </span>
+
+        {/* Status & Collapsible Map Toggle */}
+        <div className="pt-1 flex items-center justify-between flex-wrap gap-2 text-xs">
+          {currentCoords ? (
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                ✓
+              </span>
+              <div>
+                <span className="font-bold text-emerald-950 block">
+                  تم تحديد الموقع: {matchedCity?.cityName} ({matchedCity?.governorateName})
+                </span>
+                <span className="text-[11px] text-emerald-700 font-mono">
+                  {currentCoords.lat.toFixed(5)}, {currentCoords.lng.toFixed(5)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-amber-900 text-xs">
+              <span className="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                !
+              </span>
+              <span>لم يتم التقاط الموقع بعد. انقر على زر الـ GPS أعلاه أو حدده من الخريطة.</span>
+            </div>
+          )}
+
+          {/* Toggle Map Button (Opens/Closes the Map) */}
+          <button
+            type="button"
+            onClick={() => setIsMapOpen((prev) => !prev)}
+            className="text-xs font-bold text-brand-primary hover:text-brand-dark flex items-center gap-1.5 py-1 px-2.5 rounded-md hover:bg-white border border-transparent hover:border-brand-border transition-colors cursor-pointer"
+          >
+            <span>{isMapOpen ? '✕ إخفاء الخريطة' : '🗺️ تعديل الموقع يدوياً على الخريطة'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 2. Collapsible Map Accordion (Zero height when closed) */}
+      {isMapOpen && (
+        <div className="rounded-xl overflow-hidden border border-brand-border shadow-xs bg-brand-surface animate-in fade-in duration-200">
+          <div className="bg-white px-3.5 py-2 border-b border-brand-border flex items-center justify-between text-xs font-bold text-brand-dark">
+            <span className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-brand-primary"></span>
+              <span>انقر في أي مكان بالخريطة أو اسحب الدبوس لتثبيت مدخل المحل بدقة</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsMapOpen(false)}
+              className="text-brand-muted hover:text-brand-dark text-[11px] font-bold cursor-pointer"
+            >
+              إغلاق الخريطة
+            </button>
+          </div>
+
+          <div
+            ref={mapContainerRef}
+            style={{ height: '240px', width: '100%', zIndex: 1 }}
+            className="cursor-crosshair"
+          />
         </div>
       )}
 
-      {/* Bounds Warning */}
+      {/* Warnings & Feedback */}
       {boundsError && (
         <p className="text-[11px] text-red-600 font-bold m-0 flex items-center gap-1.5">
           <span>⚠️</span>
@@ -260,7 +312,6 @@ export default function StoreMapPickerInner({
         </p>
       )}
 
-      {/* GPS info/error message */}
       {gpsMessage && (
         <p className="text-[11px] text-brand-muted font-bold m-0 flex items-center gap-1.5">
           <span>📡</span>
@@ -268,7 +319,6 @@ export default function StoreMapPickerInner({
         </p>
       )}
 
-      {/* Schema / Validation Error */}
       {error && <p className="text-[11px] text-red-600 font-bold m-0">{error}</p>}
     </div>
   );

@@ -229,8 +229,20 @@ export default function MerchantJoinPage() {
                   </div>
                 </div>
 
-                {/* Governorates & Cities (Dynamic from DB) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* 2. MANDATORY STORE GPS & COLLAPSIBLE MAP (Placed ABOVE address fields) */}
+                <div className="pt-1">
+                  <StoreMapPicker
+                    initialLat={selectedLat}
+                    initialLng={selectedLng}
+                    onLocationSelect={({ lat, lng, suggestedCityId, suggestedGovernorateId }) => {
+                      setLocation(lat, lng, suggestedCityId, suggestedGovernorateId);
+                    }}
+                    error={errors.lat?.message || errors.lng?.message}
+                  />
+                </div>
+
+                {/* 3. Governorates & Cities (Reflected automatically from GPS with manual override capability) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
                   {/* Governorate */}
                   <div>
                     <label className="block text-xs font-bold text-brand-dark mb-1.5">
@@ -280,11 +292,20 @@ export default function MerchantJoinPage() {
                         </>
                       )}
                     </select>
+                    {selectedLat && selectedLng ? (
+                      <span className="text-[10px] text-emerald-700 font-bold block mt-1">
+                        ✓ تم اختيار المدينة تلقائياً من موقع الـ GPS — يمكنك تغييرها يدوياً إذا رغبت.
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-brand-muted block mt-1">
+                        ستُحدد المدينة تلقائياً عند النقر على زر الـ GPS أعلاه.
+                      </span>
+                    )}
                     {errors.city && <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.city.message}</p>}
                   </div>
                 </div>
 
-                {/* Detailed Address */}
+                {/* 4. Detailed Address */}
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1.5">
                     العنوان التفصيلي ونقطة الاستلام <span className="text-brand-primary">*</span>
@@ -300,18 +321,6 @@ export default function MerchantJoinPage() {
                   {errors.storeAddress && (
                     <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.storeAddress.message}</p>
                   )}
-                </div>
-
-                {/* MANDATORY STORE MAP PICKER */}
-                <div className="pt-2">
-                  <StoreMapPicker
-                    initialLat={selectedLat}
-                    initialLng={selectedLng}
-                    onLocationSelect={({ lat, lng, suggestedCityName }) => {
-                      setLocation(lat, lng, suggestedCityName);
-                    }}
-                    error={errors.lat?.message || errors.lng?.message}
-                  />
                 </div>
               </div>
 

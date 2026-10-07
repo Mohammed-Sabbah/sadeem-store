@@ -44,11 +44,20 @@ export function useMerchantJoin() {
   const selectedCity = watch('city');
 
   const setLocation = (
-    lat: number,
-    lng: number,
+    lat?: number,
+    lng?: number,
     suggestedCityId?: string,
     suggestedGovId?: string
   ) => {
+    if (lat === undefined || lng === undefined) {
+      setValue('lat', undefined as unknown as number, { shouldValidate: true });
+      setValue('lng', undefined as unknown as number, { shouldValidate: true });
+      setError('lat', {
+        type: 'manual',
+        message: 'موقع المتجر المحدد خارج نطاق المحافظة الوسطى المعتمدة حالياً',
+      });
+      return;
+    }
     setValue('lat', lat, { shouldValidate: true });
     setValue('lng', lng, { shouldValidate: true });
     clearErrors(['lat', 'lng']);

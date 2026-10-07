@@ -9,7 +9,8 @@ export type { LocationSelectPayload };
 export interface StoreMapPickerProps {
   initialLat?: number;
   initialLng?: number;
-  onLocationSelect: (payload: LocationSelectPayload) => void;
+  onLocationSelect: (payload: LocationSelectPayload | null) => void;
+  allowedHubIds?: string[];
   error?: string;
 }
 
@@ -18,13 +19,16 @@ const StoreMapPickerInner = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="p-4 rounded-xl border border-brand-border bg-brand-surface/60 space-y-3 font-almarai">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="h-4 w-44 bg-brand-border/60 animate-pulse rounded"></div>
-            <div className="h-3 w-60 bg-brand-border/40 animate-pulse rounded mt-1.5"></div>
+      <div className="space-y-2.5 font-almarai py-1 animate-pulse">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="space-y-1.5">
+            <div className="h-4 w-40 bg-brand-border/60 rounded" />
+            <div className="h-3 w-64 bg-brand-border/40 rounded" />
           </div>
-          <div className="h-9 w-44 bg-brand-border/60 animate-pulse rounded-lg"></div>
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-32 bg-brand-border/60 rounded-lg" />
+            <div className="h-10 w-20 bg-brand-border/40 rounded-lg" />
+          </div>
         </div>
       </div>
     ),

@@ -4,12 +4,10 @@ const otpSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
         unique: true,
     },
     sentTo: {
         type: String,
-        required: true
     },
     hashedOtp: {
         type: String,
@@ -25,7 +23,6 @@ const otpSchema = new mongoose.Schema({
     },
     expiresAt: {
         type: Date,
-        required: true,
         expires: 0,
     },
     attempts: {

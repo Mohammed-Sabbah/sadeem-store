@@ -5,16 +5,13 @@ const productSchema = new mongoose.Schema(
         storeId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Store',
-            required: true,
             index: true,
         },
         title: {
             type: String,
-            required: true,
         },
         description: {
             type: String,
-            required: true,
         },
         images: {
             type: [String],
@@ -25,6 +22,11 @@ const productSchema = new mongoose.Schema(
             default: true,
             index: true,
         },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
         isSuspended: {
             type: Boolean,
             default: false,
@@ -33,8 +35,6 @@ const productSchema = new mongoose.Schema(
         suspensionReason: {
             type: String,
             default: null,
-            trim: true,
-            maxlength: 500,
         },
     },
     {

@@ -1,8 +1,8 @@
 const mongoose = require('mongoose');
-const { STATUS, STATUS_VALUES, STORE_APPROVE_STATUS_VALUES, STORE_APPROVE_STATUS } = require('../constants/enums');
+const { STATUS, STORE_APPROVE_STATUS } = require('../constants/enums');
 const { createAddressSchema } = require('./address');
 
-const addressSchema = createAddressSchema({ detailedAddressRequired: true, coordinatesRequired: true });
+const addressSchema = createAddressSchema();
 
 const storeSchema = new mongoose.Schema(
     {
@@ -35,12 +35,10 @@ const storeSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: STATUS_VALUES,
             default: STATUS.ACTIVE,
         },
         approveStatus: {
             type: String,
-            enum: STORE_APPROVE_STATUS_VALUES,
             default: STORE_APPROVE_STATUS.PENDING,
         },
         isDeleted: {

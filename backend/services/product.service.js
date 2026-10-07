@@ -12,11 +12,8 @@ async function createProductDocuments(productData, variants, session) {
         [product] = await Product.create([productData], options);
         const createdVariants = await Variant.create(
             variants.map((variant) => ({
-                ...variant,
                 productId: product._id,
-                isActive: product.isActive,
-                isSuspended: product.isSuspended,
-                suspensionReason: product.suspensionReason,
+                ...variant
             })),
             options
         );
@@ -55,7 +52,7 @@ async function createProductDocuments(productData, variants, session) {
 
 async function updateProductDocuments({ id, storeId, productUpdates, variants, session }) {
     const options = session ? { session } : {};
-    const productQuery = Product.findOne({ _id: id, storeId });
+    const productQuery = Product.findOne({ _id: id, storeId, isDeleted: { $ne: true } });
     if (session) productQuery.session(session);
     const product = await productQuery;
     if (!product) return null;
@@ -162,7 +159,7 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
 
 async function getProductDetails(req, res, next, admin = false) {
     try {
-        const filter = { _id: req.params.id };
+        const filter = { _id: req.params.id, isDeleted: { $ne: true } };
         if (!admin) {
             filter.isActive = true;
             filter.isSuspended = false;
@@ -183,7 +180,7 @@ async function getProductDetails(req, res, next, admin = false) {
     }
 }
 
-async function listProducts(req, res, next, admin = false) {
+async function listProducts(req, res, next, admin = false, sellerStoreId = null) {
     try {
         const {
             page = 1,
@@ -198,9 +195,14 @@ async function listProducts(req, res, next, admin = false) {
         const pageNumber = Number(page);
         const pageSize = Number(limit);
         const productFilter = createProductFilter(req.query, admin);
+        if (sellerStoreId) {
+            productFilter.storeId = sellerStoreId;
+        }
 
         if (categoryId) {
-            productFilter.storeId = { $in: await getCategoryStoreIds(categoryId, storeId) };
+            productFilter.storeId = {
+                $in: await getCategoryStoreIds(categoryId, sellerStoreId || storeId),
+            };
         }
 
         const variantFilter = {};
@@ -215,53 +217,70 @@ async function listProducts(req, res, next, admin = false) {
 
         const priceDirection = sort === 'price_desc' ? -1 : 1;
         const orderByPrice = sort === 'price_asc' || sort === 'price_desc';
-        const productPipeline = [
-            { $match: productFilter },
-            {
-                $lookup: {
-                    from: Variant.collection.name,
-                    let: { productId: '$_id' },
-                    pipeline: [
-                        {
-                            $match: {
-                                $expr: { $eq: ['$productId', '$$productId'] },
-                                ...variantFilter,
-                            },
-                        },
-                        { $sort: { price: priceDirection, _id: 1 } },
-                        { $project: { _id: 1, price: 1, stock: 1 } },
-                    ],
-                    as: 'matchingVariants',
-                },
-            },
-            { $match: { 'matchingVariants.0': { $exists: true } } },
-            { $addFields: { sortPrice: { $arrayElemAt: ['$matchingVariants.price', 0] } } },
-            {
-                $sort: orderByPrice
-                    ? { sortPrice: priceDirection, _id: 1 }
-                    : { createdAt: -1, _id: -1 },
-            },
-            {
-                $facet: {
-                    metadata: [{ $count: 'total' }],
-                    products: [
-                        { $skip: (pageNumber - 1) * pageSize },
-                        { $limit: pageSize },
-                        { $project: { _id: 1 } },
-                    ],
-                },
-            },
-        ];
+        const hasVariantFilters = Object.keys(variantFilter).length > 0;
+        let products;
+        let total;
 
-        const [result] = await Product.aggregate(productPipeline);
-        const ids = result.products.map((product) => product._id);
-        const total = result.metadata.length ? result.metadata[0].total : 0;
-        const [products, variants] = await Promise.all([
-            Product.find({ _id: { $in: ids } })
-                .populate('storeId', 'name logo categoryId')
-                .lean(),
-            Variant.find({ productId: { $in: ids } }).lean(),
-        ]);
+        if (!hasVariantFilters && !orderByPrice) {
+            [total, products] = await Promise.all([
+                Product.countDocuments(productFilter),
+                Product.find(productFilter)
+                    .sort({ createdAt: -1, _id: -1 })
+                    .skip((pageNumber - 1) * pageSize)
+                    .limit(pageSize)
+                    .populate('storeId', 'name logo categoryId')
+                    .lean(),
+            ]);
+        } else {
+            const matchingVariants = await Variant.find(variantFilter)
+                .sort({ price: priceDirection, _id: 1 })
+                .select('productId price')
+                .lean();
+            const matchingPrices = new Map();
+            matchingVariants.forEach((variant) => {
+                const id = String(variant.productId);
+                if (!matchingPrices.has(id)) matchingPrices.set(id, variant.price);
+            });
+
+            const matchingProductFilter = {
+                ...productFilter,
+                _id: { $in: [...matchingPrices.keys()] },
+            };
+
+            if (orderByPrice) {
+                const matchingProducts = await Product.find(matchingProductFilter)
+                    .select('_id')
+                    .lean();
+                const ids = matchingProducts
+                    .map((product) => product._id)
+                    .sort((left, right) => {
+                        const priceDifference =
+                            (matchingPrices.get(String(left)) - matchingPrices.get(String(right))) *
+                            priceDirection;
+                        return priceDifference || String(left).localeCompare(String(right));
+                    });
+                total = ids.length;
+                const pageIds = ids.slice((pageNumber - 1) * pageSize, pageNumber * pageSize);
+                products = await Product.find({ _id: { $in: pageIds } })
+                    .populate('storeId', 'name logo categoryId')
+                    .lean();
+                const productsById = new Map(products.map((product) => [String(product._id), product]));
+                products = pageIds.map((id) => productsById.get(String(id))).filter(Boolean);
+            } else {
+                [total, products] = await Promise.all([
+                    Product.countDocuments(matchingProductFilter),
+                    Product.find(matchingProductFilter)
+                        .sort({ createdAt: -1, _id: -1 })
+                        .skip((pageNumber - 1) * pageSize)
+                        .limit(pageSize)
+                        .populate('storeId', 'name logo categoryId')
+                        .lean(),
+                ]);
+            }
+        }
+
+        const ids = products.map((product) => product._id);
+        const variants = await Variant.find({ productId: { $in: ids } }).lean();
         const variantsByProductId = new Map();
         variants.forEach((variant) => {
             const key = String(variant.productId);
@@ -269,14 +288,10 @@ async function listProducts(req, res, next, admin = false) {
             productVariants.push(variant);
             variantsByProductId.set(key, productVariants);
         });
-        const productsById = new Map(products.map((product) => [String(product._id), product]));
-        const orderedProducts = ids
-            .map((id) => productsById.get(String(id)))
-            .filter(Boolean)
-            .map((product) => ({
-                ...product,
-                variants: variantsByProductId.get(String(product._id)) || [],
-            }));
+        const orderedProducts = products.map((product) => ({
+            ...product,
+            variants: variantsByProductId.get(String(product._id)) || [],
+        }));
 
         return success(res, 200, {
             products: orderedProducts,

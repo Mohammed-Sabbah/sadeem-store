@@ -2,11 +2,11 @@ const mongoose = require('mongoose');
 
 const citySchema = new mongoose.Schema(
     {
-        id: { type: String, required: true },
-        name: { type: String, required: true },
+        id: { type: String },
+        name: { type: String },
         center: {
-            lat: { type: Number, required: true },
-            lng: { type: Number, required: true },
+            lat: { type: Number },
+            lng: { type: Number },
         },
     },
     { _id: false }
@@ -16,17 +16,14 @@ const regionSchema = new mongoose.Schema(
     {
         code: {
             type: String,
-            required: true,
             unique: true,
             index: true,
         },
         name: {
             type: String,
-            required: true,
         },
         status: {
             type: String,
-            enum: ['closed', 'delivery_only', 'hub'],
             default: 'closed',
             index: true,
         },
@@ -37,8 +34,8 @@ const regionSchema = new mongoose.Schema(
             },
         },
         center: {
-            lat: { type: Number, required: true },
-            lng: { type: Number, required: true },
+            lat: { type: Number },
+            lng: { type: Number },
         },
         cities: [citySchema],
         order: {

@@ -1,14 +1,15 @@
+const mongoose = require('mongoose');
 const { escapeRegex } = require("./index")
 
 function createProductFilter(query, admin) {
-    const filter = {};
+    const filter = { isDeleted: { $ne: true } };
 
     if (admin) {
         if (query.isActive !== undefined) filter.isActive = query.isActive;
         if (query.isSuspended !== undefined) filter.isSuspended = query.isSuspended;
     } else {
-        filter.isActive = true;
-        filter.isSuspended = false;
+        filter.isActive = { $ne: false };
+        filter.isSuspended = { $ne: true };
     }
 
     if (query.storeId) {

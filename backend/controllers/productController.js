@@ -11,7 +11,10 @@ const {
 
 async function createProduct(req, res, next) {
     try {
-        const { title, description, images, variants } = req.body;
+        const { title, description, images, variants, price, stock } = req.body;
+        const productVariants = Array.isArray(variants) && variants.length > 0
+            ? variants
+            : [{ price, stock }];
         const product = await withMongoTransaction((session) =>
             createProductDocuments(
                 {
@@ -20,7 +23,7 @@ async function createProduct(req, res, next) {
                     description,
                     images,
                 },
-                variants,
+                productVariants,
                 session
             )
         );
@@ -36,6 +39,10 @@ async function createProduct(req, res, next) {
 
 async function getProducts(req, res, next) {
     return listProducts(req, res, next);
+}
+
+async function getSellerProducts(req, res, next) {
+    return listProducts(req, res, next, true, req.store._id);
 }
 
 async function getAdminProducts(req, res, next) {
@@ -82,30 +89,22 @@ async function updateProduct(req, res, next) {
 
 async function deleteProduct(req, res, next) {
     try {
-        const product = await withMongoTransaction(async (session) => {
-            const options = session ? { session } : {};
-            const productQuery = Product.findOne({
+        const product = await Product.findOneAndUpdate(
+            {
                 _id: req.params.id,
                 storeId: req.store._id,
-            });
-            if (session) productQuery.session(session);
-            const foundProduct = await productQuery;
-            if (!foundProduct) return null;
-
-            await Variant.deleteMany({ productId: foundProduct._id }, options);
-            await Product.deleteOne(
-                { _id: foundProduct._id, storeId: req.store._id },
-                options
-            );
-            return foundProduct;
-        });
+                isDeleted: { $ne: true },
+            },
+            { $set: { isDeleted: true } },
+            { new: true }
+        );
 
         if (!product) {
             return error(res, 404, 'Product not found');
         }
         return success(res, 200, {
             message: 'Product deleted successfully',
-            product: product.toObject(),
+            product,
         });
     } catch (err) {
         return next(err);
@@ -117,7 +116,7 @@ async function updateProductAvailability(req, res, next) {
         const product = await withMongoTransaction(async (session) => {
             const options = session ? { session } : {};
             const product = await Product.findOneAndUpdate(
-                { _id: req.params.id, storeId: req.store._id },
+                { _id: req.params.id, storeId: req.store._id, isDeleted: { $ne: true } },
                 { $set: { isActive: req.body.isActive } },
                 { new: true, runValidators: true, ...options }
             );
@@ -165,7 +164,7 @@ async function updateProductStatus(req, res, next) {
                     suspensionReason: null,
                 };
             const product = await Product.findByIdAndUpdate(
-                req.params.id,
+                { _id: req.params.id, isDeleted: { $ne: true } },
                 { $set: statusUpdates },
                 { new: true, runValidators: true, ...options }
             );
@@ -204,6 +203,7 @@ async function updateProductStatus(req, res, next) {
 module.exports = {
     createProduct,
     getProducts,
+    getSellerProducts,
     getProductById,
     getAdminProducts,
     getAdminProductById,

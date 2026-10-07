@@ -2,6 +2,7 @@ const router = require('express').Router();
 const {
     createProduct,
     getProducts,
+    getSellerProducts,
     getProductById,
     getAdminProducts,
     getAdminProductById,
@@ -24,6 +25,7 @@ const { validateVariant, validateVariantUpdate } = require('../schemas/variantSc
 
 router.get('/admin', authenticate, authorize(ROLE.ADMIN), validateProductFilters, getAdminProducts);
 router.get('/admin/:id', authenticate, authorize(ROLE.ADMIN), validateProductId, getAdminProductById);
+router.get('/mine', authenticate, authorize(ROLE.SELLER), validateProductFilters, getSellerProducts);
 router.get('/', validateProductFilters, getProducts);
 router.get('/:id', validateProductId, getProductById);
 
@@ -37,7 +39,7 @@ router.post(
     createProduct
 );
 router.patch(
-    '/:id/status',
+    '/:id/approve-status',
     authenticate,
     authorize(ROLE.ADMIN),
     validateProductId,
@@ -45,7 +47,7 @@ router.patch(
     updateProductStatus
 );
 router.patch(
-    '/:id/availability',
+    '/:id/status',
     authenticate,
     authorize(ROLE.SELLER),
     verifyActiveStore,

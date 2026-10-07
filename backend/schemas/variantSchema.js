@@ -66,7 +66,9 @@ const validateVariant = [
         .isFloat({ min: 0 })
         .withMessage('Variant price must be a nonnegative number')
         .toFloat(),
-    body('variants').custom((value) => validateVariants(value, false)),
+    body('variants')
+        .optional()
+        .custom((value) => validateVariants(value, false)),
     validateRequest,
 ];
 

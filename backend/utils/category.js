@@ -1,3 +1,6 @@
+const mongoose = require('mongoose');
+const Store = require('../models/Store');
+
 async function getCategoryStoreIds(categoryId, storeId) {
     const storeFilter = { categoryId: new mongoose.Types.ObjectId(categoryId) };
     if (storeId) storeFilter._id = new mongoose.Types.ObjectId(storeId);

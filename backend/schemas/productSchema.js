@@ -2,6 +2,7 @@ const { body, param, query } = require('express-validator');
 const validateRequest = require('./validateRequest');
 
 const productFields = ['title', 'description', 'images', 'variants'];
+const createProductFields = [...productFields, 'price', 'stock'];
 
 function validateProductFields(value, fields, requireFields) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -12,8 +13,8 @@ function validateProductFields(value, fields, requireFields) {
     if (keys.some((key) => !fields.includes(key))) {
         throw new Error('Product contains unsupported fields');
     }
-    if (requireFields && !['title', 'description', 'variants'].every((field) => keys.includes(field))) {
-        throw new Error('Product title, description, and variants are required');
+    if (requireFields && !['title', 'description'].every((field) => keys.includes(field))) {
+        throw new Error('Product title and description are required');
     }
     if (!requireFields && keys.length === 0) {
         throw new Error('At least one product field is required');
@@ -22,7 +23,22 @@ function validateProductFields(value, fields, requireFields) {
 }
 
 const validateProduct = [
-    body().custom((value) => validateProductFields(value, productFields, true)),
+    body().custom((value) => {
+        validateProductFields(value, createProductFields, true);
+        if (Array.isArray(value.variants) && value.variants.length === 0 &&
+            (value.price === undefined || value.stock === undefined)) {
+            throw new Error('Top-level price and stock are required when variants are empty');
+        }
+        if (value.variants === undefined &&
+            (value.price === undefined || value.stock === undefined)) {
+            throw new Error('Top-level price and stock are required when variants are omitted');
+        }
+        if (Array.isArray(value.variants) && value.variants.length > 0 &&
+            (value.price !== undefined || value.stock !== undefined)) {
+            throw new Error('Provide price and stock inside each variant when variants are provided');
+        }
+        return true;
+    }),
     body('title')
         .isString()
         .withMessage('Product title must be a string')
@@ -43,9 +59,20 @@ const validateProduct = [
         .optional()
         .isString()
         .withMessage('Each product image must be a string'),
+    body('price')
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage('Product price must be a nonnegative number')
+        .toFloat(),
+    body('stock')
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage('Product stock must be a nonnegative number')
+        .toFloat(),
     body('variants')
-        .isArray({ min: 1 })
-        .withMessage('Product must have at least one variant'),
+        .optional()
+        .isArray()
+        .withMessage('Product variants must be an array'),
     validateRequest,
 ];
 

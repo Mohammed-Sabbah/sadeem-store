@@ -5,7 +5,6 @@ const variantSchema = new mongoose.Schema(
         productId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Product',
-            required: true,
             index: true,
         },
         image: {
@@ -19,8 +18,6 @@ const variantSchema = new mongoose.Schema(
         },
         stock: {
             type: Number,
-            required: true,
-            min: 0,
         },
         isActive: {
             type: Boolean,
@@ -35,13 +32,9 @@ const variantSchema = new mongoose.Schema(
         suspensionReason: {
             type: String,
             default: null,
-            trim: true,
-            maxlength: 500,
         },
         price: {
             type: Number,
-            required: true,
-            min: 0,
         },
     },
     {

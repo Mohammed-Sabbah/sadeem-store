@@ -29,30 +29,10 @@ export const GAZA_BOUNDS = {
 
 // خريطة محافظات ومدن قطاع غزة ومراكزها بالفرونت إند (Zero Cost)
 export const GAZA_REGIONS_CLIENT = {
-  north: {
-    id: 'north',
-    name: 'شمال غزة',
-    center: { lat: 31.545, lng: 34.505 },
-    cities: [
-      { id: 'jabalia', name: 'جباليا ومخيمها', center: { lat: 31.528, lng: 34.485 } },
-      { id: 'beit_lahia', name: 'بيت لاهيا', center: { lat: 31.545, lng: 34.505 } },
-      { id: 'beit_hanoun', name: 'بيت حانون', center: { lat: 31.542, lng: 34.536 } },
-    ],
-  },
-  gaza: {
-    id: 'gaza',
-    name: 'مدينة غزة',
-    center: { lat: 31.505, lng: 34.463 },
-    cities: [
-      { id: 'riman', name: 'الرمال وتل الهوا', center: { lat: 31.512, lng: 34.445 } },
-      { id: 'shujaeyya', name: 'الشجاعية والدرج والتفاح', center: { lat: 31.505, lng: 34.480 } },
-      { id: 'zaytoun', name: 'الزيتون والصبرة', center: { lat: 31.495, lng: 34.460 } },
-      { id: 'sheikh_radwan', name: 'الشيخ رضوان والنصر', center: { lat: 31.525, lng: 34.465 } },
-    ],
-  },
   central: {
     id: 'central',
     name: 'المحافظة الوسطى',
+    status: 'hub' as const,
     center: { lat: 31.428, lng: 34.375 },
     cities: [
       { id: 'deir_albalah', name: 'دير البلح', center: { lat: 31.418, lng: 34.351 } },
@@ -65,6 +45,7 @@ export const GAZA_REGIONS_CLIENT = {
   khan_younis: {
     id: 'khan_younis',
     name: 'خان يونس',
+    status: 'delivery_only' as const,
     center: { lat: 31.346, lng: 34.306 },
     cities: [
       { id: 'khan_younis_city', name: 'مدينة خان يونس والبلد', center: { lat: 31.346, lng: 34.306 } },
@@ -74,9 +55,33 @@ export const GAZA_REGIONS_CLIENT = {
       { id: 'mawasi_ky', name: 'المواصي - خان يونس', center: { lat: 31.355, lng: 34.260 } },
     ],
   },
+  gaza: {
+    id: 'gaza',
+    name: 'مدينة غزة',
+    status: 'closed' as const,
+    center: { lat: 31.505, lng: 34.463 },
+    cities: [
+      { id: 'riman', name: 'الرمال وتل الهوا', center: { lat: 31.512, lng: 34.445 } },
+      { id: 'shujaeyya', name: 'الشجاعية والدرج والتفاح', center: { lat: 31.505, lng: 34.480 } },
+      { id: 'zaytoun', name: 'الزيتون والصبرة', center: { lat: 31.495, lng: 34.460 } },
+      { id: 'sheikh_radwan', name: 'الشيخ رضوان والنصر', center: { lat: 31.525, lng: 34.465 } },
+    ],
+  },
+  north: {
+    id: 'north',
+    name: 'شمال غزة',
+    status: 'closed' as const,
+    center: { lat: 31.545, lng: 34.505 },
+    cities: [
+      { id: 'jabalia', name: 'جباليا ومخيمها', center: { lat: 31.528, lng: 34.485 } },
+      { id: 'beit_lahia', name: 'بيت لاهيا', center: { lat: 31.545, lng: 34.505 } },
+      { id: 'beit_hanoun', name: 'بيت حانون', center: { lat: 31.542, lng: 34.536 } },
+    ],
+  },
   rafah: {
     id: 'rafah',
     name: 'رفح',
+    status: 'closed' as const,
     center: { lat: 31.282, lng: 34.250 },
     cities: [
       { id: 'rafah_city', name: 'مدينة رفح والبلد', center: { lat: 31.282, lng: 34.250 } },

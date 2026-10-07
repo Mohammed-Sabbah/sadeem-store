@@ -81,6 +81,14 @@ export function HybridAddressPicker({
 
     try {
       const match = await getCurrentGpsPosition();
+      const govConfig = GAZA_REGIONS_CLIENT[match.governorateId as keyof typeof GAZA_REGIONS_CLIENT];
+      if (govConfig && govConfig.status === 'closed') {
+        setGpsError(
+          `موقعك الحالي يقع في «${match.governorateName}» (خارج نطاق التغطية حالياً). التوصيل متاح حالياً للمحافظة الوسطى وخان يونس.`
+        );
+        return;
+      }
+
       setMatchedInfo(match);
       setGovernorateId(match.governorateId);
       setCityId(match.cityId);
@@ -235,11 +243,19 @@ export function HybridAddressPicker({
               }}
               disabled={isSubmitting}
             >
-              {Object.values(GAZA_REGIONS_CLIENT).map((gov) => (
-                <option key={gov.id} value={gov.id}>
-                  {gov.name}
-                </option>
-              ))}
+              {Object.values(GAZA_REGIONS_CLIENT).map((gov) => {
+                const isClosed = gov.status === 'closed';
+                return (
+                  <option
+                    key={gov.id}
+                    value={gov.id}
+                    disabled={isClosed}
+                    className={isClosed ? 'text-gray-400 bg-gray-50' : 'font-bold'}
+                  >
+                    {gov.name} {isClosed ? '(قريباً - خارج التغطية)' : ''}
+                  </option>
+                );
+              })}
             </select>
           </div>
 

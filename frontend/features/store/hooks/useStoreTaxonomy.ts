@@ -20,14 +20,22 @@ export function useStoreTaxonomy() {
     isLoading: isLoadingRegions,
     isError: isRegionsError,
   } = useQuery<RegionItem[]>({
-    queryKey: ['store-regions'],
-    queryFn: taxonomyService.fetchRegions,
+    queryKey: ['store-regions-unified'],
+    queryFn: () => taxonomyService.fetchRegions(),
     staleTime: 10 * 60 * 1000,
   });
 
-  // Governorates available for store onboarding (central in phase 1, plus active flags)
-  const availableGovernorates = regions.filter((r) => r.isActive);
+  // 1. المحافظات ذات المركز النشط المتاحة لتسجيل المتاجر (status === 'hub')
+  const hubGovernorates = regions.filter((r) => r.status === 'hub');
+
+  // 2. المحافظات المتاحة لتوصيل واستقبال طلبات الزبائن (status !== 'closed')
+  const deliveryGovernorates = regions.filter((r) => r.status !== 'closed');
+
+  // 3. كامل المحافظات المسجلة
   const allGovernorates = regions;
+
+  // للتوافق العكسي مع الكود القديم
+  const availableGovernorates = hubGovernorates;
 
   const getCitiesForGovernorate = (govCodeOrName: string): CityItem[] => {
     const found = regions.find(
@@ -62,6 +70,8 @@ export function useStoreTaxonomy() {
   return {
     categories,
     regions,
+    hubGovernorates,
+    deliveryGovernorates,
     availableGovernorates,
     allGovernorates,
     getCitiesForGovernorate,

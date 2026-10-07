@@ -13,7 +13,7 @@ const { issueAccessToken, issueRefreshToken, verifyToken, hashRefreshToken, crea
 const { generateOtp, sendEmail } = require('../utils/email');
 const { success, error } = require('../utils/responses');
 const { sanitizeUser } = require("../utils/user")
-
+const { withMongoTransaction } = require("../config/db")
 
 async function checkRegistrationConflicts(email, phoneNumber) {
     const existingUser = await User.findOne({ email });
@@ -34,26 +34,6 @@ async function createUserWithWallet(userData, session) {
     const [user] = await User.create([userData], options);
     await Wallet.create([{ userId: user._id, balance: 0, currency: 'ILS' }], options);
     return user;
-}
-
-async function withMongoTransaction(callback) {
-    const session = await mongoose.startSession();
-
-    try {
-        return await session.withTransaction(() => callback(session));
-    } catch (txError) {
-        const isNoReplicaSet = txError && txError.message && (
-            txError.message.includes('replica set') ||
-            txError.message.includes('Transaction numbers are only allowed')
-        );
-
-        if (isNoReplicaSet) {
-            return await callback(null);
-        }
-        throw txError;
-    } finally {
-        await session.endSession();
-    }
 }
 
 async function register(req, res, next) {
@@ -192,8 +172,8 @@ async function login(req, res, next) {
             if (store.approveStatus === STORE_APPROVE_STATUS.REJECTED) {
                 return error(res, 403, 'Your merchant store has been rejected by admin');
             }
-            if (store.status !== STATUS.ACTIVE) {
-                return error(res, 403, 'Your merchant store is inactive');
+            if (store.approveStatus !== STORE_APPROVE_STATUS.APPROVED) {
+                return error(res, 403, 'Your merchant store isnt approved yet. Please contact support for more information');
             }
         }
 

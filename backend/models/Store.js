@@ -15,6 +15,7 @@ const storeSchema = new mongoose.Schema(
         categoryId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Category',
+            index: true,
         },
         name: {
             type: String,

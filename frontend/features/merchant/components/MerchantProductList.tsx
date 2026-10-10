@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link';
 import type { ProductItem } from '../types/merchant.types';
 
 export type FilterTab = 'all' | 'in_stock' | 'out_of_stock' | 'inactive';
@@ -230,9 +231,12 @@ export default function MerchantProductList({
                               </span>
                             )}
                           </div>
-                          <strong className="text-sm font-black text-brand-dark block tracking-tight">
+                          <Link
+                            href={`/merchant/products/${p._id}`}
+                            className="text-sm font-black text-brand-dark block tracking-tight hover:text-brand-primary transition-colors cursor-pointer"
+                          >
                             {p.name}
-                          </strong>
+                          </Link>
                           <span className="text-[11px] font-mono text-brand-muted">
                             {hasVariants
                               ? `${p.variants?.length} متغيرات مختلفة`
@@ -333,16 +337,28 @@ export default function MerchantProductList({
 
                         {/* Actions */}
                         <td className="py-3.5 px-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => confirmDelete(p._id, p.name)}
-                            className="p-2 rounded-xl text-brand-muted hover:text-red-600 hover:bg-red-50 transition-all duration-150 active:scale-90 cursor-pointer"
-                            title="حذف الصنف"
-                          >
-                            <svg className="w-4 h-4 stroke-[1.75]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                          </button>
+                          <div className="flex items-center justify-center gap-1">
+                            <Link
+                              href={`/merchant/products/${p._id}`}
+                              className="p-2 rounded-xl text-brand-muted hover:text-brand-primary hover:bg-brand-primary-soft transition-all duration-150 active:scale-90 inline-flex items-center justify-center cursor-pointer"
+                              title="استوديو وتعديل الصنف"
+                            >
+                              <svg className="w-4 h-4 stroke-[1.75]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                              </svg>
+                            </Link>
+
+                            <button
+                              type="button"
+                              onClick={() => confirmDelete(p._id, p.name)}
+                              className="p-2 rounded-xl text-brand-muted hover:text-red-600 hover:bg-red-50 transition-all duration-150 active:scale-90 cursor-pointer"
+                              title="حذف الصنف"
+                            >
+                              <svg className="w-4 h-4 stroke-[1.75]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
 
@@ -460,23 +476,37 @@ export default function MerchantProductList({
                         <span className="text-[10px] font-bold text-brand-muted block mb-0.5">
                           {p.categoryTitle || 'صنف عام'}
                         </span>
-                        <h3 className="text-xs sm:text-sm font-black text-brand-dark truncate m-0 mb-1">
+                        <Link
+                          href={`/merchant/products/${p._id}`}
+                          className="text-xs sm:text-sm font-black text-brand-dark truncate block mb-1 hover:text-brand-primary transition-colors cursor-pointer"
+                        >
                           {p.name}
-                        </h3>
+                        </Link>
                         <span className="text-xs font-black text-brand-dark bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border">
                           {priceLabel}
                         </span>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => confirmDelete(p._id, p.name)}
-                      className="p-1.5 rounded-lg text-brand-muted hover:text-red-600 transition-colors cursor-pointer"
-                      title="حذف الصنف"
-                    >
-                      ✕
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={`/merchant/products/${p._id}`}
+                        className="p-1.5 rounded-lg text-brand-muted hover:text-brand-primary transition-colors cursor-pointer"
+                        title="استوديو الصنف"
+                      >
+                        <svg className="w-3.5 h-3.5 stroke-[2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => confirmDelete(p._id, p.name)}
+                        className="p-1.5 rounded-lg text-brand-muted hover:text-red-600 transition-colors cursor-pointer"
+                        title="حذف الصنف"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
 
                   {/* Operational Mobile Controls */}

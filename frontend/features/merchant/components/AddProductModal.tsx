@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { taxonomyService, type CategoryItem } from '@/features/store/services/taxonomy.service';
-import type { ProductFormData, ProductOption } from '../types/merchant.types';
+import { merchantService } from '../services/merchant.service';
+import type { ProductFormData, ProductOption, OptionDefinition } from '../types/merchant.types';
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function AddProductModal({
   onSubmit,
 }: AddProductModalProps) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [categoryOptionDefinitions, setCategoryOptionDefinitions] = useState<OptionDefinition[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -86,6 +88,16 @@ export default function AddProductModal({
     };
   }, [isOpen]);
 
+  // Load allowed options for selected category
+  useEffect(() => {
+    if (!categoryId) return;
+    merchantService.fetchOptionsByCategory(categoryId).then((res) => {
+      if (res.success && res.data?.definitions) {
+        setCategoryOptionDefinitions(res.data.definitions);
+      }
+    });
+  }, [categoryId]);
+
   // Compute Cartesian product for Variants
   useEffect(() => {
     if (isSimple) return;
@@ -105,6 +117,14 @@ export default function AddProductModal({
 
     const valueArrays = validOptions.map((o) => o.values);
     const combinations = cartesian(valueArrays);
+
+    if (combinations.length > 100) {
+      setErrorMessage(`هذه التشكيلة ستنتج ${combinations.length} صنف. الحد الأقصى المسموح هو 100 صنف.`);
+      setVariantsRows([]);
+      return;
+    } else {
+      setErrorMessage(null);
+    }
 
     setVariantsRows((prev) => {
       return combinations.map((combo) => {
@@ -135,12 +155,25 @@ export default function AddProductModal({
     });
   }, [isSimple, options]);
 
-  const addOption = (optionName: string = '') => {
+  const addOption = (optionName: string = '', def?: OptionDefinition) => {
     if (options.length >= 3) {
       alert('الحد الأقصى للخيارات هو 3 لضمان سرعة التصفح لزبائن غزة.');
       return;
     }
-    setOptions((prev) => [...prev, { name: optionName, values: [] }]);
+    const targetName = def?.label || optionName;
+    if (options.some((o) => o.name === targetName)) return;
+    setOptions((prev) => [
+      ...prev,
+      {
+        key: def?.key,
+        source: def ? 'DEFINED' : 'CUSTOM',
+        label: def?.label || targetName,
+        name: targetName,
+        type: def?.type || 'TEXT',
+        unit: def?.unit || null,
+        values: def?.values ? def.values.slice(0, 3).map((v) => v.label) : [],
+      },
+    ]);
   };
 
   const removeOption = (index: number) => {
@@ -513,16 +546,28 @@ export default function AddProductModal({
                   خيارات الصنف (اللون، المقاس، الحجم):
                 </h3>
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                  {PRESET_OPTIONS.map((preset) => (
-                    <button
-                      key={preset}
-                      type="button"
-                      onClick={() => addOption(preset)}
-                      className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-muted hover:text-brand-dark hover:border-brand-primary transition-all duration-150 active:scale-95 cursor-pointer"
-                    >
-                      + {preset}
-                    </button>
-                  ))}
+                  {categoryOptionDefinitions.length > 0
+                    ? categoryOptionDefinitions.map((def) => (
+                        <button
+                          key={def.key}
+                          type="button"
+                          onClick={() => addOption(def.label, def)}
+                          disabled={options.some((o) => o.name === def.label || o.key === def.key)}
+                          className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer"
+                        >
+                          + {def.label}
+                        </button>
+                      ))
+                    : PRESET_OPTIONS.map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => addOption(preset)}
+                          className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-muted hover:text-brand-dark hover:border-brand-primary transition-all duration-150 active:scale-95 cursor-pointer"
+                        >
+                          + {preset}
+                        </button>
+                      ))}
                   <button
                     type="button"
                     onClick={() => addOption('')}
@@ -617,8 +662,13 @@ export default function AddProductModal({
               {variantsRows.length > 0 && (
                 <div className="space-y-3 pt-2">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200/80">
-                    <div className="text-xs font-black text-amber-950">
-                      ⚡ توليد {variantsRows.length} متغيرات — تعبئة سريعة جماعية:
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-amber-950">
+                        الأصناف المولدة: {variantsRows.length} / 100
+                      </span>
+                      <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                        متبقي {Math.max(0, 100 - variantsRows.length)}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2">

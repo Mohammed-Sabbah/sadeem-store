@@ -14,7 +14,7 @@ export interface StoreAddress {
 export interface StoreProfile {
   _id: string;
   name: string;
-  categoryId: string | { _id: string; title: string; slug: string };
+  categoryId: string | { _id: string; title: string; slug: string; allowedOptions?: string[] };
   categoryName?: string;
   address: StoreAddress;
   phoneNumber?: string;
@@ -26,30 +26,56 @@ export interface StoreProfile {
   updatedAt?: string;
 }
 
+export interface OptionDefinitionValue {
+  key: string;
+  label: string;
+  hex?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface OptionDefinition {
+  _id?: string;
+  key: string;
+  label: string;
+  type: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC';
+  unit?: string | null;
+  values: OptionDefinitionValue[];
+  isActive: boolean;
+}
+
 export interface ProductOption {
+  key?: string;
+  source?: 'DEFINED' | 'CUSTOM';
+  label?: string;
   name: string; // e.g. "اللون", "المقاس"
+  type?: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC';
+  unit?: string | null;
   values: string[]; // e.g. ["أسود", "بيج"], ["S", "M", "L"]
 }
 
 export interface ProductVariant {
   _id?: string;
   productId?: string;
+  storeId?: string;
   sku: string;
-  attributes: Record<string, string>; // e.g. { "اللون": "أسود", "المقاس": "L" }
-  attrKey: string; // e.g. "اللون:أسود|المقاس:L" or "default"
+  attributes: Record<string, string>; // e.g. { "color": "black", "size": "L" }
+  attrKey: string; // e.g. "color:black|size:L" or "default"
   price: number;
-  compareAtPrice?: number;
+  compareAtPrice?: number | null;
   stock: number;
   isActive: boolean;
   image?: string;
+  images?: string[];
 }
 
 export interface ProductItem {
   _id: string;
   storeId: string;
-  categoryId: string | { _id: string; title: string; slug?: string };
+  categoryId: string | { _id: string; title: string; slug?: string; allowedOptions?: string[] };
   categoryTitle?: string;
   name: string;
+  title?: string;
   slug?: string;
   description?: string;
   images: string[];
@@ -69,6 +95,7 @@ export interface ProductItem {
 
 export interface ProductFormData {
   name: string;
+  title?: string;
   description: string;
   categoryId: string;
   images: string[];
@@ -79,13 +106,16 @@ export interface ProductFormData {
   simpleSku: string;
   options: ProductOption[];
   variants: Array<{
+    _id?: string;
     attributes: Record<string, string>;
     attrKey: string;
     sku: string;
     price: number;
-    compareAtPrice?: number;
+    compareAtPrice?: number | null;
     stock: number;
     isActive: boolean;
+    image?: string;
+    images?: string[];
   }>;
   isFeatured: boolean;
   isActive: boolean;

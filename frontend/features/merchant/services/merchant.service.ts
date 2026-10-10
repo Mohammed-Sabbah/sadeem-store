@@ -422,6 +422,267 @@ export const merchantService = {
   },
 
   /**
+   * جلب تفاصيل منتج محدد مع أصنافه
+   */
+  async getProductById(productId: string): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
+    try {
+      const res = await getRequest<{ product: any }>(`/api/products/${productId}`);
+      if (res.success && res.data?.product) {
+        const prod = res.data.product;
+        const mapped: ProductItem = {
+          _id: prod._id,
+          storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
+          categoryId: prod.categoryId,
+          categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
+          name: prod.title || prod.name,
+          title: prod.title || prod.name,
+          slug: prod.slug,
+          description: prod.description || '',
+          images: prod.images || [],
+          options: (prod.options || []).map((o: any) => ({
+            key: o.key,
+            source: o.source,
+            label: o.label || o.name,
+            name: o.name || o.label || o.key,
+            type: o.type,
+            unit: o.unit,
+            values: o.values || [],
+          })),
+          minPrice: prod.minPrice || 0,
+          maxPrice: prod.maxPrice || 0,
+          inStock: prod.inStock || false,
+          isFeatured: prod.isFeatured || false,
+          isActive: prod.isActive !== undefined ? prod.isActive : true,
+          variants: (prod.variants || []).map((v: any) => ({
+            _id: v._id,
+            productId: v.productId,
+            storeId: v.storeId,
+            sku: v.sku,
+            attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
+            attrKey: v.attrKey,
+            price: v.price,
+            compareAtPrice: v.compareAtPrice,
+            stock: v.stock,
+            isActive: v.isActive !== undefined ? v.isActive : true,
+            images: v.images || (v.image ? [v.image] : []),
+          })),
+          variantsCount: (prod.variants || []).length,
+          totalStock: prod.totalStock || (prod.variants || []).reduce((s: number, v: any) => s + (v.stock || 0), 0),
+          createdAt: prod.createdAt || new Date().toISOString(),
+          updatedAt: prod.updatedAt,
+        };
+        return { success: true, data: mapped };
+      }
+    } catch {
+      // Offline / mock fallback
+    }
+
+    const local = getLocalProducts().find((p) => p._id === productId);
+    if (local) {
+      return { success: true, data: local };
+    }
+    return { success: false, message: 'المنتج غير موجود' };
+  },
+
+  /**
+   * تحديث تفاصيل منتج وأصنافه
+   */
+  async updateProduct(
+    productId: string,
+    formData: Partial<ProductFormData>
+  ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
+    try {
+      const payload: any = {
+        title: formData.name || formData.title,
+        description: formData.description,
+        categoryId: formData.categoryId,
+        images: formData.images,
+        isFeatured: formData.isFeatured,
+        isActive: formData.isActive,
+      };
+
+      if (formData.options) {
+        payload.options = formData.options.map((opt) => ({
+          key: opt.key || opt.name.toLowerCase().trim(),
+          source: opt.source || 'DEFINED',
+          label: opt.label || opt.name,
+          type: opt.type || 'TEXT',
+          unit: opt.unit || null,
+          values: opt.values,
+        }));
+      }
+
+      if (formData.variants) {
+        payload.variants = formData.variants.map((v) => ({
+          _id: v._id,
+          sku: v.sku,
+          attributes: v.attributes,
+          price: Number(v.price) || 0,
+          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+          stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+          isActive: v.isActive !== undefined ? v.isActive : true,
+          images: v.images || [],
+        }));
+      }
+
+      const res = await patchRequest<{ product: any }>(`/api/products/${productId}`, payload);
+      if (res.success && res.data?.product) {
+        const prod = res.data.product;
+        const mapped: ProductItem = {
+          _id: prod._id,
+          storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
+          categoryId: prod.categoryId,
+          categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
+          name: prod.title || prod.name,
+          title: prod.title || prod.name,
+          slug: prod.slug,
+          description: prod.description || '',
+          images: prod.images || [],
+          options: prod.options || [],
+          minPrice: prod.minPrice || 0,
+          maxPrice: prod.maxPrice || 0,
+          inStock: prod.inStock || false,
+          isFeatured: prod.isFeatured || false,
+          isActive: prod.isActive !== undefined ? prod.isActive : true,
+          variants: prod.variants || [],
+          variantsCount: (prod.variants || []).length,
+          totalStock: prod.totalStock || 0,
+          createdAt: prod.createdAt || new Date().toISOString(),
+          updatedAt: prod.updatedAt,
+        };
+
+        // Update local storage
+        const current = getLocalProducts();
+        const updated = current.map((p) => (p._id === productId ? mapped : p));
+        saveLocalProducts(updated);
+
+        return { success: true, data: mapped, message: 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
+      }
+    } catch {
+      // offline fallback
+    }
+
+    // Local update fallback
+    const current = getLocalProducts();
+    const existing = current.find((p) => p._id === productId);
+    if (!existing) {
+      return { success: false, message: 'المنتج غير موجود' };
+    }
+
+    const updatedItem: ProductItem = {
+      ...existing,
+      name: formData.name || existing.name,
+      description: formData.description !== undefined ? formData.description : existing.description,
+      categoryId: formData.categoryId || existing.categoryId,
+      images: formData.images || existing.images,
+      options: formData.options || existing.options,
+      isFeatured: formData.isFeatured !== undefined ? formData.isFeatured : existing.isFeatured,
+      isActive: formData.isActive !== undefined ? formData.isActive : existing.isActive,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (formData.variants) {
+      const vList = formData.variants.map((v, i) => ({
+        _id: v._id || `var_${i}`,
+        sku: v.sku,
+        attributes: v.attributes,
+        attrKey: v.attrKey || 'default',
+        price: Number(v.price) || 0,
+        compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+        stock: Number(v.stock) || 0,
+        isActive: v.isActive !== undefined ? v.isActive : true,
+      }));
+      updatedItem.variants = vList;
+      updatedItem.variantsCount = vList.length;
+      updatedItem.totalStock = vList.reduce((s, v) => s + v.stock, 0);
+      updatedItem.minPrice = vList.length > 0 ? Math.min(...vList.map((v) => v.price)) : 0;
+      updatedItem.maxPrice = vList.length > 0 ? Math.max(...vList.map((v) => v.price)) : 0;
+      updatedItem.inStock = updatedItem.totalStock > 0;
+    }
+
+    saveLocalProducts(current.map((p) => (p._id === productId ? updatedItem : p)));
+    return { success: true, data: updatedItem, message: 'تم حفظ التعديلات محلياً بنجاح' };
+  },
+
+  /**
+   * جلب تعريفات الخيارات العامة والوحدات المتاحة
+   */
+  async fetchOptionDefinitions(): Promise<{
+    success: boolean;
+    data?: { definitions: any[]; availableUnits: any[] };
+  }> {
+    try {
+      const res = await getRequest<any>('/api/options');
+      if (res.success && res.data) {
+        return { success: true, data: res.data };
+      }
+    } catch {
+      // offline fallback
+    }
+
+    return {
+      success: true,
+      data: {
+        definitions: [
+          {
+            key: 'color',
+            label: 'اللون',
+            type: 'COLOR',
+            values: [
+              { key: 'black', label: 'أسود', hex: '#000000' },
+              { key: 'white', label: 'أبيض', hex: '#FFFFFF' },
+              { key: 'navy', label: 'كحلي', hex: '#1E3A8A' },
+              { key: 'beige', label: 'بيج', hex: '#D4B996' },
+              { key: 'amber', label: 'كهرماني', hex: '#B8621B' },
+            ],
+            isActive: true,
+          },
+          {
+            key: 'size_clothing',
+            label: 'مقاس الملابس',
+            type: 'SIZE',
+            values: [
+              { key: 's', label: 'S' },
+              { key: 'm', label: 'M' },
+              { key: 'l', label: 'L' },
+              { key: 'xl', label: 'XL' },
+            ],
+            isActive: true,
+          },
+        ],
+        availableUnits: [],
+      },
+    };
+  },
+
+  /**
+   * جلب الخيارات المصرحة لتصنيف محدد
+   */
+  async fetchOptionsByCategory(categoryId: string): Promise<{
+    success: boolean;
+    data?: { allowedKeys?: string[]; definitions: any[]; availableUnits: any[] };
+  }> {
+    try {
+      const res = await getRequest<any>(`/api/options/category/${categoryId}`);
+      if (res.success && res.data) {
+        return { success: true, data: res.data };
+      }
+    } catch {
+      // offline fallback
+    }
+
+    const fallback = await this.fetchOptionDefinitions();
+    return {
+      success: true,
+      data: {
+        allowedKeys: [],
+        definitions: fallback.data?.definitions || [],
+        availableUnits: fallback.data?.availableUnits || [],
+      },
+    };
+  },
+
+  /**
    * حساب ملخص الإحصائيات الحية للمتجر
    */
   calculateMetrics(products: ProductItem[]): MerchantMetrics {

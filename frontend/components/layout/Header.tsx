@@ -168,16 +168,27 @@ export function Header() {
             )}
           </Link>
 
-          <Link
-            href={isAuthenticated ? "/account" : "/auth/login?redirect=/account"}
-            className="hidden sm:inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-brand-dark text-white hover:bg-brand-primary text-xs font-bold transition-colors shadow-sm no-underline"
-          >
-            {isAuthenticated ? (
-              <span>أهلاً، {user?.name?.split(' ')[0] || 'حسابي'}</span>
-            ) : (
-              <span>دخول / حسابي</span>
-            )}
-          </Link>
+          {isAuthenticated && (user?.role === 'seller' || (user?.role as string) === 'merchant') ? (
+            <Link
+              href="/merchant/dashboard"
+              className="hidden sm:inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-[#B8621B] text-white hover:bg-[#9E5012] text-xs font-black transition-colors shadow-xs no-underline active:scale-95"
+              title="العودة إلى لوحة تحكم التاجر وإدارة المخزون"
+            >
+              <span>لوحة التاجر</span>
+              <span className="text-[10px]">↗</span>
+            </Link>
+          ) : (
+            <Link
+              href={isAuthenticated ? "/account" : "/auth/login?redirect=/account"}
+              className="hidden sm:inline-flex items-center justify-center gap-1.5 px-4 py-1.5 rounded-full bg-brand-dark text-white hover:bg-brand-primary text-xs font-bold transition-colors shadow-sm no-underline"
+            >
+              {isAuthenticated ? (
+                <span>أهلاً، {user?.name?.split(' ')[0] || 'حسابي'}</span>
+              ) : (
+                <span>دخول / حسابي</span>
+              )}
+            </Link>
+          )}
         </div>
       </div>
 

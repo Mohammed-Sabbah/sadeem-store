@@ -38,8 +38,22 @@ export function useLogin() {
     }
 
     if (res.data?.user) {
-      setSessionUser(res.data.user);
-      router.push(redirectUrl);
+      const loggedUser = res.data.user;
+      setSessionUser(loggedUser);
+
+      // Role-based routing: Merchants must land on merchant dashboard, never customer storefront
+      const isSeller = loggedUser.role === 'seller' || loggedUser.role === 'merchant';
+      if (isSeller) {
+        if (redirectUrl.startsWith('/merchant')) {
+          router.push(redirectUrl);
+        } else {
+          router.push('/merchant/dashboard');
+        }
+      } else if (loggedUser.role === 'admin') {
+        router.push('/admin');
+      } else {
+        router.push(redirectUrl === '/' ? '/' : redirectUrl);
+      }
     }
   };
 

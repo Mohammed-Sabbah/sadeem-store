@@ -19,7 +19,7 @@ export interface UserProfile {
     phone?: string;
     isDefault?: boolean;
   }>;
-  role: 'customer' | 'merchant' | 'courier' | 'admin';
+  role: 'customer' | 'merchant' | 'seller' | 'courier' | 'admin';
   status: 'active' | 'pending_approval' | 'suspended';
   walletBalance: number;
   ordersCount?: number;

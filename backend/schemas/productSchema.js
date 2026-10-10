@@ -4,6 +4,7 @@ const validateRequest = require('./validateRequest');
 const productFields = [
     'title',
     'name',
+    'slug',
     'categoryId',
     'description',
     'images',
@@ -106,10 +107,30 @@ const validateProduct = [
         .optional()
         .isArray()
         .withMessage('Product options must be an array'),
+    body('options.*.key')
+        .optional()
+        .isString()
+        .withMessage('Option key must be a string'),
+    body('options.*.label')
+        .optional()
+        .isString()
+        .withMessage('Option label must be a string'),
     body('options.*.name')
         .optional()
         .isString()
         .withMessage('Option name must be a string'),
+    body('options.*.source')
+        .optional()
+        .isIn(['DEFINED', 'CUSTOM'])
+        .withMessage('Option source must be DEFINED or CUSTOM'),
+    body('options.*.type')
+        .optional()
+        .isIn(['COLOR', 'SIZE', 'TEXT', 'NUMERIC'])
+        .withMessage('Option type must be COLOR, SIZE, TEXT, or NUMERIC'),
+    body('options.*.unit')
+        .optional()
+        .isString()
+        .withMessage('Option unit must be a string'),
     body('options.*.values')
         .optional()
         .isArray()

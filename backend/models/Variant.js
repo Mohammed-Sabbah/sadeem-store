@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { isMoney, roundMoney } = require('../utils/money');
 
 const variantSchema = new mongoose.Schema(
     {
@@ -8,10 +9,15 @@ const variantSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
+        storeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Store',
+            required: true,
+            index: true,
+        },
         sku: {
             type: String,
             required: true,
-            unique: true,
             trim: true,
             uppercase: true,
         },
@@ -28,21 +34,40 @@ const variantSchema = new mongoose.Schema(
             type: Number,
             required: true,
             min: 0,
+            validate: {
+                validator: function (v) {
+                    return isMoney(v);
+                },
+                message: 'السعر يجب أن يكون رقماً موجباً وبحد أقصى منزلتين عشريتين',
+            },
         },
         compareAtPrice: {
             type: Number,
             min: 0,
             default: null,
+            validate: {
+                validator: function (v) {
+                    if (v === null || v === undefined) return true;
+                    return isMoney(v);
+                },
+                message: 'سعر الخصم/المقارنة يجب أن يكون رقماً موجباً وبحد أقصى منزلتين عشريتين',
+            },
         },
         stock: {
             type: Number,
             required: true,
             min: 0,
             default: 0,
+            validate: {
+                validator: function (v) {
+                    return Number.isInteger(v) && v >= 0;
+                },
+                message: 'المخزون يجب أن يكون رقماً صحيحاً غير سالب',
+            },
         },
-        image: {
-            type: String,
-            default: '',
+        images: {
+            type: [String],
+            default: [],
         },
         isActive: {
             type: Boolean,
@@ -65,12 +90,16 @@ const variantSchema = new mongoose.Schema(
     }
 );
 
-// Compound Unique Index: Prevents duplicate combination (e.g. Red + L) within the same product
+// الفهرس المركب لمنع تكرار نفس تركيبة الخصائص لنفس المنتج (مثلاً أحمر + L مرتين)
 variantSchema.index({ productId: 1, attrKey: 1 }, { unique: true });
+
+// الفهرس المركب لكود SKU: فريد على مستوى المتجر نفسه حصراً (Store-Scoped SKU)
+variantSchema.index({ storeId: 1, sku: 1 }, { unique: true });
+
 variantSchema.index({ productId: 1, price: 1 });
 variantSchema.index({ productId: 1, stock: 1 });
 
-// Pre-validate hook to calculate deterministic, sorted attrKey from attributes
+// Pre-validate hook لحساب attrKey تصاعدياً ومحدداً بشكل حتمي (Deterministic AttrKey)
 variantSchema.pre('validate', function (next) {
     if (this.attributes) {
         let entries = [];
@@ -82,7 +111,7 @@ variantSchema.pre('validate', function (next) {
 
         const sorted = entries
             .filter(([k, v]) => k && v !== undefined && v !== null && String(v).trim())
-            .map(([k, v]) => [String(k).trim(), String(v).trim()])
+            .map(([k, v]) => [String(k).trim().toLowerCase(), String(v).trim()])
             .sort(([a], [b]) => a.localeCompare(b));
 
         this.attrKey = sorted.length > 0

@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { escapeRegex } = require('./index');
+const { roundMoney } = require('./money');
 
 function createProductFilter(query, admin = false) {
     const filter = { isDeleted: { $ne: true } };
@@ -37,6 +38,16 @@ function createProductFilter(query, admin = false) {
         filter.$or = [{ title: search }, { description: search }];
     }
 
+    // فلترة الخيارات السريعة عبر Product.options (e.g. optionKey=color & optionValue=red)
+    if (query.optionKey && query.optionValue) {
+        filter.options = {
+            $elemMatch: {
+                key: String(query.optionKey).toLowerCase().trim(),
+                values: String(query.optionValue).trim(),
+            },
+        };
+    }
+
     return filter;
 }
 
@@ -66,8 +77,8 @@ async function recomputeProductSummary(productId, session = null) {
         },
     ]).session(session || null);
 
-    const minPrice = summary?.minPrice ?? 0;
-    const maxPrice = summary?.maxPrice ?? 0;
+    const minPrice = roundMoney(summary?.minPrice ?? 0);
+    const maxPrice = roundMoney(summary?.maxPrice ?? 0);
     const totalStock = summary?.totalStock ?? 0;
     const inStock = totalStock > 0;
 
@@ -87,25 +98,36 @@ async function recomputeProductSummary(productId, session = null) {
     return { minPrice, maxPrice, totalStock, inStock };
 }
 
-function generateVariantSku(productTitle, attributes = {}, index = 1) {
-    const titlePart = (productTitle || 'ITEM')
-        .replace(/[^a-zA-Z0-9\u0621-\u064A]/g, '')
+/**
+ * توليد كود SKU تلقائي مفهوم يعتمد على القيم الحقيقية (وليس المفاتيح العشوائية)
+ * Format: SDM-{CAT}-{ATTR_VALS}-{INDEX}-{RANDOM}
+ */
+function generateVariantSku(categoryCodeOrTitle = 'ITEM', attributes = {}, index = 1) {
+    const cleanPrefix = (categoryCodeOrTitle || 'ITEM')
+        .replace(/[^a-zA-Z0-9]/g, '')
         .slice(0, 4)
         .toUpperCase() || 'PROD';
 
     let attrPart = '';
     if (attributes && typeof attributes === 'object') {
-        const values = attributes instanceof Map
-            ? [...attributes.values()]
-            : Object.values(attributes);
-        attrPart = values
+        const entries = attributes instanceof Map
+            ? [...attributes.entries()]
+            : Object.entries(attributes);
+
+        const values = entries
+            .map(([, v]) => String(v || '').trim())
             .filter(Boolean)
-            .map((v) => String(v).slice(0, 3).toUpperCase())
-            .join('-');
+            .map((v) => {
+                // إزالة المحارف غير اللاتينية/الأرقام أو اختصارها
+                const cleaned = v.replace(/[^a-zA-Z0-9]/g, '');
+                return cleaned ? cleaned.slice(0, 4).toUpperCase() : 'VAL';
+            });
+
+        attrPart = values.slice(0, 3).join('-');
     }
 
     const randomSuffix = Math.floor(100 + Math.random() * 900);
-    return `SDM-${titlePart}${attrPart ? `-${attrPart}` : ''}-${index}-${randomSuffix}`;
+    return `SDM-${cleanPrefix}${attrPart ? `-${attrPart}` : ''}-${index}-${randomSuffix}`;
 }
 
 module.exports = {

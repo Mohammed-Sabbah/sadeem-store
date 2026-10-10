@@ -2,10 +2,32 @@ const mongoose = require('mongoose');
 
 const productOptionSchema = new mongoose.Schema(
     {
-        name: {
+        key: {
             type: String,
             required: true,
             trim: true,
+            lowercase: true,
+        },
+        source: {
+            type: String,
+            enum: ['DEFINED', 'CUSTOM'],
+            default: 'DEFINED',
+        },
+        label: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        type: {
+            type: String,
+            enum: ['COLOR', 'SIZE', 'TEXT', 'NUMERIC'],
+            default: 'TEXT',
+        },
+        unit: {
+            type: String,
+            default: null,
+            trim: true,
+            lowercase: true,
         },
         values: {
             type: [String],
@@ -35,6 +57,11 @@ const productSchema = new mongoose.Schema(
             required: true,
             trim: true,
             index: true,
+        },
+        slug: {
+            type: String,
+            trim: true,
+            default: null,
         },
         description: {
             type: String,
@@ -102,6 +129,15 @@ const productSchema = new mongoose.Schema(
     }
 );
 
+// Indexes
+productSchema.index(
+    { storeId: 1, slug: 1 },
+    {
+        unique: true,
+        partialFilterExpression: { isDeleted: false, slug: { $type: 'string' } },
+    }
+);
+productSchema.index({ 'options.key': 1, 'options.values': 1 });
 productSchema.index({ storeId: 1, isActive: 1, isDeleted: 1, createdAt: -1 });
 productSchema.index({ categoryId: 1, isActive: 1, isDeleted: 1, inStock: 1 });
 productSchema.index({ isActive: 1, isDeleted: 1, minPrice: 1 });

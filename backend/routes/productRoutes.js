@@ -26,6 +26,7 @@ const { validateVariant, validateVariantUpdate } = require('../schemas/variantSc
 router.get('/admin', authenticate, authorize(ROLE.ADMIN), validateProductFilters, getAdminProducts);
 router.get('/admin/:id', authenticate, authorize(ROLE.ADMIN), validateProductId, getAdminProductById);
 router.get('/mine', authenticate, authorize(ROLE.SELLER), validateProductFilters, getSellerProducts);
+router.get('/merchant/my-products', authenticate, authorize(ROLE.SELLER), validateProductFilters, getSellerProducts);
 router.get('/', validateProductFilters, getProducts);
 router.get('/:id', validateProductId, getProductById);
 
@@ -48,6 +49,15 @@ router.patch(
 );
 router.patch(
     '/:id/status',
+    authenticate,
+    authorize(ROLE.SELLER),
+    verifyActiveStore,
+    validateProductId,
+    validateProductAvailability,
+    updateProductAvailability
+);
+router.patch(
+    '/:id/toggle',
     authenticate,
     authorize(ROLE.SELLER),
     verifyActiveStore,

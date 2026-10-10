@@ -1,8 +1,30 @@
 const { body, param, query } = require('express-validator');
 const validateRequest = require('./validateRequest');
 
-const productFields = ['title', 'description', 'images', 'variants'];
-const createProductFields = [...productFields, 'price', 'stock'];
+const productFields = [
+    'title',
+    'name',
+    'categoryId',
+    'description',
+    'images',
+    'options',
+    'variants',
+    'isFeatured',
+    'isActive',
+];
+
+const createProductFields = [
+    ...productFields,
+    'price',
+    'stock',
+    'sku',
+    'compareAtPrice',
+    'simplePrice',
+    'simpleStock',
+    'simpleSku',
+    'simpleCompareAtPrice',
+    'isSimple',
+];
 
 function validateProductFields(value, fields, requireFields) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
@@ -10,12 +32,21 @@ function validateProductFields(value, fields, requireFields) {
     }
 
     const keys = Object.keys(value);
-    if (keys.some((key) => !fields.includes(key))) {
-        throw new Error('Product contains unsupported fields');
+    const unsupported = keys.filter((key) => !fields.includes(key));
+    if (unsupported.length > 0) {
+        throw new Error(`Product contains unsupported fields: ${unsupported.join(', ')}`);
     }
-    if (requireFields && !['title', 'description'].every((field) => keys.includes(field))) {
-        throw new Error('Product title and description are required');
+
+    if (requireFields) {
+        const hasTitleOrName = Boolean((value.title && String(value.title).trim()) || (value.name && String(value.name).trim()));
+        if (!hasTitleOrName) {
+            throw new Error('Product title or name is required');
+        }
+        if (!value.categoryId) {
+            throw new Error('Product categoryId is required');
+        }
     }
+
     if (!requireFields && keys.length === 0) {
         throw new Error('At least one product field is required');
     }
@@ -25,32 +56,44 @@ function validateProductFields(value, fields, requireFields) {
 const validateProduct = [
     body().custom((value) => {
         validateProductFields(value, createProductFields, true);
+
+        // Normalize title from name if name was provided
+        if (!value.title && value.name) {
+            value.title = value.name;
+        }
+
+        // Support simple products (price & stock passed directly or via simplePrice / simpleStock)
+        const price = value.price !== undefined ? value.price : value.simplePrice;
+        const stock = value.stock !== undefined ? value.stock : value.simpleStock;
+
         if (Array.isArray(value.variants) && value.variants.length === 0 &&
-            (value.price === undefined || value.stock === undefined)) {
+            (price === undefined || stock === undefined)) {
             throw new Error('Top-level price and stock are required when variants are empty');
         }
         if (value.variants === undefined &&
-            (value.price === undefined || value.stock === undefined)) {
+            (price === undefined || stock === undefined)) {
             throw new Error('Top-level price and stock are required when variants are omitted');
-        }
-        if (Array.isArray(value.variants) && value.variants.length > 0 &&
-            (value.price !== undefined || value.stock !== undefined)) {
-            throw new Error('Provide price and stock inside each variant when variants are provided');
         }
         return true;
     }),
     body('title')
+        .optional()
         .isString()
         .withMessage('Product title must be a string')
-        .trim()
-        .notEmpty()
-        .withMessage('Product title is required'),
+        .trim(),
+    body('name')
+        .optional()
+        .isString()
+        .withMessage('Product name must be a string')
+        .trim(),
+    body('categoryId')
+        .isMongoId()
+        .withMessage('Valid categoryId is required'),
     body('description')
+        .optional()
         .isString()
         .withMessage('Product description must be a string')
-        .trim()
-        .notEmpty()
-        .withMessage('Product description is required'),
+        .trim(),
     body('images')
         .optional()
         .isArray()
@@ -59,6 +102,18 @@ const validateProduct = [
         .optional()
         .isString()
         .withMessage('Each product image must be a string'),
+    body('options')
+        .optional()
+        .isArray()
+        .withMessage('Product options must be an array'),
+    body('options.*.name')
+        .optional()
+        .isString()
+        .withMessage('Option name must be a string'),
+    body('options.*.values')
+        .optional()
+        .isArray()
+        .withMessage('Option values must be an array of strings'),
     body('price')
         .optional()
         .isFloat({ min: 0 })
@@ -84,14 +139,21 @@ const validateProductUpdate = [
         .withMessage('Product title must be a string')
         .trim()
         .notEmpty()
-        .withMessage('Product title is required'),
+        .withMessage('Product title cannot be empty'),
+    body('name')
+        .optional()
+        .isString()
+        .withMessage('Product name must be a string')
+        .trim(),
+    body('categoryId')
+        .optional()
+        .isMongoId()
+        .withMessage('Invalid category ID'),
     body('description')
         .optional()
         .isString()
         .withMessage('Product description must be a string')
-        .trim()
-        .notEmpty()
-        .withMessage('Product description is required'),
+        .trim(),
     body('images')
         .optional()
         .isArray()
@@ -100,10 +162,14 @@ const validateProductUpdate = [
         .optional()
         .isString()
         .withMessage('Each product image must be a string'),
+    body('options')
+        .optional()
+        .isArray()
+        .withMessage('Product options must be an array'),
     body('variants')
         .optional()
         .isArray({ min: 1 })
-        .withMessage('Product must have at least one variant'),
+        .withMessage('Product must have at least one variant when updating variants'),
     validateRequest,
 ];
 
@@ -167,11 +233,14 @@ const validateProductFilters = [
         .toBoolean(),
     query('sort')
         .optional()
-        .isIn(['newest', 'price_asc', 'price_desc'])
+        .isIn(['newest', 'price_asc', 'price_desc', 'popular'])
         .withMessage('Invalid product sort order'),
     query().custom((value) => {
-        if (value.minPrice !== undefined && value.maxPrice !== undefined &&
-            Number(value.minPrice) > Number(value.maxPrice)) {
+        if (
+            value.minPrice !== undefined &&
+            value.maxPrice !== undefined &&
+            Number(value.minPrice) > Number(value.maxPrice)
+        ) {
             throw new Error('minPrice cannot exceed maxPrice');
         }
         return true;

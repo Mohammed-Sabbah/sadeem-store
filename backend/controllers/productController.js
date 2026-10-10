@@ -2,26 +2,54 @@ const Product = require('../models/Product');
 const Variant = require('../models/Variant');
 const { success, error } = require('../utils/responses');
 const { withMongoTransaction } = require('../config/db');
+const { recomputeProductSummary } = require('../utils/product');
 const {
     createProductDocuments,
     listProducts,
     getProductDetails,
-    updateProductDocuments
-} = require("../services/product.service")
+    updateProductDocuments,
+} = require('../services/product.service');
 
 async function createProduct(req, res, next) {
     try {
-        const { title, description, images, variants, price, stock } = req.body;
+        const {
+            title,
+            name,
+            categoryId,
+            description,
+            images,
+            options,
+            variants,
+            price,
+            stock,
+            sku,
+            simplePrice,
+            simpleStock,
+            simpleSku,
+            isFeatured,
+            isActive,
+        } = req.body;
+
+        const productTitle = title || name;
+        const resolvedPrice = price !== undefined ? price : simplePrice;
+        const resolvedStock = stock !== undefined ? stock : simpleStock;
+        const resolvedSku = sku || simpleSku;
+
         const productVariants = Array.isArray(variants) && variants.length > 0
             ? variants
-            : [{ price, stock }];
+            : [{ price: resolvedPrice, stock: resolvedStock, sku: resolvedSku, attributes: {} }];
+
         const product = await withMongoTransaction((session) =>
             createProductDocuments(
                 {
                     storeId: req.store._id,
-                    title,
-                    description,
-                    images,
+                    categoryId,
+                    title: productTitle,
+                    description: description || '',
+                    images: images || [],
+                    options: options || [],
+                    isFeatured: isFeatured || false,
+                    isActive: isActive !== undefined ? isActive : true,
                 },
                 productVariants,
                 session
@@ -59,11 +87,28 @@ async function getAdminProductById(req, res, next) {
 
 async function updateProduct(req, res, next) {
     try {
-        const { title, description, images, variants } = req.body;
+        const {
+            title,
+            name,
+            categoryId,
+            description,
+            images,
+            options,
+            variants,
+            isFeatured,
+            isActive,
+        } = req.body;
+
         const productUpdates = {};
         if (title !== undefined) productUpdates.title = title;
+        else if (name !== undefined) productUpdates.title = name;
+
+        if (categoryId !== undefined) productUpdates.categoryId = categoryId;
         if (description !== undefined) productUpdates.description = description;
         if (images !== undefined) productUpdates.images = images;
+        if (options !== undefined) productUpdates.options = options;
+        if (isFeatured !== undefined) productUpdates.isFeatured = isFeatured;
+        if (isActive !== undefined) productUpdates.isActive = isActive;
 
         const product = await withMongoTransaction((session) =>
             updateProductDocuments({
@@ -78,6 +123,7 @@ async function updateProduct(req, res, next) {
         if (!product) {
             return error(res, 404, 'Product not found');
         }
+
         return success(res, 200, {
             message: 'Product updated successfully',
             product,
@@ -102,6 +148,7 @@ async function deleteProduct(req, res, next) {
         if (!product) {
             return error(res, 404, 'Product not found');
         }
+
         return success(res, 200, {
             message: 'Product deleted successfully',
             product,
@@ -133,6 +180,9 @@ async function updateProductAvailability(req, res, next) {
                 },
                 options
             );
+
+            await recomputeProductSummary(product._id, session);
+
             const variantsQuery = Variant.find({ productId: product._id });
             if (session) variantsQuery.session(session);
             return { ...product.toObject(), variants: await variantsQuery.lean() };
@@ -141,6 +191,7 @@ async function updateProductAvailability(req, res, next) {
         if (!product) {
             return error(res, 404, 'Product not found');
         }
+
         return success(res, 200, {
             message: `Product ${product.isActive ? 'activated' : 'deactivated'} successfully`,
             product,
@@ -163,6 +214,7 @@ async function updateProductStatus(req, res, next) {
                     isSuspended: false,
                     suspensionReason: null,
                 };
+
             const product = await Product.findByIdAndUpdate(
                 { _id: req.params.id, isDeleted: { $ne: true } },
                 { $set: statusUpdates },
@@ -181,6 +233,9 @@ async function updateProductStatus(req, res, next) {
                 },
                 options
             );
+
+            await recomputeProductSummary(product._id, session);
+
             const variantsQuery = Variant.find({ productId: product._id });
             if (session) variantsQuery.session(session);
             return { ...product.toObject(), variants: await variantsQuery.lean() };
@@ -189,6 +244,7 @@ async function updateProductStatus(req, res, next) {
         if (!product) {
             return error(res, 404, 'Product not found');
         }
+
         return success(res, 200, {
             message: product.isSuspended
                 ? `Product suspended: ${product.suspensionReason}`

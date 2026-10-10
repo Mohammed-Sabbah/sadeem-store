@@ -1,9 +1,11 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 
 async function connectDB() {
     try {
-        await mongoose.connect(process.env.DB_URL);
+        const uri = process.env.DB_URL || process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/sadeem_db';
+        await mongoose.connect(uri);
         console.log('MongoDB connected successfully');
         return mongoose.connection;
     } catch (error) {
@@ -35,5 +37,5 @@ async function withMongoTransaction(callback) {
 
 module.exports = {
     connectDB,
-    withMongoTransaction
+    withMongoTransaction,
 };

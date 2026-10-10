@@ -144,7 +144,7 @@ async function runStoreRegistrationVerification() {
         email: testEmail,
         password: 'hashed_password_test',
         role: 'seller',
-        status: 'pendingApproval',
+        status: 'active',
     });
 
     const testStore = await Store.create({
@@ -160,7 +160,8 @@ async function runStoreRegistrationVerification() {
                 lng: 34.3514,
             },
         },
-        status: 'pendingApproval',
+        approveStatus: 'pending',
+        status: 'active',
     });
 
     const savedStore = await Store.findById(testStore._id).lean();

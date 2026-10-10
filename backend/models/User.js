@@ -1,22 +1,30 @@
 const mongoose = require('mongoose');
-const { ROLE, STATUS } = require('../constants/enums');
+const { ROLE, STATUS, ROLE_VALUES, STATUS_VALUES } = require('../constants/enums');
 const { createAddressSchema } = require('./address');
 
 const userSchema = new mongoose.Schema(
     {
         name: {
             type: String,
+            required: true,
+            trim: true,
         },
         phoneNumber: {
             type: String,
+            required: true,
+            trim: true,
         },
         email: {
             type: String,
+            required: true,
             unique: true,
+            trim: true,
+            lowercase: true,
             index: true,
         },
         password: {
             type: String,
+            required: true,
             select: false,
         },
         addresses: {
@@ -25,10 +33,12 @@ const userSchema = new mongoose.Schema(
         },
         role: {
             type: String,
+            enum: ROLE_VALUES,
             default: ROLE.USER,
         },
         status: {
             type: String,
+            enum: STATUS_VALUES,
             default: STATUS.ACTIVE,
         },
         isDeleted: {

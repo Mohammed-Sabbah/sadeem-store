@@ -306,15 +306,15 @@ export default function AddProductModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:justify-end font-almarai text-right animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 lg:p-6 font-almarai text-right animate-fadeIn">
       {/* Apple-style Backdrop Blur Scrim */}
       <div
         onClick={onClose}
-        className="fixed inset-0 bg-brand-dark/40 backdrop-blur-xs transition-opacity cursor-pointer"
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity cursor-pointer"
       />
 
-      {/* Apple Slide-Over Sheet (From Right on Desktop, Bottom-Sheet on Mobile) */}
-      <div className="relative w-full sm:max-w-xl md:max-w-2xl bg-white sm:h-full sm:max-h-screen max-h-[92vh] rounded-t-3xl sm:rounded-t-none sm:rounded-r-none sm:rounded-l-3xl shadow-2xl flex flex-col z-10 overflow-hidden border-t sm:border-t-0 sm:border-r border-brand-border/70 transition-transform">
+      {/* Centered Dialog on Desktop, Bottom-Sheet on Mobile */}
+      <div className="relative w-full sm:max-w-2xl md:max-w-3xl bg-brand-card max-h-[92vh] sm:max-h-[88vh] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col z-10 overflow-hidden border border-brand-border/80 transition-all">
         {/* Mobile Grab Handle Bar (Physical Affordance) */}
         <div className="sm:hidden w-full pt-3 pb-1 flex justify-center shrink-0">
           <div className="w-10 h-1 rounded-full bg-zinc-300" />

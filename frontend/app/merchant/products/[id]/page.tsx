@@ -12,7 +12,7 @@ import type {
 } from '@/features/merchant/types/merchant.types';
 
 // =========================================================
-// Refined Architectural SVG Icons (Strictly Zero Emojis)
+// Apple-Grade Crisp Architectural SVGs (Zero Emojis)
 // =========================================================
 
 function IconChartBar({ className = 'w-4 h-4' }: { className?: string }) {
@@ -97,22 +97,6 @@ function IconSpark({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
-function IconPhoto({ className = 'w-4 h-4' }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-    </svg>
-  );
-}
-
-function IconPalette({ className = 'w-4 h-4' }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l9.75-9.75" />
-    </svg>
-  );
-}
-
 function IconCheck({ className = 'w-3.5 h-3.5' }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -137,7 +121,7 @@ function IconArrowRight({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
-// Types for Customer Reviews and Operational Stats
+// Data models
 interface ProductReview {
   id: string;
   authorName: string;
@@ -157,7 +141,7 @@ const SAMPLE_REVIEWS: ProductReview[] = [
     rating: 5,
     date: 'منذ يومين',
     variantSummary: 'اللون: كحلي ناعم · المقاس: L',
-    comment: 'الخامة ممتازة والتفصيل دقيق، قمت بمعاينة وتجربة القطعة عند الباب مع مندوب سَدِيم قبل دفع المبلغ. مصداقية عالية.',
+    comment: 'الخامة ممتازة والتفصيل دقيق، قمت بمعاينة وتجربة القطعة عند الباب مع مندوب سَدِيم قبل دفع المبلغ. مصداقية تشغيلية نادرة.',
     verifiedPurchase: true,
   },
   {
@@ -167,7 +151,7 @@ const SAMPLE_REVIEWS: ProductReview[] = [
     rating: 5,
     date: 'منذ 5 أيام',
     variantSummary: 'اللون: بيج طبيعي · المقاس: M',
-    comment: 'اللون في الواقع مطابق للصور تماماً، وصل في طرد سَدِيم الموحد وجمعت معه طلبيات من متاجر أخرى بتوصيل 8 شيكل فقط.',
+    comment: 'اللون في الواقع مطابق للصور تماماً، وصل في طرد سَدِيم الموحد وجمعت معه مشتريات من متجرين مختلفين بتوصيل 8 شيكل فقط.',
     verifiedPurchase: true,
   },
   {
@@ -177,7 +161,7 @@ const SAMPLE_REVIEWS: ProductReview[] = [
     rating: 4,
     date: 'منذ أسبوع',
     variantSummary: 'اللون: أبيض سحابي · المقاس: XL',
-    comment: 'القطن مريح والمقاس مضبوط ومناسب للطقس، أنصح بتوفير المزيد من الألوان.',
+    comment: 'القطن مريح والمقاس مضبوط ومناسب للأجواء الحارة، أنصح بتوفير المزيد من الألوان الصيفية.',
     verifiedPurchase: true,
   },
 ];
@@ -203,21 +187,18 @@ export default function MerchantProductStudioPage() {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [allowedDefinitions, setAllowedDefinitions] = useState<OptionDefinition[]>([]);
 
-  // -------------------------------------------------------------
-  // Form State (Dependency Waterfall)
-  // -------------------------------------------------------------
-  // Step 1: Identity & Classification
+  // Form Fields
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
 
-  // Step 2: Gallery Pool (Source for all color bindings)
+  // Gallery
   const [images, setImages] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState('');
 
-  // Step 3: Product Structure Decision (Simple vs. Configurable)
+  // Mode: Simple vs Configurable
   const [isSimple, setIsSimple] = useState(false);
 
   // Simple Product Fields
@@ -226,16 +207,16 @@ export default function MerchantProductStudioPage() {
   const [simpleStock, setSimpleStock] = useState<number | string>(10);
   const [simpleSku, setSimpleSku] = useState('');
 
-  // Step 4: Options & Color-Image Map
+  // Options & Color-Image Map
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [optionTagInputs, setOptionTagInputs] = useState<Record<number, string>>({});
   const [colorImageMap, setColorImageMap] = useState<Record<string, string>>({});
 
-  // Step 5: Bulk Actions State
+  // Bulk Actions
   const [bulkPriceInput, setBulkPriceInput] = useState('');
   const [bulkStockInput, setBulkStockInput] = useState('');
 
-  // Step 6: Generated Variants Matrix
+  // Generated Variants Matrix
   const [variants, setVariants] = useState<
     Array<{
       _id?: string;
@@ -250,7 +231,7 @@ export default function MerchantProductStudioPage() {
     }>
   >([]);
 
-  // 1. Initial Load from Backend & Services
+  // 1. Initial Load
   useEffect(() => {
     if (!productId) return;
     let isMounted = true;
@@ -331,7 +312,7 @@ export default function MerchantProductStudioPage() {
     };
   }, [productId]);
 
-  // Load allowed options when category changes
+  // Load category options on category switch
   useEffect(() => {
     if (!categoryId) return;
     merchantService.fetchOptionsByCategory(categoryId).then((res) => {
@@ -343,9 +324,6 @@ export default function MerchantProductStudioPage() {
 
   // Calculated Metrics
   const variantsCount = isSimple ? 1 : variants.length;
-  const isNearVariantLimit = variantsCount >= 85;
-  const isOverVariantLimit = variantsCount > 100;
-  const remainingVariants = Math.max(0, 100 - variantsCount);
 
   const totalStock = useMemo(() => {
     if (isSimple) return Number(simpleStock) || 0;
@@ -364,9 +342,7 @@ export default function MerchantProductStudioPage() {
     return Math.max(...variants.map((v) => Number(v.price) || 0));
   }, [isSimple, simplePrice, variants]);
 
-  // -------------------------------------------------------------
-  // Gallery Handlers
-  // -------------------------------------------------------------
+  // Gallery handlers
   const handleAddImage = () => {
     const cleanUrl = newImageUrl.trim();
     if (!cleanUrl) return;
@@ -378,7 +354,6 @@ export default function MerchantProductStudioPage() {
     const targetUrl = images[imgIdx];
     setImages(images.filter((_, idx) => idx !== imgIdx));
 
-    // Clear from color map if deleted
     const updatedMap = { ...colorImageMap };
     for (const color in updatedMap) {
       if (updatedMap[color] === targetUrl) {
@@ -388,9 +363,7 @@ export default function MerchantProductStudioPage() {
     setColorImageMap(updatedMap);
   };
 
-  // -------------------------------------------------------------
-  // Option Architecture Handlers
-  // -------------------------------------------------------------
+  // Options Handlers
   const handleAddOptionPreset = (def: OptionDefinition) => {
     if (options.some((o) => o.key === def.key || o.name === def.label)) return;
     setOptions([
@@ -463,9 +436,7 @@ export default function MerchantProductStudioPage() {
     }
   };
 
-  // -------------------------------------------------------------
-  // Color-Image Binding Handler
-  // -------------------------------------------------------------
+  // Visual Color-Image Tap Binding
   const handleBindColorImage = (colorVal: string, imageUrl: string) => {
     const nextMap = { ...colorImageMap, [colorVal]: imageUrl };
     setColorImageMap(nextMap);
@@ -487,9 +458,7 @@ export default function MerchantProductStudioPage() {
     setVariants(updatedVariants);
   };
 
-  // -------------------------------------------------------------
-  // Cartesian Matrix Generator
-  // -------------------------------------------------------------
+  // Matrix Generator
   const handleRegenerateCombinations = () => {
     const validOptions = options.filter((o) => o.values.length > 0);
     if (validOptions.length === 0) {
@@ -561,9 +530,7 @@ export default function MerchantProductStudioPage() {
     setVariants(newVariants);
   };
 
-  // -------------------------------------------------------------
-  // Bulk Mass Actions (Price & Stock)
-  // -------------------------------------------------------------
+  // Bulk values
   const handleApplyBulkPrice = () => {
     const val = Number(bulkPriceInput);
     if (isNaN(val) || val < 0) {
@@ -584,9 +551,7 @@ export default function MerchantProductStudioPage() {
     setBulkStockInput('');
   };
 
-  // -------------------------------------------------------------
-  // Quick Inline Stock Update in Overview Tab
-  // -------------------------------------------------------------
+  // Quick Delta Stock
   const handleQuickDeltaStock = async (variantId: string | undefined, delta: number) => {
     if (!productId) return;
     const targetVariant = variants.find((v) => v._id === variantId || v.sku === variantId);
@@ -601,9 +566,7 @@ export default function MerchantProductStudioPage() {
     await merchantService.quickUpdateStock(productId, newStock, targetVariant._id || targetVariant.sku);
   };
 
-  // -------------------------------------------------------------
-  // Save & Delete Operations
-  // -------------------------------------------------------------
+  // Save changes
   const handleSaveProduct = async () => {
     if (!name.trim()) {
       setErrorMessage('يرجى إدخال اسم الصنف');
@@ -676,28 +639,27 @@ export default function MerchantProductStudioPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center font-almarai text-right">
-        <div className="w-9 h-9 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mb-4" />
-        <h2 className="text-sm font-bold text-brand-dark">جاري فتح مركز إدارة الصنف...</h2>
-        <p className="text-xs text-brand-muted mt-1">يتم استدعاء بيانات المبيعات والمخزون الميداني</p>
+      <div className="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center font-almarai text-right">
+        <div className="w-8 h-8 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mb-4" />
+        <h2 className="text-xs font-bold text-brand-dark">جاري فتح مركز إدارة الصنف...</h2>
       </div>
     );
   }
 
   if (!product && !isLoading) {
     return (
-      <div className="max-w-xl mx-auto p-8 text-center font-almarai text-right">
-        <div className="bg-brand-card p-6 rounded-2xl border border-brand-border/80 shadow-2xs">
-          <div className="w-12 h-12 rounded-2xl bg-brand-surface mx-auto flex items-center justify-center text-brand-muted mb-3">
-            <IconAlertTriangle className="w-6 h-6" />
+      <div className="max-w-md mx-auto p-8 text-center font-almarai text-right">
+        <div className="bg-brand-card p-6 rounded-2xl border border-brand-border/60 shadow-xs">
+          <div className="w-10 h-10 rounded-xl bg-brand-surface mx-auto flex items-center justify-center text-brand-muted mb-3">
+            <IconAlertTriangle className="w-5 h-5" />
           </div>
-          <h2 className="text-base font-bold text-brand-dark mb-1">المنتج غير موجود</h2>
-          <p className="text-xs text-brand-muted mb-5">قد يكون تم نقله أو حذفه من قبل إدارة المتجر.</p>
+          <h2 className="text-sm font-bold text-brand-dark mb-1">المنتج غير موجود</h2>
+          <p className="text-xs text-brand-muted mb-4">قد يكون تم نقله أو حذفه من قبل إدارة المتجر.</p>
           <Link
             href="/merchant/dashboard"
-            className="inline-flex items-center gap-2 bg-brand-primary text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-brand-primary-hover transition-all"
+            className="inline-flex items-center gap-1.5 bg-brand-primary text-white text-xs font-bold px-4 py-2 rounded-xl hover:bg-brand-primary-hover active:scale-[0.97] transition-transform duration-100"
           >
-            <span>العودة للوحة التحكم</span>
+            <span>العودة للكتالوج</span>
             <IconArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -714,46 +676,54 @@ export default function MerchantProductStudioPage() {
   );
 
   return (
-    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 font-almarai text-right pb-28">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6 font-almarai text-right pb-28">
       {/* ========================================================= */}
-      {/* 1. Serene Master Header (Cosmic Quiet Luxury)             */}
+      {/* 1. Serene Master Header (No Nested Boxiness)              */}
       {/* ========================================================= */}
-      <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs mb-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* Identity & Thumbnail */}
-          <div className="flex items-center gap-4">
-            <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border border-brand-border/80 bg-brand-surface shrink-0">
+      <div className="mb-6 space-y-4">
+        {/* Top Breadcrumb & Metadata */}
+        <div className="flex items-center justify-between gap-3 text-xs text-brand-muted/80">
+          <Link
+            href="/merchant/dashboard"
+            className="hover:text-brand-primary transition-colors flex items-center gap-1 font-bold"
+          >
+            <IconArrowRight className="w-3.5 h-3.5" />
+            <span>كتالوج المتجر</span>
+            <span className="text-brand-border mx-1">/</span>
+            <span>{categories.find((c) => c._id === categoryId)?.title || 'عام'}</span>
+          </Link>
+
+          <div className="flex items-center gap-2 text-[11px] font-bold">
+            <span className="text-brand-muted">الرمز المرجعي:</span>
+            <span className="font-mono text-brand-dark bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border/60">
+              {productId.slice(-8).toUpperCase()}
+            </span>
+          </div>
+        </div>
+
+        {/* Title, Photo & Global Actions Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border border-brand-border/70 bg-brand-surface shrink-0 shadow-2xs">
               <img src={primaryImage} alt={name} className="w-full h-full object-cover" />
             </div>
 
             <div>
-              <div className="flex items-center gap-2 text-xs font-bold text-brand-muted mb-1">
-                <Link
-                  href="/merchant/dashboard"
-                  className="hover:text-brand-primary transition-colors flex items-center gap-1"
-                >
-                  <IconArrowRight className="w-3.5 h-3.5" />
-                  <span>كتالوج المتجر</span>
-                </Link>
-                <span>/</span>
-                <span>{categories.find((c) => c._id === categoryId)?.title || 'عام'}</span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-lg sm:text-xl font-black text-brand-dark tracking-tight">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-black text-brand-dark tracking-tight leading-tight">
                   {name || 'صنف بدون اسم'}
                 </h1>
                 <span
                   className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
                     isActive
                       ? 'bg-brand-trust-soft text-brand-trust border-brand-trust/30'
-                      : 'bg-brand-surface text-brand-muted border-brand-border'
+                      : 'bg-brand-surface text-brand-muted border-brand-border/60'
                   }`}
                 >
                   {isActive ? 'معروض بالمتجر' : 'مخفي مؤقتاً'}
                 </span>
                 {isFeatured && (
-                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 flex items-center gap-1">
                     <IconStarSolid className="w-3 h-3 text-amber-600" />
                     <span>مميز بالصدارة</span>
                   </span>
@@ -772,12 +742,12 @@ export default function MerchantProductStudioPage() {
             </div>
           </div>
 
-          {/* Action Buttons & Navigation */}
-          <div className="flex items-center gap-2.5 self-stretch sm:self-auto justify-between sm:justify-end border-t md:border-t-0 pt-3 md:pt-0 border-brand-border/50">
+          {/* Quick Header Navigation Actions */}
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             <Link
               href={`/product/${productId}`}
               target="_blank"
-              className="px-3.5 py-2 rounded-xl bg-brand-surface hover:bg-brand-border/40 text-brand-dark text-xs font-bold border border-brand-border transition-colors flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-brand-card hover:bg-brand-surface text-brand-dark text-xs font-bold border border-brand-border/80 transition-colors flex items-center gap-1.5 shadow-2xs active:scale-[0.97]"
               title="معاينة كيف يرى الزبون هذا الصنف في متجر سَدِيم"
             >
               <IconEye className="w-3.5 h-3.5 text-brand-muted" />
@@ -788,7 +758,7 @@ export default function MerchantProductStudioPage() {
               <button
                 type="button"
                 onClick={() => setActiveTab('editor')}
-                className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-95 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-[0.97] transition-transform duration-100 shadow-2xs flex items-center gap-1.5 cursor-pointer"
               >
                 <IconEditPencil className="w-3.5 h-3.5" />
                 <span>تعديل الصنف والخيارات</span>
@@ -798,7 +768,7 @@ export default function MerchantProductStudioPage() {
                 type="button"
                 onClick={handleSaveProduct}
                 disabled={isSaving}
-                className="px-5 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-95 shadow-2xs transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+                className="px-5 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-[0.97] transition-transform duration-100 shadow-2xs disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
                 {isSaving && (
                   <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -809,15 +779,15 @@ export default function MerchantProductStudioPage() {
           </div>
         </div>
 
-        {/* Tab Navigation Strip (Apple-Style Segmented Pill Control) */}
-        <div className="mt-4 pt-3 border-t border-brand-border/60">
-          <div className="inline-flex p-1 rounded-xl bg-brand-surface/90 border border-brand-border/70 gap-1 overflow-x-auto max-w-full">
+        {/* Apple-Style Fluid Segmented Control */}
+        <div className="pt-2">
+          <div className="inline-flex p-1 rounded-2xl bg-brand-surface/90 border border-brand-border/70 gap-1 overflow-x-auto no-scrollbar max-w-full">
             <button
               type="button"
               onClick={() => setActiveTab('overview')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer flex items-center gap-2 shrink-0 active:scale-[0.98] ${
                 activeTab === 'overview'
-                  ? 'bg-brand-card text-brand-dark shadow-2xs border border-brand-border/70'
+                  ? 'bg-brand-card text-brand-dark shadow-xs border border-brand-border/60'
                   : 'text-brand-muted hover:text-brand-dark'
               }`}
             >
@@ -828,9 +798,9 @@ export default function MerchantProductStudioPage() {
             <button
               type="button"
               onClick={() => setActiveTab('editor')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer flex items-center gap-2 shrink-0 active:scale-[0.98] ${
                 activeTab === 'editor'
-                  ? 'bg-brand-card text-brand-dark shadow-2xs border border-brand-border/70'
+                  ? 'bg-brand-card text-brand-dark shadow-xs border border-brand-border/60'
                   : 'text-brand-muted hover:text-brand-dark'
               }`}
             >
@@ -841,9 +811,9 @@ export default function MerchantProductStudioPage() {
             <button
               type="button"
               onClick={() => setActiveTab('settings')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer flex items-center gap-2 shrink-0 active:scale-[0.98] ${
                 activeTab === 'settings'
-                  ? 'bg-brand-card text-brand-dark shadow-2xs border border-brand-border/70'
+                  ? 'bg-brand-card text-brand-dark shadow-xs border border-brand-border/60'
                   : 'text-brand-muted hover:text-brand-dark'
               }`}
             >
@@ -869,14 +839,14 @@ export default function MerchantProductStudioPage() {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 1: OVERVIEW & CUSTOMER PULSE (Read-Only + Quick Ops)   */}
+      {/* TAB 1: OVERVIEW & CUSTOMER PULSE (Calm, Breathing Layout) */}
       {/* ========================================================= */}
       {activeTab === 'overview' && (
         <div className="space-y-6 animate-fadeIn">
-          {/* 4 Luxury KPI Stat Cards */}
+          {/* 4 Quiet Luxury KPI Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Sales */}
-            <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+            <div className="bg-brand-card rounded-2xl border border-brand-border/60 p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-brand-muted">المبيعات الإجمالية</span>
                 <div className="w-8 h-8 rounded-xl bg-brand-surface flex items-center justify-center text-brand-dark/70 border border-brand-border/60">
@@ -885,7 +855,7 @@ export default function MerchantProductStudioPage() {
               </div>
               <div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl sm:text-3xl font-black text-brand-dark">38</span>
+                  <span className="text-2xl sm:text-3xl font-black text-brand-dark tracking-tight">38</span>
                   <span className="text-xs font-bold text-brand-muted">قطعة</span>
                 </div>
                 <p className="text-[11px] text-brand-trust font-bold mt-1">طرد موحد 8 ₪ بالوسطى</p>
@@ -893,7 +863,7 @@ export default function MerchantProductStudioPage() {
             </div>
 
             {/* Revenue */}
-            <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+            <div className="bg-brand-card rounded-2xl border border-brand-border/60 p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-brand-muted">إجمالي الإيرادات</span>
                 <div className="w-8 h-8 rounded-xl bg-brand-surface flex items-center justify-center text-brand-dark/70 border border-brand-border/60">
@@ -902,7 +872,7 @@ export default function MerchantProductStudioPage() {
               </div>
               <div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl sm:text-3xl font-black text-brand-dark">2,280</span>
+                  <span className="text-2xl sm:text-3xl font-black text-brand-dark tracking-tight">2,280</span>
                   <span className="text-xs font-bold text-brand-muted">₪</span>
                 </div>
                 <p className="text-[11px] text-brand-muted mt-1">محصلة عبر كاش وجوال باي</p>
@@ -910,16 +880,16 @@ export default function MerchantProductStudioPage() {
             </div>
 
             {/* Rating */}
-            <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+            <div className="bg-brand-card rounded-2xl border border-brand-border/60 p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-brand-muted">تقييم الزبائن</span>
-                <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-700 border border-amber-200">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-700 border border-amber-200/70">
                   <IconStarSolid className="w-4 h-4" />
                 </div>
               </div>
               <div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl sm:text-3xl font-black text-amber-600">4.8</span>
+                  <span className="text-2xl sm:text-3xl font-black text-amber-600 tracking-tight">4.8</span>
                   <span className="text-xs font-bold text-brand-muted">من 5</span>
                 </div>
                 <p className="text-[11px] text-brand-muted mt-1">استناداً لـ 14 تقييماً موثقاً</p>
@@ -927,7 +897,7 @@ export default function MerchantProductStudioPage() {
             </div>
 
             {/* Door Inspection Pass Rate */}
-            <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
+            <div className="bg-brand-card rounded-2xl border border-brand-border/60 p-4 sm:p-5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-brand-muted">القبول عند الباب</span>
                 <div className="w-8 h-8 rounded-xl bg-brand-trust-soft flex items-center justify-center text-brand-trust border border-brand-trust/30">
@@ -936,7 +906,7 @@ export default function MerchantProductStudioPage() {
               </div>
               <div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-2xl sm:text-3xl font-black text-brand-trust">96%</span>
+                  <span className="text-2xl sm:text-3xl font-black text-brand-trust tracking-tight">96%</span>
                   <span className="text-xs font-bold text-brand-muted">استلام ناجح</span>
                 </div>
                 <p className="text-[11px] text-brand-trust font-bold mt-1">معدل رفض 4% فقط</p>
@@ -944,31 +914,31 @@ export default function MerchantProductStudioPage() {
             </div>
           </div>
 
-          {/* Quick Inventory Pulse & Stepper */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/80 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-brand-border/60">
+          {/* Quick Inventory Pulse & Stepper (Engineered for Touch) */}
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/60 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-brand-border/40">
               <div>
                 <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-brand-trust" />
                   <span>المخزون الميداني اللحظي للأصناف</span>
                 </h2>
                 <p className="text-[11px] text-brand-muted mt-0.5">
-                  يمكنك زيادة أو إنقاص مخزون أي مقاس أو لون مباشرة بنقرة زر واحدة دون الحاجة للدخول في شاشة التحرير
+                  زيادة أو إنقاص مخزون أي صنف مباشرة بنقرة واحدة سريعة دون مغادرة هذه اللوحة
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('editor')}
-                className="text-xs font-bold text-brand-primary hover:underline cursor-pointer self-start sm:self-auto flex items-center gap-1"
+                className="text-xs font-bold text-brand-primary hover:underline cursor-pointer self-start sm:self-auto flex items-center gap-1 active:scale-95"
               >
                 <span>إدارة الخيارات والأسعار</span>
-                <IconArrowRight className="w-3.5 h-3.5" />
+                <IconArrowRight className="w-3 h-3" />
               </button>
             </div>
 
             {isSimple ? (
-              <div className="p-4 rounded-xl bg-brand-surface/60 border border-brand-border flex items-center justify-between">
+              <div className="p-4 rounded-xl bg-brand-surface/40 border border-brand-border/60 flex items-center justify-between">
                 <div>
                   <div className="text-xs font-black text-brand-dark">صنف مفرد (قطعة واحدة)</div>
                   <div className="text-[11px] text-brand-muted mt-0.5">
@@ -976,7 +946,7 @@ export default function MerchantProductStudioPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 bg-brand-card p-1 rounded-xl border border-brand-border">
+                <div className="flex items-center gap-2 bg-brand-card p-1 rounded-xl border border-brand-border/60 shadow-2xs">
                   <button
                     type="button"
                     onClick={() => {
@@ -985,11 +955,11 @@ export default function MerchantProductStudioPage() {
                       setSimpleStock(next);
                       merchantService.quickUpdateStock(productId, next);
                     }}
-                    className="w-8 h-8 rounded-lg bg-brand-surface font-black text-xs hover:bg-brand-border/40 flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 rounded-lg bg-brand-surface font-black text-xs hover:bg-brand-border/40 active:scale-90 transition-transform duration-100 flex items-center justify-center cursor-pointer"
                   >
                     -
                   </button>
-                  <span className="w-12 text-center font-black text-sm text-brand-dark">
+                  <span className="w-10 text-center font-black text-sm text-brand-dark tabular-nums">
                     {simpleStock}
                   </span>
                   <button
@@ -1000,7 +970,7 @@ export default function MerchantProductStudioPage() {
                       setSimpleStock(next);
                       merchantService.quickUpdateStock(productId, next);
                     }}
-                    className="w-8 h-8 rounded-lg bg-brand-surface font-black text-xs hover:bg-brand-border/40 flex items-center justify-center cursor-pointer"
+                    className="w-8 h-8 rounded-lg bg-brand-surface font-black text-xs hover:bg-brand-border/40 active:scale-90 transition-transform duration-100 flex items-center justify-center cursor-pointer"
                   >
                     +
                   </button>
@@ -1020,33 +990,33 @@ export default function MerchantProductStudioPage() {
                   return (
                     <div
                       key={v._id || vIdx}
-                      className="bg-brand-surface/40 rounded-xl p-3.5 border border-brand-border/80 flex items-center justify-between gap-3"
+                      className="bg-brand-surface/30 rounded-xl p-3.5 border border-brand-border/60 flex items-center justify-between gap-3 hover:bg-brand-surface/60 transition-colors"
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-3">
                         <img
                           src={variantPhoto}
                           alt={attrSummary}
-                          className="w-10 h-10 rounded-lg object-cover border border-brand-border shrink-0 bg-brand-surface"
+                          className="w-11 h-11 rounded-xl object-cover border border-brand-border/60 shrink-0 bg-brand-surface"
                         />
                         <div>
                           <div className="text-xs font-black text-brand-dark">{attrSummary}</div>
-                          <div className="text-[10px] text-brand-muted">
-                            {v.price} ₪ · SKU: {v.sku}
+                          <div className="text-[10px] text-brand-muted mt-0.5">
+                            {v.price} ₪ · <span className="font-mono">{v.sku}</span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5 bg-brand-card p-0.5 rounded-xl border border-brand-border shrink-0">
+                      <div className="flex items-center gap-1.5 bg-brand-card p-1 rounded-xl border border-brand-border/60 shadow-2xs shrink-0">
                         <button
                           type="button"
                           onClick={() => handleQuickDeltaStock(v._id || v.sku, -1)}
-                          className="w-7 h-7 rounded-lg bg-brand-surface hover:bg-brand-border/40 font-black text-xs flex items-center justify-center cursor-pointer active:scale-95"
+                          className="w-7 h-7 rounded-lg bg-brand-surface hover:bg-brand-border/40 font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-transform duration-100"
                           title="إنقاص المخزون قطعة واحدة"
                         >
                           -
                         </button>
                         <span
-                          className={`w-8 text-center font-black text-xs ${
+                          className={`w-7 text-center font-black text-xs tabular-nums ${
                             v.stock === 0 ? 'text-red-600' : 'text-brand-dark'
                           }`}
                         >
@@ -1055,7 +1025,7 @@ export default function MerchantProductStudioPage() {
                         <button
                           type="button"
                           onClick={() => handleQuickDeltaStock(v._id || v.sku, 1)}
-                          className="w-7 h-7 rounded-lg bg-brand-surface hover:bg-brand-border/40 font-black text-xs flex items-center justify-center cursor-pointer active:scale-95"
+                          className="w-7 h-7 rounded-lg bg-brand-surface hover:bg-brand-border/40 font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-transform duration-100"
                           title="زيادة المخزون قطعة واحدة"
                         >
                           +
@@ -1069,8 +1039,8 @@ export default function MerchantProductStudioPage() {
           </div>
 
           {/* Customer Reviews & Feedback Section */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/80 shadow-2xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-brand-border/60">
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/60 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-brand-border/40">
               <div>
                 <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-amber-500" />
@@ -1081,7 +1051,7 @@ export default function MerchantProductStudioPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200 text-amber-900 text-xs font-bold self-start sm:self-auto">
+              <div className="flex items-center gap-1.5 bg-amber-50/80 px-3 py-1 rounded-xl border border-amber-200/70 text-amber-900 text-xs font-bold self-start sm:self-auto">
                 <div className="flex items-center gap-0.5 text-amber-500">
                   <IconStarSolid className="w-3.5 h-3.5" />
                 </div>
@@ -1094,7 +1064,7 @@ export default function MerchantProductStudioPage() {
               {SAMPLE_REVIEWS.map((rev) => (
                 <div
                   key={rev.id}
-                  className="p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-2"
+                  className="p-4 rounded-xl bg-brand-surface/20 border border-brand-border/40 space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1110,7 +1080,7 @@ export default function MerchantProductStudioPage() {
                     <div className="flex items-center gap-1 text-xs">
                       <div className="flex items-center gap-0.5">
                         {Array.from({ length: rev.rating }).map((_, i) => (
-                          <IconStarSolid key={i} className="w-3.5 h-3.5" />
+                          <IconStarSolid key={i} className="w-3.5 h-3.5 text-amber-500" />
                         ))}
                       </div>
                       <span className="text-[10px] text-brand-muted mr-1.5">{rev.date}</span>
@@ -1139,8 +1109,8 @@ export default function MerchantProductStudioPage() {
       {activeTab === 'editor' && (
         <div className="space-y-6 animate-fadeIn">
           {/* Step 1: Basic Identity & Classification */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/80 shadow-2xs">
-            <h2 className="text-sm font-black text-brand-dark mb-4 pb-3 border-b border-brand-border/60 flex items-center gap-2">
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs">
+            <h2 className="text-sm font-black text-brand-dark mb-4 pb-3 border-b border-brand-border/40 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
                 1
               </span>
@@ -1157,7 +1127,7 @@ export default function MerchantProductStudioPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="مثال: قميص كتان سديمي ناعم"
-                  className="w-full h-11 px-3.5 text-xs font-bold rounded-xl border border-brand-border bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10 transition-all"
+                  className="w-full h-11 px-3.5 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
                 />
               </div>
 
@@ -1167,7 +1137,7 @@ export default function MerchantProductStudioPage() {
                   <select
                     value={categoryId}
                     onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full h-11 px-3 text-xs font-bold rounded-xl border border-brand-border bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary"
+                    className="w-full h-11 px-3 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary transition-all"
                   >
                     {categories.map((c) => (
                       <option key={c._id} value={c._id}>
@@ -1179,7 +1149,7 @@ export default function MerchantProductStudioPage() {
 
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1.5">الظهور في الصدارة</label>
-                  <label className="flex items-center gap-2.5 h-11 px-3.5 bg-brand-surface rounded-xl border border-brand-border text-xs font-bold text-brand-dark cursor-pointer select-none">
+                  <label className="flex items-center gap-2.5 h-11 px-3.5 bg-brand-surface/40 rounded-xl border border-brand-border/70 text-xs font-bold text-brand-dark cursor-pointer select-none">
                     <input
                       type="checkbox"
                       checked={isFeatured}
@@ -1198,15 +1168,15 @@ export default function MerchantProductStudioPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="اكتب وصفاً دقيقاً للمنتج وخاماته وطريقة العناية به..."
-                  className="w-full p-3.5 text-xs rounded-xl border border-brand-border bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary transition-all resize-y"
+                  className="w-full p-3.5 text-base sm:text-xs rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary transition-all resize-y"
                 />
               </div>
             </div>
           </div>
 
           {/* Step 2: Gallery Pool (Source for all color bindings) */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/80 shadow-2xs">
-            <div className="flex items-center justify-between mb-4 pb-3 border-b border-brand-border/60">
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-brand-border/40">
               <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
                   2
@@ -1223,7 +1193,7 @@ export default function MerchantProductStudioPage() {
               {images.map((img, idx) => (
                 <div
                   key={idx}
-                  className="relative aspect-square rounded-xl overflow-hidden border border-brand-border group bg-brand-surface shadow-2xs"
+                  className="relative aspect-square rounded-2xl overflow-hidden border border-brand-border/80 group bg-brand-surface shadow-2xs"
                 >
                   <img src={img} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
                   {idx === 0 && (
@@ -1243,9 +1213,8 @@ export default function MerchantProductStudioPage() {
               ))}
 
               {images.length === 0 && (
-                <div className="col-span-full py-6 text-center bg-brand-surface/40 rounded-xl border border-dashed border-brand-border text-xs text-brand-muted flex flex-col items-center justify-center gap-1.5">
-                  <IconPhoto className="w-5 h-5 text-brand-muted/70" />
-                  <span>لا توجد صور مضافة للصنف بعد</span>
+                <div className="col-span-full py-6 text-center bg-brand-surface/30 rounded-xl border border-dashed border-brand-border/80 text-xs text-brand-muted">
+                  لا توجد صور مضافة للصنف بعد
                 </div>
               )}
             </div>
@@ -1257,13 +1226,13 @@ export default function MerchantProductStudioPage() {
                 value={newImageUrl}
                 onChange={(e) => setNewImageUrl(e.target.value)}
                 placeholder="أدخل رابط صورة (https://...)"
-                className="flex-1 h-10 px-3.5 text-xs rounded-xl border border-brand-border bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary"
+                className="flex-1 h-11 px-3.5 text-base sm:text-xs rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
               />
               <button
                 type="button"
                 onClick={handleAddImage}
                 disabled={!newImageUrl.trim()}
-                className="h-10 px-4 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary-hover disabled:opacity-40 cursor-pointer transition-colors"
+                className="h-11 px-4 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary-hover active:scale-[0.97] disabled:opacity-40 cursor-pointer transition-transform duration-100"
               >
                 + إضافة للمعرض
               </button>
@@ -1271,8 +1240,8 @@ export default function MerchantProductStudioPage() {
           </div>
 
           {/* Step 3: Product Structure Decision */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/80 shadow-2xs">
-            <h2 className="text-sm font-black text-brand-dark mb-4 pb-3 border-b border-brand-border/60 flex items-center gap-2">
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs">
+            <h2 className="text-sm font-black text-brand-dark mb-4 pb-3 border-b border-brand-border/40 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
                 3
               </span>
@@ -1281,10 +1250,10 @@ export default function MerchantProductStudioPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               <label
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 flex items-start gap-3 ${
                   isSimple
-                    ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs'
-                    : 'border-brand-border bg-brand-surface/40 hover:bg-brand-surface'
+                    ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs ring-2 ring-brand-primary/20'
+                    : 'border-brand-border/70 bg-brand-surface/30 hover:bg-brand-surface'
                 }`}
               >
                 <input
@@ -1303,10 +1272,10 @@ export default function MerchantProductStudioPage() {
               </label>
 
               <label
-                className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start gap-3 ${
+                className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 flex items-start gap-3 ${
                   !isSimple
-                    ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs'
-                    : 'border-brand-border bg-brand-surface/40 hover:bg-brand-surface'
+                    ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs ring-2 ring-brand-primary/20'
+                    : 'border-brand-border/70 bg-brand-surface/30 hover:bg-brand-surface'
                 }`}
               >
                 <input
@@ -1321,7 +1290,7 @@ export default function MerchantProductStudioPage() {
                     صنف متعدد الخيارات والمصفوفة (Configurable)
                   </div>
                   <div className="text-[11px] text-brand-muted mt-0.5 leading-relaxed">
-                    يحتوي على سمات مثل الألوان والمقاسات والأوزان مع كود SKU وسعر ومخزون منفصل لكل توليفة.
+                    يحتوي على سمات مثل الألوان والمقاسات مع كود SKU وسعر ومخزون منفصل لكل توليفة.
                   </div>
                 </div>
               </label>
@@ -1329,7 +1298,7 @@ export default function MerchantProductStudioPage() {
 
             {/* Simple Product Direct Form */}
             {isSimple && (
-              <div className="mt-4 p-4 rounded-xl bg-brand-surface/60 border border-brand-border grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fadeIn">
+              <div className="mt-4 p-4 rounded-xl bg-brand-surface/40 border border-brand-border/60 grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fadeIn">
                 <div>
                   <label className="block text-[10px] font-bold text-brand-muted mb-1">
                     سعر البيع (₪) *
@@ -1340,7 +1309,7 @@ export default function MerchantProductStudioPage() {
                     step="0.5"
                     value={simplePrice}
                     onChange={(e) => setSimplePrice(e.target.value)}
-                    className="w-full h-9 px-2.5 text-xs font-black rounded-xl border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                    className="w-full h-10 px-2.5 text-base sm:text-xs font-black rounded-xl border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
                   />
                 </div>
 
@@ -1355,7 +1324,7 @@ export default function MerchantProductStudioPage() {
                     value={simpleCompareAtPrice}
                     onChange={(e) => setSimpleCompareAtPrice(e.target.value)}
                     placeholder="اختياري"
-                    className="w-full h-9 px-2.5 text-xs rounded-xl border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                    className="w-full h-10 px-2.5 text-base sm:text-xs rounded-xl border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
                   />
                 </div>
 
@@ -1368,7 +1337,7 @@ export default function MerchantProductStudioPage() {
                     min="0"
                     value={simpleStock}
                     onChange={(e) => setSimpleStock(e.target.value)}
-                    className="w-full h-9 px-2.5 text-xs font-black rounded-xl border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                    className="w-full h-10 px-2.5 text-base sm:text-xs font-black rounded-xl border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
                   />
                 </div>
 
@@ -1381,7 +1350,7 @@ export default function MerchantProductStudioPage() {
                     value={simpleSku}
                     onChange={(e) => setSimpleSku(e.target.value.toUpperCase())}
                     placeholder="SDM-ITM-01"
-                    className="w-full h-9 px-2.5 text-xs font-mono uppercase rounded-xl border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                    className="w-full h-10 px-2.5 text-base sm:text-xs font-mono uppercase rounded-xl border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
                   />
                 </div>
               </div>
@@ -1391,9 +1360,9 @@ export default function MerchantProductStudioPage() {
           {/* If Configurable: Steps 4, 5, 6 */}
           {!isSimple && (
             <>
-              {/* Step 4: Options Architecture & Color-Image Binding */}
-              <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/80 shadow-2xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-brand-border/60">
+              {/* Step 4: Options Architecture & Visual Color-Image Tap Binding */}
+              <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-brand-border/40">
                   <div>
                     <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
@@ -1402,7 +1371,7 @@ export default function MerchantProductStudioPage() {
                       <span>هندسة الخيارات وتخصيص صور الألوان</span>
                     </h2>
                     <p className="text-[11px] text-brand-muted mt-0.5">
-                      حدد السمات وأدخل قيمها، واربط صورة المعرض المطابقة لكل لون
+                      حدد السمات وقيمها، وانقر على صورة المعرض المناسبة لكل لون لربطها فورياً
                     </p>
                   </div>
 
@@ -1410,14 +1379,14 @@ export default function MerchantProductStudioPage() {
                     <button
                       type="button"
                       onClick={handleAddCustomOption}
-                      className="px-3 py-1.5 bg-brand-surface hover:bg-brand-border/50 text-brand-dark text-xs font-bold rounded-xl border border-brand-border transition-colors cursor-pointer"
+                      className="px-3 py-1.5 bg-brand-surface hover:bg-brand-border/40 text-brand-dark text-xs font-bold rounded-xl border border-brand-border/70 transition-colors cursor-pointer active:scale-95"
                     >
                       + خيار مخصص
                     </button>
                     <button
                       type="button"
                       onClick={handleRegenerateCombinations}
-                      className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary-hover shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary-hover shadow-2xs transition-transform active:scale-95 cursor-pointer flex items-center gap-1.5"
                     >
                       <IconSpark className="w-3.5 h-3.5" />
                       <span>توليد الأصناف</span>
@@ -1427,7 +1396,7 @@ export default function MerchantProductStudioPage() {
 
                 {/* Presets Chips Bar */}
                 {allowedDefinitions.length > 0 && (
-                  <div className="mb-4 p-3 bg-brand-surface/70 rounded-xl border border-brand-border/60">
+                  <div className="mb-4 p-3 bg-brand-surface/50 rounded-xl border border-brand-border/60">
                     <span className="text-[11px] font-bold text-brand-muted block mb-2">
                       خيارات معتمدة لهذا التصنيف:
                     </span>
@@ -1445,7 +1414,7 @@ export default function MerchantProductStudioPage() {
                             className={`text-xs font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
                               isAdded
                                 ? 'bg-brand-card text-brand-muted border-brand-border/40 opacity-50 cursor-not-allowed'
-                                : 'bg-white text-brand-dark hover:border-brand-primary hover:text-brand-primary border-brand-border shadow-2xs'
+                                : 'bg-white text-brand-dark hover:border-brand-primary hover:text-brand-primary border-brand-border/80 shadow-2xs active:scale-95'
                             }`}
                           >
                             + {def.label}
@@ -1461,14 +1430,14 @@ export default function MerchantProductStudioPage() {
                   {options.map((opt, optIdx) => (
                     <div
                       key={optIdx}
-                      className="bg-brand-surface/50 rounded-xl p-3.5 border border-brand-border/70 space-y-2.5"
+                      className="bg-brand-surface/30 rounded-xl p-3.5 border border-brand-border/60 space-y-2.5"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-black text-brand-dark">
                             {opt.name || opt.label}
                           </span>
-                          <span className="text-[10px] text-brand-muted bg-brand-card px-1.5 py-0.5 rounded border border-brand-border">
+                          <span className="text-[10px] text-brand-muted bg-brand-card px-1.5 py-0.5 rounded border border-brand-border/60">
                             {opt.source === 'DEFINED' ? 'معتمد' : 'مخصص'}
                           </span>
                         </div>
@@ -1486,7 +1455,7 @@ export default function MerchantProductStudioPage() {
                         {opt.values.map((val) => (
                           <span
                             key={val}
-                            className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-card text-brand-dark px-2.5 py-1 rounded-lg border border-brand-border shadow-2xs"
+                            className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-card text-brand-dark px-2.5 py-1 rounded-lg border border-brand-border/70 shadow-2xs"
                           >
                             <span>{val}</span>
                             <button
@@ -1514,7 +1483,7 @@ export default function MerchantProductStudioPage() {
                               }
                             }}
                             placeholder="+ أضف قيمة..."
-                            className="h-7 px-2 text-xs rounded-lg border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary w-24"
+                            className="h-7 px-2 text-base sm:text-xs rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary w-24"
                           />
                           <button
                             type="button"
@@ -1529,59 +1498,59 @@ export default function MerchantProductStudioPage() {
                   ))}
                 </div>
 
-                {/* Color-Specific Image Binding Section */}
+                {/* Color-Specific Visual Swatch Selector (No Ugly Dropdowns) */}
                 {colorOpt && colorOpt.values.length > 0 && images.length > 0 && (
-                  <div className="mt-5 p-4 rounded-xl bg-brand-surface/70 border border-brand-border/80">
-                    <div className="flex items-center gap-2 text-xs font-black text-brand-dark mb-1">
-                      <IconPalette className="w-4 h-4 text-brand-primary" />
-                      <span>تخصيص صور الألوان (Color Binding)</span>
+                  <div className="mt-5 p-4 rounded-xl bg-brand-surface/40 border border-brand-border/60">
+                    <div className="text-xs font-black text-brand-dark mb-1">
+                      تخصيص صور الألوان بنقرة بصرية مباشرة
                     </div>
                     <p className="text-[11px] text-brand-muted mb-3 leading-relaxed">
-                      اختر صورة المعرض المطابقة لكل لون. عند اختيار الزبون للون في صفحة الشراء، ستتحول الصورة تلقائياً لصورة هذا اللون.
+                      انقر على الصورة المناسبة من المعرض لكل لون لتخصيصها. ستتحول الصورة تلقائياً عند اختيار الزبون لهذا اللون في المتجر.
                     </p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="space-y-3">
                       {colorOpt.values.map((colVal) => {
                         const currentBound = colorImageMap[colVal] || images[0];
                         return (
                           <div
                             key={colVal}
-                            className="p-3 rounded-xl bg-brand-card border border-brand-border flex items-center justify-between gap-3 shadow-2xs"
+                            className="p-3 rounded-xl bg-brand-card border border-brand-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs"
                           >
                             <div className="flex items-center gap-2.5">
-                              <img
-                                src={currentBound}
-                                alt={colVal}
-                                className="w-10 h-10 rounded-lg object-cover border border-brand-border shrink-0 bg-brand-surface"
-                              />
-                              <div>
-                                <div className="text-xs font-black text-brand-dark">{colVal}</div>
-                                <div className="text-[10px] text-brand-muted flex items-center gap-1">
-                                  {colorImageMap[colVal] ? (
-                                    <>
-                                      <IconCheck className="w-3 h-3 text-brand-trust" />
-                                      <span className="text-brand-trust">مخصصة</span>
-                                    </>
-                                  ) : (
-                                    <span>صورة الغلاف</span>
-                                  )}
-                                </div>
-                              </div>
+                              <span className="text-xs font-black text-brand-dark min-w-16">
+                                {colVal}
+                              </span>
+                              <span className="text-[10px] text-brand-muted">
+                                {colorImageMap[colVal] ? 'صورة مخصصة' : 'صورة الغلاف (افتراضي)'}
+                              </span>
                             </div>
 
-                            {/* Dropdown to pick image from gallery */}
-                            <select
-                              value={colorImageMap[colVal] || ''}
-                              onChange={(e) => handleBindColorImage(colVal, e.target.value)}
-                              className="text-xs font-bold p-1 rounded-lg border border-brand-border bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary"
-                            >
-                              <option value="">اختر صورة...</option>
-                              {images.map((imgUrl, imgI) => (
-                                <option key={imgI} value={imgUrl}>
-                                  صورة المعرض #{imgI + 1}
-                                </option>
-                              ))}
-                            </select>
+                            {/* Visual Thumbnail Strip to tap and bind */}
+                            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                              {images.map((imgUrl, imgI) => {
+                                const isSelected = currentBound === imgUrl;
+                                return (
+                                  <button
+                                    key={imgI}
+                                    type="button"
+                                    onClick={() => handleBindColorImage(colVal, imgUrl)}
+                                    className={`relative w-10 h-10 rounded-lg overflow-hidden border transition-all cursor-pointer shrink-0 ${
+                                      isSelected
+                                        ? 'ring-2 ring-brand-primary border-brand-primary scale-105 shadow-xs'
+                                        : 'border-brand-border/60 opacity-60 hover:opacity-100'
+                                    }`}
+                                    title={`تعيين صورة ${imgI + 1} للون ${colVal}`}
+                                  >
+                                    <img src={imgUrl} alt={`خيار ${imgI + 1}`} className="w-full h-full object-cover" />
+                                    {isSelected && (
+                                      <div className="absolute inset-0 bg-brand-primary/20 flex items-center justify-center">
+                                        <IconCheck className="w-3.5 h-3.5 text-white stroke-[3]" />
+                                      </div>
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
                         );
                       })}
@@ -1591,7 +1560,7 @@ export default function MerchantProductStudioPage() {
               </div>
 
               {/* Step 5: Bulk Actions Toolbar */}
-              <div className="bg-brand-card rounded-2xl p-4 sm:p-5 border border-brand-border/80 shadow-2xs">
+              <div className="bg-brand-card rounded-2xl p-4 sm:p-5 border border-brand-border/60 shadow-xs">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <h3 className="text-xs font-black text-brand-dark flex items-center gap-1.5">
@@ -1613,13 +1582,13 @@ export default function MerchantProductStudioPage() {
                         placeholder="السعر (₪)"
                         value={bulkPriceInput}
                         onChange={(e) => setBulkPriceInput(e.target.value)}
-                        className="w-24 h-8 px-2 text-xs rounded-lg border border-brand-border bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary"
+                        className="w-24 h-9 px-2 text-base sm:text-xs rounded-xl border border-brand-border/70 bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary"
                       />
                       <button
                         type="button"
                         onClick={handleApplyBulkPrice}
                         disabled={!bulkPriceInput}
-                        className="h-8 px-2.5 bg-brand-surface hover:bg-brand-border/50 text-brand-dark text-[11px] font-bold rounded-lg border border-brand-border disabled:opacity-40 cursor-pointer"
+                        className="h-9 px-2.5 bg-brand-surface hover:bg-brand-border/50 text-brand-dark text-xs font-bold rounded-xl border border-brand-border/70 disabled:opacity-40 cursor-pointer active:scale-95"
                       >
                         تطبيق السعر
                       </button>
@@ -1633,13 +1602,13 @@ export default function MerchantProductStudioPage() {
                         placeholder="المخزون (ق)"
                         value={bulkStockInput}
                         onChange={(e) => setBulkStockInput(e.target.value)}
-                        className="w-24 h-8 px-2 text-xs rounded-lg border border-brand-border bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary"
+                        className="w-24 h-9 px-2 text-base sm:text-xs rounded-xl border border-brand-border/70 bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary"
                       />
                       <button
                         type="button"
                         onClick={handleApplyBulkStock}
                         disabled={!bulkStockInput}
-                        className="h-8 px-2.5 bg-brand-surface hover:bg-brand-border/50 text-brand-dark text-[11px] font-bold rounded-lg border border-brand-border disabled:opacity-40 cursor-pointer"
+                        className="h-9 px-2.5 bg-brand-surface hover:bg-brand-border/50 text-brand-dark text-xs font-bold rounded-xl border border-brand-border/70 disabled:opacity-40 cursor-pointer active:scale-95"
                       >
                         تطبيق المخزون
                       </button>
@@ -1649,8 +1618,8 @@ export default function MerchantProductStudioPage() {
               </div>
 
               {/* Step 6: Generated Variants Matrix */}
-              <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/80 shadow-2xs">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-brand-border/60">
+              <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-brand-border/40">
                   <div>
                     <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
@@ -1679,23 +1648,23 @@ export default function MerchantProductStudioPage() {
                         key={v._id || vIdx}
                         className={`rounded-xl border p-4 transition-all ${
                           v.isActive
-                            ? 'bg-brand-surface/30 border-brand-border/80 hover:border-brand-primary/40'
+                            ? 'bg-brand-surface/20 border-brand-border/60 hover:border-brand-primary/40'
                             : 'bg-zinc-50 border-zinc-200 opacity-60'
                         }`}
                       >
                         {/* Top bar */}
-                        <div className="flex items-center justify-between gap-3 mb-3 pb-2.5 border-b border-brand-border/50">
+                        <div className="flex items-center justify-between gap-3 mb-3 pb-2.5 border-b border-brand-border/40">
                           <div className="flex items-center gap-2.5">
                             <img
                               src={variantPhoto}
                               alt="صورة الصنف"
-                              className="w-8 h-8 rounded-lg object-cover border border-brand-border shrink-0 bg-brand-surface"
+                              className="w-9 h-9 rounded-xl object-cover border border-brand-border/60 shrink-0 bg-brand-surface"
                             />
                             <div className="flex flex-wrap items-center gap-1.5">
                               {attrEntries.map(([k, val]) => (
                                 <span
                                   key={k}
-                                  className="text-xs font-black bg-brand-card text-brand-dark px-2.5 py-0.5 rounded-lg border border-brand-border shadow-2xs"
+                                  className="text-xs font-black bg-brand-card text-brand-dark px-2.5 py-0.5 rounded-lg border border-brand-border/60 shadow-2xs"
                                 >
                                   <span className="text-brand-muted text-[10px] font-normal ml-1">
                                     {k}:
@@ -1742,7 +1711,7 @@ export default function MerchantProductStudioPage() {
                           </div>
                         </div>
 
-                        {/* Input Grid */}
+                        {/* Input Grid (Touch & Desktop Ergonomics) */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
                           <div>
                             <label className="block text-[10px] font-bold text-brand-muted mb-1">
@@ -1756,7 +1725,7 @@ export default function MerchantProductStudioPage() {
                                 updated[vIdx] = { ...v, sku: e.target.value.toUpperCase() };
                                 setVariants(updated);
                               }}
-                              className="w-full h-9 px-2.5 text-xs font-mono uppercase font-bold rounded-xl border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                              className="w-full h-10 px-2.5 text-base sm:text-xs font-mono uppercase font-bold rounded-xl border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
                             />
                           </div>
 
@@ -1775,7 +1744,7 @@ export default function MerchantProductStudioPage() {
                                   updated[vIdx] = { ...v, price: Number(e.target.value) || 0 };
                                   setVariants(updated);
                                 }}
-                                className="w-full h-9 px-2.5 pr-6 text-xs font-black rounded-xl border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                                className="w-full h-10 px-2.5 pr-6 text-base sm:text-xs font-black rounded-xl border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
                               />
                               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-brand-muted">
                                 ₪
@@ -1800,7 +1769,7 @@ export default function MerchantProductStudioPage() {
                                   setVariants(updated);
                                 }}
                                 placeholder="بدون خصم"
-                                className="w-full h-9 px-2.5 pr-6 text-xs rounded-xl border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                                className="w-full h-10 px-2.5 pr-6 text-base sm:text-xs rounded-xl border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
                               />
                               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-brand-muted">
                                 ₪
@@ -1812,7 +1781,7 @@ export default function MerchantProductStudioPage() {
                             <label className="block text-[10px] font-bold text-brand-muted mb-1">
                               المخزون (قطع)
                             </label>
-                            <div className="flex items-center h-9 bg-brand-card rounded-xl border border-brand-border px-1">
+                            <div className="flex items-center h-10 bg-brand-card rounded-xl border border-brand-border/70 px-1 shadow-2xs">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1820,7 +1789,7 @@ export default function MerchantProductStudioPage() {
                                   updated[vIdx] = { ...v, stock: Math.max(0, v.stock - 1) };
                                   setVariants(updated);
                                 }}
-                                className="w-7 h-7 rounded-lg bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all"
+                                className="w-8 h-8 rounded-lg bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-transform duration-100"
                               >
                                 -
                               </button>
@@ -1836,7 +1805,7 @@ export default function MerchantProductStudioPage() {
                                   };
                                   setVariants(updated);
                                 }}
-                                className="flex-1 text-center font-black text-xs bg-transparent focus:outline-none"
+                                className="flex-1 text-center font-black text-xs bg-transparent focus:outline-none tabular-nums"
                               />
                               <button
                                 type="button"
@@ -1845,7 +1814,7 @@ export default function MerchantProductStudioPage() {
                                   updated[vIdx] = { ...v, stock: v.stock + 1 };
                                   setVariants(updated);
                                 }}
-                                className="w-7 h-7 rounded-lg bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-95 transition-all"
+                                className="w-8 h-8 rounded-lg bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-transform duration-100"
                               >
                                 +
                               </button>
@@ -1857,7 +1826,7 @@ export default function MerchantProductStudioPage() {
                   })}
 
                   {variants.length === 0 && (
-                    <div className="text-center py-8 bg-brand-surface/40 rounded-xl border border-dashed border-brand-border text-xs text-brand-muted">
+                    <div className="text-center py-8 bg-brand-surface/30 rounded-xl border border-dashed border-brand-border/80 text-xs text-brand-muted">
                       لا توجد أصناف مسجلة. انقر على «توليد الأصناف» أعلاه لإنشاء المصفوفة.
                     </div>
                   )}
@@ -1866,9 +1835,9 @@ export default function MerchantProductStudioPage() {
             </>
           )}
 
-          {/* Sticky Bottom Save Bar */}
-          <div className="fixed bottom-0 left-0 right-0 z-30 bg-brand-card/95 backdrop-blur-md border-t border-brand-border/80 px-4 py-3 shadow-xl font-almarai">
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          {/* Sticky Bottom Save Bar (Translucent Apple Material) */}
+          <div className="fixed bottom-0 left-0 right-0 z-30 bg-brand-card/85 backdrop-blur-xl border-t border-brand-border/70 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-xl font-almarai">
+            <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
               <div className="hidden sm:flex items-center gap-2 text-xs text-brand-muted">
                 <span>الصنف:</span>
                 <span className="font-bold text-brand-dark">{name || 'بدون اسم'}</span>
@@ -1882,7 +1851,7 @@ export default function MerchantProductStudioPage() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('overview')}
-                  className="px-4 py-2 rounded-xl border border-brand-border text-brand-dark text-xs font-bold hover:bg-brand-surface transition-colors cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-brand-border/80 text-brand-dark text-xs font-bold hover:bg-brand-surface active:scale-[0.97] transition-all cursor-pointer"
                 >
                   إلغاء التعديل
                 </button>
@@ -1890,7 +1859,7 @@ export default function MerchantProductStudioPage() {
                   type="button"
                   onClick={handleSaveProduct}
                   disabled={isSaving}
-                  className="flex-1 sm:flex-initial px-6 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-95 shadow-xs transition-all disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                  className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-[0.97] shadow-xs transition-transform duration-100 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
                 >
                   {isSaving && (
                     <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -1908,13 +1877,13 @@ export default function MerchantProductStudioPage() {
       {/* ========================================================= */}
       {activeTab === 'settings' && (
         <div className="space-y-6 animate-fadeIn max-w-3xl">
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/80 shadow-2xs space-y-5">
-            <h2 className="text-sm font-black text-brand-dark pb-3 border-b border-brand-border/60">
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/60 shadow-xs space-y-5">
+            <h2 className="text-sm font-black text-brand-dark pb-3 border-b border-brand-border/40">
               إعدادات العرض والعمليات الميدانية
             </h2>
 
             {/* Visibility Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-xl bg-brand-surface/40 border border-brand-border">
+            <div className="flex items-center justify-between p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60">
               <div>
                 <div className="text-xs font-black text-brand-dark">ظهور الصنف في المتجر</div>
                 <div className="text-[11px] text-brand-muted mt-0.5">
@@ -1924,7 +1893,7 @@ export default function MerchantProductStudioPage() {
               <button
                 type="button"
                 onClick={() => setIsActive(!isActive)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer active:scale-[0.97] ${
                   isActive
                     ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100'
                     : 'border-brand-trust text-brand-trust bg-brand-trust-soft hover:bg-brand-trust-soft/80'
@@ -1935,7 +1904,7 @@ export default function MerchantProductStudioPage() {
             </div>
 
             {/* Operational Policies Summary */}
-            <div className="p-4 rounded-xl bg-brand-surface/30 border border-brand-border space-y-2 text-xs">
+            <div className="p-4 rounded-xl bg-brand-surface/20 border border-brand-border/40 space-y-2 text-xs">
               <div className="font-bold text-brand-dark">سياسات سَدِيم الميدانية المطبقة على الصنف:</div>
               <ul className="text-[11px] text-brand-muted space-y-1.5 list-disc list-inside">
                 <li>
@@ -1952,7 +1921,7 @@ export default function MerchantProductStudioPage() {
           </div>
 
           {/* Danger Zone */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-red-200 shadow-2xs space-y-3">
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-red-200/80 shadow-xs space-y-3">
             <h2 className="text-sm font-black text-red-700">منطقة الخطر</h2>
             <p className="text-xs text-brand-muted leading-relaxed">
               حذف الصنف يؤدي لإزالته نهائياً من قاعدة بيانات المتجر. إذا كان الصنف مرتبطاً بطلبات سابقة، سيتم إيقاف تفعيله للحفاظ على سلامة فواتير الزبائن.
@@ -1960,7 +1929,7 @@ export default function MerchantProductStudioPage() {
             <button
               type="button"
               onClick={handleDeleteProduct}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-700 transition-colors cursor-pointer shadow-2xs"
+              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-700 active:scale-[0.97] transition-transform duration-100 cursor-pointer shadow-2xs"
             >
               حذف هذا الصنف نهائياً من المتجر
             </button>

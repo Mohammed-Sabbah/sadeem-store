@@ -137,6 +137,22 @@ function IconUploadCloud({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
+function IconTrash({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+    </svg>
+  );
+}
+
+function IconChevronDown({ className = 'w-3.5 h-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
+  );
+}
+
 // Data models
 interface ProductReview {
   id: string;
@@ -1530,9 +1546,9 @@ export default function MerchantProductStudioPage() {
           {/* If Multi-Variant Product: Frictionless, Human-Friendly Flow */}
           {!isSimple && (
             <div className="space-y-6">
-              {/* Step 4: Add Options (Colors & Sizes via Compact Select Dropdowns) */}
-              <div className="bg-brand-card rounded-2xl p-4 sm:p-6 border border-brand-border/60 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-brand-border/40">
+              {/* Step 4: Options (Colors & Sizes - Clean Tabular Apple Pattern) */}
+              <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-brand-border/50">
                   <div>
                     <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
@@ -1541,22 +1557,22 @@ export default function MerchantProductStudioPage() {
                       <span>خيارات ومقاسات الصنف</span>
                     </h2>
                     <p className="text-[11px] text-brand-muted mt-0.5">
-                      اختر المقاسات أو الألوان من القوائم المنسدلة لإضافتها دون أن تأخذ حيزاً كبيراً
+                      حدد المقاسات أو الألوان. يمكنك تخصيص صورة لكل لون مباشرة بالضغط على مصغرة صورته.
                     </p>
                   </div>
 
-                  {/* Add Option Dropdown Select */}
-                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                  {/* Add Option Dropdown Select with Bespoke Chevron */}
+                  <div className="relative inline-flex items-center self-start sm:self-auto">
                     <select
                       value=""
                       onChange={(e) => {
                         const val = e.target.value as 'COLOR' | 'SIZE' | 'CUSTOM';
                         if (val) handleAddPredefinedOption(val);
                       }}
-                      className="h-9 px-3 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-surface hover:bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary cursor-pointer shadow-2xs"
+                      className="appearance-none pr-3.5 pl-8 py-2 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-surface hover:bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary cursor-pointer shadow-2xs transition-colors"
                     >
                       <option value="" disabled>
-                        + إضافة خيار جديد... ▾
+                        + إضافة خيار جديد...
                       </option>
                       {!options.some((o) => o.type === 'COLOR' || o.name === 'اللون') && (
                         <option value="COLOR">الألوان (Colors)</option>
@@ -1566,16 +1582,17 @@ export default function MerchantProductStudioPage() {
                       )}
                       <option value="CUSTOM">خيار مخصص آخر</option>
                     </select>
+                    <IconChevronDown className="w-3.5 h-3.5 text-brand-muted absolute left-2.5 pointer-events-none" />
                   </div>
                 </div>
 
-                {/* Compact Options List */}
+                {/* Tabular Options List (Zero Nested Boxiness, Clean 1px Dividers) */}
                 {options.length === 0 ? (
-                  <div className="py-6 text-center bg-brand-surface/20 rounded-xl border border-dashed border-brand-border/80 text-xs text-brand-muted">
+                  <div className="py-8 text-center bg-brand-surface/20 rounded-xl border border-dashed border-brand-border/80 text-xs text-brand-muted">
                     اختر «+ إضافة خيار جديد» أعلاه لتحديد المقاسات أو الألوان
                   </div>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="divide-y divide-brand-border/50">
                     {options.map((opt, optIdx) => {
                       const isColor = opt.type === 'COLOR' || opt.name === 'اللون';
                       const isSize = opt.type === 'SIZE' || opt.name === 'المقاس';
@@ -1583,88 +1600,122 @@ export default function MerchantProductStudioPage() {
                       return (
                         <div
                           key={optIdx}
-                          className="bg-brand-surface/30 rounded-xl p-3 sm:p-4 border border-brand-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                          className="py-4 first:pt-1 last:pb-1 flex flex-col md:flex-row md:items-center justify-between gap-3.5"
                         >
-                          {/* Label */}
-                          <div className="flex items-center gap-2 shrink-0 min-w-24">
+                          {/* Option Name & Count Badge */}
+                          <div className="flex items-center gap-2.5 shrink-0 min-w-28">
                             <span className="text-xs font-black text-brand-dark">
                               {opt.name || opt.label}
                             </span>
-                            <span className="text-[10px] text-brand-muted bg-brand-card px-1.5 py-0.5 rounded border border-brand-border/60">
-                              {opt.values.length}
+                            <span className="text-[10px] font-bold text-brand-muted bg-brand-surface px-2 py-0.5 rounded-full border border-brand-border/60">
+                              {opt.values.length} {isColor ? 'ألوان' : isSize ? 'مقاسات' : 'قيم'}
                             </span>
                           </div>
 
-                          {/* Selected Tags + Select Dropdown */}
-                          <div className="flex flex-wrap items-center gap-1.5 flex-1">
-                            {/* Tags */}
-                            {opt.values.map((val) => (
-                              <span
-                                key={val}
-                                className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand-card text-brand-dark px-2.5 py-1 rounded-lg border border-brand-border/70 shadow-2xs"
-                              >
-                                <span>{val}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveOptionValue(optIdx, val)}
-                                  className="text-brand-muted hover:text-red-600 transition-colors cursor-pointer"
-                                  title="إزالة هذه القيمة"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
+                          {/* Selected Values Tags + Direct Swatch + Select Dropdown */}
+                          <div className="flex flex-wrap items-center gap-2 flex-1">
+                            {/* Values Pills */}
+                            {opt.values.map((val) => {
+                              const boundImg = isColor ? colorImageMap[val] || images[0] : null;
 
-                            {/* Select Dropdown to pick new value (Hidden inside dropdown!) */}
-                            <select
-                              value=""
-                              onChange={(e) => {
-                                const selectedVal = e.target.value;
-                                if (selectedVal === '__CUSTOM__') {
-                                  setShowCustomInput((prev) => ({ ...prev, [optIdx]: true }));
-                                } else if (selectedVal) {
-                                  handleAddOptionValue(optIdx, selectedVal);
-                                }
-                              }}
-                              className="h-8 px-2.5 text-xs font-bold rounded-lg border border-brand-border/80 bg-brand-card text-brand-dark hover:border-brand-primary focus:outline-none focus:border-brand-primary cursor-pointer shadow-2xs"
-                            >
-                              <option value="" disabled>
-                                {isColor
-                                  ? '+ إضافة لون من القائمة... ▾'
-                                  : isSize
-                                  ? '+ إضافة مقاس من القائمة... ▾'
-                                  : '+ إضافة قيمة... ▾'}
-                              </option>
-                              {isColor &&
-                                PRESET_COLORS.filter((c) => !opt.values.includes(c)).map((col) => (
-                                  <option key={col} value={col}>
-                                    {col}
-                                  </option>
-                                ))}
-                              {isSize && (
-                                <>
-                                  <optgroup label="مقاسات الملابس">
-                                    {PRESET_CLOTHING_SIZES.filter((s) => !opt.values.includes(s)).map(
-                                      (sz) => (
-                                        <option key={sz} value={sz}>
-                                          {sz}
-                                        </option>
-                                      )
-                                    )}
-                                  </optgroup>
-                                  <optgroup label="مقاسات الأحذية">
-                                    {PRESET_SHOE_SIZES.filter((s) => !opt.values.includes(s)).map(
-                                      (sz) => (
-                                        <option key={sz} value={sz}>
-                                          {sz}
-                                        </option>
-                                      )
-                                    )}
-                                  </optgroup>
-                                </>
-                              )}
-                              <option value="__CUSTOM__">+ كتابة يدوية مخصصة...</option>
-                            </select>
+                              return (
+                                <div
+                                  key={val}
+                                  className="inline-flex items-center gap-1.5 bg-brand-surface/70 hover:bg-brand-surface text-brand-dark pr-2 pl-2.5 py-1 rounded-xl border border-brand-border/70 text-xs font-bold transition-all shadow-2xs group"
+                                >
+                                  {/* Color image mini swatch button */}
+                                  {isColor && (
+                                    <div className="relative inline-flex items-center cursor-pointer" title="تغيير صورة هذا اللون">
+                                      <img
+                                        src={boundImg || primaryImage}
+                                        alt={val}
+                                        className="w-5 h-5 rounded-md object-cover border border-brand-border/80 shrink-0"
+                                      />
+                                      {images.length > 0 && (
+                                        <select
+                                          value={colorImageMap[val] || images[0] || ''}
+                                          onChange={(e) => handleBindColorImage(val, e.target.value)}
+                                          className="absolute inset-0 opacity-0 cursor-pointer"
+                                          title="اختر صورة لهذا اللون"
+                                        >
+                                          {images.map((imgUrl, imgI) => (
+                                            <option key={imgI} value={imgUrl}>
+                                              {imgI === 0 ? 'صورة الغلاف' : `صورة المعرض #${imgI + 1}`}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      )}
+                                    </div>
+                                  )}
+
+                                  <span>{val}</span>
+
+                                  {/* Delete Pill Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveOptionValue(optIdx, val)}
+                                    className="text-brand-muted hover:text-red-600 transition-colors cursor-pointer text-xs leading-none mr-0.5"
+                                    title="إزالة هذه القيمة"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              );
+                            })}
+
+                            {/* Dropdown to pick new value (Hidden inside select with bespoke chevron) */}
+                            <div className="relative inline-flex items-center">
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  const selectedVal = e.target.value;
+                                  if (selectedVal === '__CUSTOM__') {
+                                    setShowCustomInput((prev) => ({ ...prev, [optIdx]: true }));
+                                  } else if (selectedVal) {
+                                    handleAddOptionValue(optIdx, selectedVal);
+                                  }
+                                }}
+                                className="appearance-none pr-3 pl-7 py-1.5 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-card hover:bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary cursor-pointer shadow-2xs transition-colors"
+                              >
+                                <option value="" disabled>
+                                  {isColor
+                                    ? '+ إضافة لون...'
+                                    : isSize
+                                    ? '+ إضافة مقاس...'
+                                    : '+ إضافة قيمة...'}
+                                </option>
+                                {isColor &&
+                                  PRESET_COLORS.filter((c) => !opt.values.includes(c)).map((col) => (
+                                    <option key={col} value={col}>
+                                      {col}
+                                    </option>
+                                  ))}
+                                {isSize && (
+                                  <>
+                                    <optgroup label="مقاسات الملابس">
+                                      {PRESET_CLOTHING_SIZES.filter((s) => !opt.values.includes(s)).map(
+                                        (sz) => (
+                                          <option key={sz} value={sz}>
+                                            {sz}
+                                          </option>
+                                        )
+                                      )}
+                                    </optgroup>
+                                    <optgroup label="مقاسات الأحذية">
+                                      {PRESET_SHOE_SIZES.filter((s) => !opt.values.includes(s)).map(
+                                        (sz) => (
+                                          <option key={sz} value={sz}>
+                                            {sz}
+                                          </option>
+                                        )
+                                      )}
+                                    </optgroup>
+                                  </>
+                                )}
+                                <option value="__CUSTOM__">+ كتابة يدوية مخصصة...</option>
+                              </select>
+                              <IconChevronDown className="w-3 h-3 text-brand-muted absolute left-2 pointer-events-none" />
+                            </div>
 
                             {/* Inline Custom Input when chosen */}
                             {showCustomInput[optIdx] && (
@@ -1689,7 +1740,7 @@ export default function MerchantProductStudioPage() {
                                     }
                                   }}
                                   placeholder="اكتب القيمة ثم Enter..."
-                                  className="h-8 px-2 text-xs rounded-lg border border-brand-primary bg-white text-brand-dark focus:outline-none w-32 shadow-2xs"
+                                  className="h-8 px-2.5 text-xs rounded-xl border border-brand-primary bg-white text-brand-dark focus:outline-none w-32 shadow-2xs"
                                 />
                                 <button
                                   type="button"
@@ -1697,7 +1748,7 @@ export default function MerchantProductStudioPage() {
                                     handleAddOptionValue(optIdx);
                                     setShowCustomInput((prev) => ({ ...prev, [optIdx]: false }));
                                   }}
-                                  className="h-8 px-2 text-[11px] font-bold bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover cursor-pointer"
+                                  className="h-8 px-2.5 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover cursor-pointer"
                                 >
                                   إضافة
                                 </button>
@@ -1714,64 +1765,19 @@ export default function MerchantProductStudioPage() {
                             )}
                           </div>
 
-                          {/* Delete Option */}
+                          {/* Delete Option Action */}
                           <button
                             type="button"
                             onClick={() => handleRemoveOption(optIdx)}
-                            className="text-[11px] text-brand-muted hover:text-red-600 font-bold self-end sm:self-center transition-colors cursor-pointer shrink-0"
+                            className="text-xs text-brand-muted hover:text-red-600 transition-colors cursor-pointer flex items-center gap-1 shrink-0 self-end md:self-auto py-1"
+                            title="إزالة هذا الخيار بالكامل"
                           >
-                            حذف الخيار ×
+                            <IconTrash className="w-3.5 h-3.5" />
+                            <span className="text-[11px] font-bold">إزالة الخيار</span>
                           </button>
                         </div>
                       );
                     })}
-                  </div>
-                )}
-
-                {/* Color-Image Binding (Compact single rows with select) */}
-                {colorOpt && colorOpt.values.length > 0 && images.length > 0 && (
-                  <div className="pt-3 border-t border-brand-border/40">
-                    <div className="text-xs font-black text-brand-dark mb-1">
-                      ربط صور الألوان (اختياري)
-                    </div>
-                    <p className="text-[11px] text-brand-muted mb-2.5">
-                      حدد صورة المعرض الخاصة بكل لون من القائمة المنسدلة:
-                    </p>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {colorOpt.values.map((colVal) => {
-                        const currentBound = colorImageMap[colVal] || images[0];
-                        return (
-                          <div
-                            key={colVal}
-                            className="p-2.5 rounded-xl bg-brand-surface/40 border border-brand-border/60 flex items-center justify-between gap-2 shadow-2xs"
-                          >
-                            <div className="flex items-center gap-2 min-w-16">
-                              <img
-                                src={currentBound}
-                                alt={colVal}
-                                className="w-7 h-7 rounded-lg object-cover border border-brand-border/70 shrink-0 bg-brand-surface"
-                              />
-                              <span className="text-xs font-black text-brand-dark truncate">
-                                {colVal}
-                              </span>
-                            </div>
-
-                            <select
-                              value={colorImageMap[colVal] || images[0] || ''}
-                              onChange={(e) => handleBindColorImage(colVal, e.target.value)}
-                              className="h-7 px-2 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary cursor-pointer truncate max-w-36"
-                            >
-                              {images.map((imgUrl, imgI) => (
-                                <option key={imgI} value={imgUrl}>
-                                  {imgI === 0 ? 'صورة الغلاف' : `صورة المعرض #${imgI + 1}`}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-                        );
-                      })}
-                    </div>
                   </div>
                 )}
               </div>

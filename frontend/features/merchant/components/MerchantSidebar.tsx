@@ -71,10 +71,10 @@ export default function MerchantSidebar({
 
   return (
     <aside
-      className={`h-full flex flex-col justify-between font-almarai text-right select-none ${
+      className={`h-full flex flex-col justify-between font-almarai text-right select-none overflow-y-auto no-scrollbar ${
         isMobileDrawer
           ? 'w-full p-5 bg-brand-card'
-          : 'w-68 border-l border-brand-border bg-brand-card p-5 sticky top-0 h-screen shrink-0'
+          : 'w-68 border-l border-brand-border bg-brand-card p-5'
       }`}
     >
       {/* 1. Header & Store Capsule */}
@@ -213,7 +213,7 @@ export default function MerchantSidebar({
       </div>
 
       {/* 3. Bottom Utility & Operational Assurance */}
-      <div className="space-y-3 pt-4 border-t border-brand-border/60">
+      <div className="space-y-3 pt-4 border-t border-brand-border/60 shrink-0">
         {/* Central Gaza Logistics Pillar Badge */}
         <div className="rounded-xl bg-brand-primary-soft border border-brand-primary-border p-2.5 space-y-1 text-right">
           <div className="flex items-center justify-between">

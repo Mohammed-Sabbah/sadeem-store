@@ -25,8 +25,8 @@ function MerchantLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-brand-bg text-brand-dark font-almarai antialiased flex flex-col lg:flex-row selection:bg-brand-primary-soft selection:text-brand-primary">
-      {/* 1. Desktop Fixed Sidebar (Right-hand in RTL) */}
-      <div className="hidden lg:block shrink-0">
+      {/* 1. Desktop Fixed/Sticky Sidebar (Right-hand in RTL) */}
+      <div className="hidden lg:block shrink-0 sticky top-0 h-screen self-start z-30">
         <MerchantSidebar />
       </div>
 

@@ -153,6 +153,62 @@ function IconChevronDown({ className = 'w-3.5 h-3.5' }: { className?: string }) 
   );
 }
 
+function IconPlus({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  );
+}
+
+function IconPalette({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l9.75 9.75" />
+      <circle cx="7.5" cy="7.5" r="1.25" fill="currentColor" />
+      <circle cx="16.5" cy="7.5" r="1.25" fill="currentColor" />
+      <circle cx="7.5" cy="13.5" r="1.25" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconRuler({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 9h16.5m-16.5 6h16.5M6 9v3m4-3v2m4-2v3m4-3v2M3.75 6.75h16.5a1.5 1.5 0 011.5 1.5v7.5a1.5 1.5 0 01-1.5 1.5H3.75a1.5 1.5 0 01-1.5-1.5v-7.5a1.5 1.5 0 011.5-1.5z" />
+    </svg>
+  );
+}
+
+function IconX({ className = 'w-3.5 h-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+// Color Swatches Palette (Accurate RGB/Hex for Central Gaza Merchants)
+const COLOR_SWATCHES: Record<string, { hex: string; border?: boolean }> = {
+  'أسود': { hex: '#18181B' },
+  'أبيض': { hex: '#FFFFFF', border: true },
+  'كحلي': { hex: '#1E3A8A' },
+  'رمادي': { hex: '#71717A' },
+  'بيج': { hex: '#E5D9C5' },
+  'زيتي': { hex: '#4D5D43' },
+  'عسلي': { hex: '#B8621B' },
+  'عنابي': { hex: '#831843' },
+  'بني': { hex: '#78350F' },
+  'أزرق': { hex: '#2563EB' },
+  'وردي': { hex: '#F472B6' },
+  'سماوي': { hex: '#38BDF8' },
+  'رملي': { hex: '#D2B48C' },
+  'فحمي': { hex: '#27272A' },
+  'زيتوني': { hex: '#556B2F' },
+  'أخضر': { hex: '#15803D' },
+  'أحمر': { hex: '#DC2626' },
+};
+
 // Data models
 interface ProductReview {
   id: string;
@@ -273,6 +329,28 @@ export default function MerchantProductStudioPage() {
       images?: string[];
     }>
   >([]);
+
+  // Bespoke Apple Popovers & Menus State
+  const [isAddOptionOpen, setIsAddOptionOpen] = useState(false);
+  const [activeValuePopoverIdx, setActiveValuePopoverIdx] = useState<number | null>(null);
+  const [activeColorPhotoPopover, setActiveColorPhotoPopover] = useState<string | null>(null);
+  const [customColorInput, setCustomColorInput] = useState('');
+  const [customSizeInput, setCustomSizeInput] = useState('');
+
+  // Global Click-Outside Listener to dismiss popovers seamlessly
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      if (!target.closest('[data-popover]')) {
+        setIsAddOptionOpen(false);
+        setActiveValuePopoverIdx(null);
+        setActiveColorPhotoPopover(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // 1. Initial Load
   useEffect(() => {
@@ -1237,29 +1315,44 @@ export default function MerchantProductStudioPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1.5">التصنيف المعتمد *</label>
-                  <select
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full h-11 px-3 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary transition-all"
-                  >
-                    {categories.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.title}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative flex items-center">
+                    <IconPackage className="w-4 h-4 text-brand-muted absolute right-3.5 pointer-events-none" />
+                    <select
+                      value={categoryId}
+                      onChange={(e) => setCategoryId(e.target.value)}
+                      className="w-full h-11 pr-10 pl-9 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all appearance-none cursor-pointer"
+                    >
+                      {categories.map((c) => (
+                        <option key={c._id} value={c._id}>
+                          {c.title}
+                        </option>
+                      ))}
+                    </select>
+                    <IconChevronDown className="w-3.5 h-3.5 text-brand-muted absolute left-3.5 pointer-events-none" />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-brand-dark mb-1.5">الظهور في الصدارة</label>
-                  <label className="flex items-center gap-2.5 h-11 px-3.5 bg-brand-surface/40 rounded-xl border border-brand-border/70 text-xs font-bold text-brand-dark cursor-pointer select-none">
+                  <label
+                    className={`flex items-center justify-between h-11 px-3.5 rounded-xl border text-xs font-bold cursor-pointer select-none transition-all ${
+                      isFeatured
+                        ? 'bg-amber-50/70 text-amber-950 border-amber-300 ring-2 ring-amber-400/20'
+                        : 'bg-brand-surface/40 text-brand-dark border-brand-border/70 hover:bg-brand-surface/70'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <IconStarSolid
+                        className={`w-4 h-4 ${isFeatured ? 'text-amber-500' : 'text-brand-muted/40'}`}
+                      />
+                      <span>إبراز الصنف في واجهة المتجر الرئيسية</span>
+                    </div>
                     <input
                       type="checkbox"
                       checked={isFeatured}
                       onChange={(e) => setIsFeatured(e.target.checked)}
-                      className="w-4 h-4 accent-brand-primary rounded"
+                      className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
                     />
-                    <span>إبراز الصنف في واجهة المتجر الرئيسية (Featured)</span>
                   </label>
                 </div>
               </div>
@@ -1561,28 +1654,84 @@ export default function MerchantProductStudioPage() {
                     </p>
                   </div>
 
-                  {/* Add Option Dropdown Select with Bespoke Chevron */}
-                  <div className="relative inline-flex items-center self-start sm:self-auto">
-                    <select
-                      value=""
-                      onChange={(e) => {
-                        const val = e.target.value as 'COLOR' | 'SIZE' | 'CUSTOM';
-                        if (val) handleAddPredefinedOption(val);
+                  {/* Bespoke Apple Add Option Popover */}
+                  <div className="relative inline-flex items-center self-start sm:self-auto" data-popover>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddOptionOpen(!isAddOptionOpen);
+                        setActiveValuePopoverIdx(null);
+                        setActiveColorPhotoPopover(null);
                       }}
-                      className="appearance-none pr-3.5 pl-8 py-2 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-surface hover:bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary cursor-pointer shadow-2xs transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-surface hover:bg-brand-card text-brand-dark transition-all shadow-2xs active:scale-[0.98] cursor-pointer"
                     >
-                      <option value="" disabled>
-                        + إضافة خيار جديد...
-                      </option>
-                      {!options.some((o) => o.type === 'COLOR' || o.name === 'اللون') && (
-                        <option value="COLOR">الألوان (Colors)</option>
-                      )}
-                      {!options.some((o) => o.type === 'SIZE' || o.name === 'المقاس') && (
-                        <option value="SIZE">المقاسات (Sizes)</option>
-                      )}
-                      <option value="CUSTOM">خيار مخصص آخر</option>
-                    </select>
-                    <IconChevronDown className="w-3.5 h-3.5 text-brand-muted absolute left-2.5 pointer-events-none" />
+                      <IconPlus className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>إضافة خيار جديد</span>
+                      <IconChevronDown
+                        className={`w-3.5 h-3.5 text-brand-muted transition-transform duration-200 ${
+                          isAddOptionOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+
+                    {isAddOptionOpen && (
+                      <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-64 bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-1.5 z-50 animate-fadeIn space-y-1">
+                        {!options.some((o) => o.type === 'COLOR' || o.name === 'اللون') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleAddPredefinedOption('COLOR');
+                              setIsAddOptionOpen(false);
+                            }}
+                            className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0 mt-0.5">
+                              <IconPalette className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-brand-dark">الألوان (Colors)</div>
+                              <div className="text-[10px] text-brand-muted">إضافة ألوان مع ربط صور مخصصة لكل لون</div>
+                            </div>
+                          </button>
+                        )}
+
+                        {!options.some((o) => o.type === 'SIZE' || o.name === 'المقاس') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleAddPredefinedOption('SIZE');
+                              setIsAddOptionOpen(false);
+                            }}
+                            className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-brand-trust/10 text-brand-trust flex items-center justify-center shrink-0 mt-0.5">
+                              <IconRuler className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-brand-dark">المقاسات (Sizes)</div>
+                              <div className="text-[10px] text-brand-muted">مقاسات ملابس (S, M, L) أو أحذية (38-45)</div>
+                            </div>
+                          </button>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleAddPredefinedOption('CUSTOM');
+                            setIsAddOptionOpen(false);
+                          }}
+                          className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
+                        >
+                          <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
+                            <IconSliders className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-brand-dark">خيار مخصص آخر</div>
+                            <div className="text-[10px] text-brand-muted">مثل الحجم، الخامة، أو النوع</div>
+                          </div>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1612,7 +1761,7 @@ export default function MerchantProductStudioPage() {
                             </span>
                           </div>
 
-                          {/* Selected Values Tags + Direct Swatch + Select Dropdown */}
+                          {/* Selected Values Tags + Direct Swatch + Bespoke Popover */}
                           <div className="flex flex-wrap items-center gap-2 flex-1">
                             {/* Values Pills */}
                             {opt.values.map((val) => {
@@ -1623,27 +1772,110 @@ export default function MerchantProductStudioPage() {
                                   key={val}
                                   className="inline-flex items-center gap-1.5 bg-brand-surface/70 hover:bg-brand-surface text-brand-dark pr-2 pl-2.5 py-1 rounded-xl border border-brand-border/70 text-xs font-bold transition-all shadow-2xs group"
                                 >
-                                  {/* Color image mini swatch button */}
+                                  {/* Color image custom popover thumbnail */}
                                   {isColor && (
-                                    <div className="relative inline-flex items-center cursor-pointer" title="تغيير صورة هذا اللون">
-                                      <img
-                                        src={boundImg || primaryImage}
-                                        alt={val}
-                                        className="w-5 h-5 rounded-md object-cover border border-brand-border/80 shrink-0"
-                                      />
-                                      {images.length > 0 && (
-                                        <select
-                                          value={colorImageMap[val] || images[0] || ''}
-                                          onChange={(e) => handleBindColorImage(val, e.target.value)}
-                                          className="absolute inset-0 opacity-0 cursor-pointer"
-                                          title="اختر صورة لهذا اللون"
-                                        >
-                                          {images.map((imgUrl, imgI) => (
-                                            <option key={imgI} value={imgUrl}>
-                                              {imgI === 0 ? 'صورة الغلاف' : `صورة المعرض #${imgI + 1}`}
-                                            </option>
-                                          ))}
-                                        </select>
+                                    <div className="relative inline-flex items-center" data-popover>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveColorPhotoPopover(
+                                            activeColorPhotoPopover === val ? null : val
+                                          );
+                                          setIsAddOptionOpen(false);
+                                          setActiveValuePopoverIdx(null);
+                                        }}
+                                        className="relative w-5 h-5 rounded-md overflow-hidden border border-brand-border/80 shrink-0 hover:scale-110 transition-transform cursor-pointer shadow-2xs group/thumb"
+                                        title={`تغيير صورة هذا اللون: ${val}`}
+                                      >
+                                        <img
+                                          src={boundImg || primaryImage}
+                                          alt={val}
+                                          className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                          <IconPhoto className="w-3 h-3 text-white" />
+                                        </div>
+                                      </button>
+
+                                      {/* Color Photo Picker Popover */}
+                                      {activeColorPhotoPopover === val && (
+                                        <div className="absolute right-0 top-full mt-2 w-64 bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-2.5">
+                                          <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                            <span className="flex items-center gap-1">
+                                              <IconPhoto className="w-3.5 h-3.5 text-brand-primary" />
+                                              <span>صورة لون «{val}»</span>
+                                            </span>
+                                            <button
+                                              type="button"
+                                              onClick={() => setActiveColorPhotoPopover(null)}
+                                              className="text-brand-muted hover:text-brand-dark cursor-pointer"
+                                            >
+                                              <IconX className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+
+                                          {images.length === 0 ? (
+                                            <div className="py-4 text-center text-[11px] text-brand-muted">
+                                              لا توجد صور في المعرض بعد. أضف صوراً في الخطوة 2 أولاً.
+                                            </div>
+                                          ) : (
+                                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto no-scrollbar py-1">
+                                              {images.map((imgUrl, imgI) => {
+                                                const isAssigned =
+                                                  colorImageMap[val] === imgUrl ||
+                                                  (!colorImageMap[val] && imgI === 0);
+                                                return (
+                                                  <button
+                                                    key={imgI}
+                                                    type="button"
+                                                    onClick={() => {
+                                                      handleBindColorImage(val, imgUrl);
+                                                      setActiveColorPhotoPopover(null);
+                                                    }}
+                                                    className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer group/item ${
+                                                      isAssigned
+                                                        ? 'border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                                                        : 'border-brand-border/70 hover:border-brand-primary/50'
+                                                    }`}
+                                                  >
+                                                    <img
+                                                      src={imgUrl}
+                                                      alt={`صورة ${imgI + 1}`}
+                                                      className="w-full h-full object-cover"
+                                                    />
+                                                    {isAssigned && (
+                                                      <div className="absolute inset-0 bg-brand-primary/25 flex items-center justify-center">
+                                                        <span className="w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
+                                                          <IconCheck className="w-3 h-3" />
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                    <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] font-bold px-1 rounded">
+                                                      {imgI === 0 ? 'الغلاف' : `#${imgI + 1}`}
+                                                    </span>
+                                                  </button>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
+
+                                          {colorImageMap[val] && (
+                                            <div className="pt-1.5 border-t border-brand-border/40">
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const nextMap = { ...colorImageMap };
+                                                  delete nextMap[val];
+                                                  setColorImageMap(nextMap);
+                                                  setActiveColorPhotoPopover(null);
+                                                }}
+                                                className="w-full py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-center"
+                                              >
+                                                إلغاء التخصيص (استخدام الغلاف)
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
                                       )}
                                     </div>
                                   )}
@@ -1657,112 +1889,261 @@ export default function MerchantProductStudioPage() {
                                     className="text-brand-muted hover:text-red-600 transition-colors cursor-pointer text-xs leading-none mr-0.5"
                                     title="إزالة هذه القيمة"
                                   >
-                                    ×
+                                    <IconX className="w-3 h-3" />
                                   </button>
                                 </div>
                               );
                             })}
 
-                            {/* Dropdown to pick new value (Hidden inside select with bespoke chevron) */}
-                            <div className="relative inline-flex items-center">
-                              <select
-                                value=""
-                                onChange={(e) => {
-                                  const selectedVal = e.target.value;
-                                  if (selectedVal === '__CUSTOM__') {
-                                    setShowCustomInput((prev) => ({ ...prev, [optIdx]: true }));
-                                  } else if (selectedVal) {
-                                    handleAddOptionValue(optIdx, selectedVal);
-                                  }
+                            {/* Bespoke Apple Value Popover */}
+                            <div className="relative inline-flex items-center" data-popover>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveValuePopoverIdx(
+                                    activeValuePopoverIdx === optIdx ? null : optIdx
+                                  );
+                                  setIsAddOptionOpen(false);
+                                  setActiveColorPhotoPopover(null);
                                 }}
-                                className="appearance-none pr-3 pl-7 py-1.5 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-card hover:bg-brand-surface text-brand-dark focus:outline-none focus:border-brand-primary cursor-pointer shadow-2xs transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-card hover:bg-brand-surface text-brand-dark transition-all shadow-2xs active:scale-[0.98] cursor-pointer"
                               >
-                                <option value="" disabled>
-                                  {isColor
-                                    ? '+ إضافة لون...'
-                                    : isSize
-                                    ? '+ إضافة مقاس...'
-                                    : '+ إضافة قيمة...'}
-                                </option>
-                                {isColor &&
-                                  PRESET_COLORS.filter((c) => !opt.values.includes(c)).map((col) => (
-                                    <option key={col} value={col}>
-                                      {col}
-                                    </option>
-                                  ))}
-                                {isSize && (
-                                  <>
-                                    <optgroup label="مقاسات الملابس">
-                                      {PRESET_CLOTHING_SIZES.filter((s) => !opt.values.includes(s)).map(
-                                        (sz) => (
-                                          <option key={sz} value={sz}>
-                                            {sz}
-                                          </option>
-                                        )
-                                      )}
-                                    </optgroup>
-                                    <optgroup label="مقاسات الأحذية">
-                                      {PRESET_SHOE_SIZES.filter((s) => !opt.values.includes(s)).map(
-                                        (sz) => (
-                                          <option key={sz} value={sz}>
-                                            {sz}
-                                          </option>
-                                        )
-                                      )}
-                                    </optgroup>
-                                  </>
-                                )}
-                                <option value="__CUSTOM__">+ كتابة يدوية مخصصة...</option>
-                              </select>
-                              <IconChevronDown className="w-3 h-3 text-brand-muted absolute left-2 pointer-events-none" />
-                            </div>
-
-                            {/* Inline Custom Input when chosen */}
-                            {showCustomInput[optIdx] && (
-                              <div className="inline-flex items-center gap-1 animate-fadeIn">
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  value={optionTagInputs[optIdx] || ''}
-                                  onChange={(e) =>
-                                    setOptionTagInputs((prev) => ({
-                                      ...prev,
-                                      [optIdx]: e.target.value,
-                                    }))
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      handleAddOptionValue(optIdx);
-                                      setShowCustomInput((prev) => ({ ...prev, [optIdx]: false }));
-                                    } else if (e.key === 'Escape') {
-                                      setShowCustomInput((prev) => ({ ...prev, [optIdx]: false }));
-                                    }
-                                  }}
-                                  placeholder="اكتب القيمة ثم Enter..."
-                                  className="h-8 px-2.5 text-xs rounded-xl border border-brand-primary bg-white text-brand-dark focus:outline-none w-32 shadow-2xs"
+                                <IconPlus className="w-3 h-3 text-brand-primary" />
+                                <span>{isColor ? 'إضافة لون...' : isSize ? 'إضافة مقاس...' : 'إضافة قيمة...'}</span>
+                                <IconChevronDown
+                                  className={`w-3 h-3 text-brand-muted transition-transform duration-200 ${
+                                    activeValuePopoverIdx === optIdx ? 'rotate-180' : ''
+                                  }`}
                                 />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    handleAddOptionValue(optIdx);
-                                    setShowCustomInput((prev) => ({ ...prev, [optIdx]: false }));
-                                  }}
-                                  className="h-8 px-2.5 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover cursor-pointer"
-                                >
-                                  إضافة
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setShowCustomInput((prev) => ({ ...prev, [optIdx]: false }))
-                                  }
-                                  className="h-8 px-1.5 text-xs text-brand-muted hover:text-brand-dark cursor-pointer"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            )}
+                              </button>
+
+                              {activeValuePopoverIdx === optIdx && (
+                                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-3">
+                                  {isColor && (
+                                    <>
+                                      <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                        <span className="flex items-center gap-1.5">
+                                          <IconPalette className="w-3.5 h-3.5 text-brand-primary" />
+                                          <span>لوحة الألوان الجاهزة</span>
+                                        </span>
+                                        <span className="text-[10px] text-brand-muted font-normal">اختر للتضمين فورياً</span>
+                                      </div>
+
+                                      <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto no-scrollbar py-0.5">
+                                        {Object.entries(COLOR_SWATCHES).map(([colName, swatch]) => {
+                                          const isSelected = opt.values.includes(colName);
+                                          return (
+                                            <button
+                                              key={colName}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  handleRemoveOptionValue(optIdx, colName);
+                                                } else {
+                                                  handleAddOptionValue(optIdx, colName);
+                                                }
+                                              }}
+                                              className={`flex items-center gap-1.5 p-1.5 rounded-xl border text-right transition-all cursor-pointer active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary-soft/50 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/60 hover:bg-brand-surface text-brand-muted hover:text-brand-dark'
+                                              }`}
+                                            >
+                                              <span
+                                                className="w-4 h-4 rounded-full shrink-0 shadow-2xs"
+                                                style={{
+                                                  backgroundColor: swatch.hex,
+                                                  border: swatch.border ? '1px solid #D1D5DB' : 'none',
+                                                }}
+                                              />
+                                              <span className="text-xs truncate flex-1">{colName}</span>
+                                              {isSelected && <IconCheck className="w-3 h-3 text-brand-primary shrink-0" />}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+
+                                      <div className="pt-2 border-t border-brand-border/40 flex items-center gap-1.5">
+                                        <input
+                                          type="text"
+                                          value={customColorInput}
+                                          onChange={(e) => setCustomColorInput(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.preventDefault();
+                                              if (customColorInput.trim()) {
+                                                handleAddOptionValue(optIdx, customColorInput.trim());
+                                                setCustomColorInput('');
+                                              }
+                                            }
+                                          }}
+                                          placeholder="أو اكتب لوناً مخصصاً (مثال: بترولي)..."
+                                          className="flex-1 h-8 px-2.5 text-xs rounded-xl border border-brand-border/80 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (customColorInput.trim()) {
+                                              handleAddOptionValue(optIdx, customColorInput.trim());
+                                              setCustomColorInput('');
+                                            }
+                                          }}
+                                          disabled={!customColorInput.trim()}
+                                          className="h-8 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
+                                        >
+                                          إضافة
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {isSize && (
+                                    <>
+                                      <div className="space-y-2">
+                                        <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
+                                          <span className="flex items-center gap-1">
+                                            <IconRuler className="w-3.5 h-3.5 text-brand-primary" />
+                                            <span>مقاسات الملابس</span>
+                                          </span>
+                                          <span className="text-[10px] text-brand-muted font-normal">S إلى 3XL</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {PRESET_CLOTHING_SIZES.map((sz) => {
+                                            const isSelected = opt.values.includes(sz);
+                                            return (
+                                              <button
+                                                key={sz}
+                                                type="button"
+                                                onClick={() => {
+                                                  if (isSelected) {
+                                                    handleRemoveOptionValue(optIdx, sz);
+                                                  } else {
+                                                    handleAddOptionValue(optIdx, sz);
+                                                  }
+                                                }}
+                                                className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                  isSelected
+                                                    ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
+                                                    : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
+                                                }`}
+                                              >
+                                                <span>{sz}</span>
+                                                {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+
+                                      <div className="space-y-2 pt-1">
+                                        <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
+                                          <span>مقاسات الأحذية</span>
+                                          <span className="text-[10px] text-brand-muted font-normal">38 إلى 45</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {['38', ...PRESET_SHOE_SIZES].map((sz) => {
+                                            const isSelected = opt.values.includes(sz);
+                                            return (
+                                              <button
+                                                key={sz}
+                                                type="button"
+                                                onClick={() => {
+                                                  if (isSelected) {
+                                                    handleRemoveOptionValue(optIdx, sz);
+                                                  } else {
+                                                    handleAddOptionValue(optIdx, sz);
+                                                  }
+                                                }}
+                                                className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                  isSelected
+                                                    ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
+                                                    : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
+                                                }`}
+                                              >
+                                                <span>{sz}</span>
+                                                {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+
+                                      <div className="pt-2 border-t border-brand-border/40 flex items-center gap-1.5">
+                                        <input
+                                          type="text"
+                                          value={customSizeInput}
+                                          onChange={(e) => setCustomSizeInput(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.preventDefault();
+                                              if (customSizeInput.trim()) {
+                                                handleAddOptionValue(optIdx, customSizeInput.trim());
+                                                setCustomSizeInput('');
+                                              }
+                                            }
+                                          }}
+                                          placeholder="أو اكتب مقاساً مخصصاً (مثال: 4XL أو 100ml)..."
+                                          className="flex-1 h-8 px-2.5 text-xs rounded-xl border border-brand-border/80 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (customSizeInput.trim()) {
+                                              handleAddOptionValue(optIdx, customSizeInput.trim());
+                                              setCustomSizeInput('');
+                                            }
+                                          }}
+                                          disabled={!customSizeInput.trim()}
+                                          className="h-8 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
+                                        >
+                                          إضافة
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {!isColor && !isSize && (
+                                    <div className="space-y-2.5">
+                                      <div className="text-[11px] font-bold text-brand-dark pb-1 border-b border-brand-border/40">
+                                        إضافة قيمة لهذا الخيار
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <input
+                                          type="text"
+                                          autoFocus
+                                          value={customSizeInput}
+                                          onChange={(e) => setCustomSizeInput(e.target.value)}
+                                          onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                              e.preventDefault();
+                                              if (customSizeInput.trim()) {
+                                                handleAddOptionValue(optIdx, customSizeInput.trim());
+                                                setCustomSizeInput('');
+                                              }
+                                            }
+                                          }}
+                                          placeholder="اكتب القيمة..."
+                                          className="flex-1 h-8 px-2.5 text-xs rounded-xl border border-brand-border/80 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (customSizeInput.trim()) {
+                                              handleAddOptionValue(optIdx, customSizeInput.trim());
+                                              setCustomSizeInput('');
+                                            }
+                                          }}
+                                          disabled={!customSizeInput.trim()}
+                                          className="h-8 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
+                                        >
+                                          إضافة
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
 
                           {/* Delete Option Action */}
@@ -1782,9 +2163,9 @@ export default function MerchantProductStudioPage() {
                 )}
               </div>
 
-              {/* Step 5: Generated Combinations List (Clean, Calm & Fast) */}
+              {/* Step 5: Generated Combinations List (Clean Tabular Layout) */}
               <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-brand-border/40">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-brand-border/40">
                   <div>
                     <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
                       <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
@@ -1798,41 +2179,46 @@ export default function MerchantProductStudioPage() {
                   </div>
 
                   {/* Fast Bulk Toolbar */}
-                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto bg-brand-surface/40 p-1.5 rounded-xl border border-brand-border/60">
-                    <div className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto bg-brand-surface/60 p-1.5 rounded-xl border border-brand-border/70">
+                    <span className="text-[10px] font-bold text-brand-muted px-1.5 hidden md:inline">
+                      إجراءات سريعة:
+                    </span>
+                    <div className="flex items-center gap-1 bg-brand-card rounded-lg border border-brand-border/70 px-2 py-0.5 shadow-2xs">
+                      <span className="text-[10px] text-brand-muted font-bold">₪</span>
                       <input
                         type="number"
                         min="0"
                         step="0.5"
-                        placeholder="السعر (₪)"
+                        placeholder="السعر"
                         value={bulkPriceInput}
                         onChange={(e) => setBulkPriceInput(e.target.value)}
-                        className="w-20 h-8 px-2 text-base sm:text-xs rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                        className="w-16 h-7 text-xs font-bold text-brand-dark bg-transparent focus:outline-none"
                       />
                       <button
                         type="button"
                         onClick={handleApplyBulkPrice}
                         disabled={!bulkPriceInput}
-                        className="h-8 px-2 bg-brand-card hover:bg-brand-surface text-brand-dark text-[11px] font-bold rounded-lg border border-brand-border/70 disabled:opacity-40 cursor-pointer active:scale-95"
+                        className="px-2 py-1 bg-brand-surface hover:bg-brand-primary hover:text-white text-brand-dark text-[10px] font-bold rounded-md transition-colors disabled:opacity-30 cursor-pointer active:scale-95"
                       >
                         توحيد السعر
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 bg-brand-card rounded-lg border border-brand-border/70 px-2 py-0.5 shadow-2xs">
+                      <IconPackage className="w-3 h-3 text-brand-muted" />
                       <input
                         type="number"
                         min="0"
                         placeholder="المخزون"
                         value={bulkStockInput}
                         onChange={(e) => setBulkStockInput(e.target.value)}
-                        className="w-16 h-8 px-2 text-base sm:text-xs rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                        className="w-14 h-7 text-xs font-bold text-brand-dark bg-transparent focus:outline-none"
                       />
                       <button
                         type="button"
                         onClick={handleApplyBulkStock}
                         disabled={!bulkStockInput}
-                        className="h-8 px-2 bg-brand-card hover:bg-brand-surface text-brand-dark text-[11px] font-bold rounded-lg border border-brand-border/70 disabled:opacity-40 cursor-pointer active:scale-95"
+                        className="px-2 py-1 bg-brand-surface hover:bg-brand-primary hover:text-white text-brand-dark text-[10px] font-bold rounded-md transition-colors disabled:opacity-30 cursor-pointer active:scale-95"
                       >
                         توحيد المخزون
                       </button>
@@ -1840,148 +2226,282 @@ export default function MerchantProductStudioPage() {
                   </div>
                 </div>
 
-                {/* Compact Variant Cards */}
-                <div className="space-y-2.5">
-                  {variants.map((v, vIdx) => {
-                    const attrSummary =
-                      Object.entries(v.attributes || {})
-                        .map(([_, val]) => val)
-                        .join(' · ') || 'افتراضي';
+                {/* Streamlined Variants Table / List */}
+                {variants.length === 0 ? (
+                  <div className="text-center py-8 bg-brand-surface/30 rounded-xl border border-dashed border-brand-border/80 text-xs text-brand-muted">
+                    أضف قيم المقاسات أو الألوان في الخطوة 4 أعلاه لتوليد القائمة فورياً
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* Table Header (Desktop Only) */}
+                    <div className="hidden md:grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-black text-brand-muted border-b border-brand-border/40">
+                      <div className="col-span-4">الصنف والتوليفة</div>
+                      <div className="col-span-3">رمز SKU</div>
+                      <div className="col-span-2">سعر البيع</div>
+                      <div className="col-span-2">المخزون بالمستودع</div>
+                      <div className="col-span-1 text-center">الإجراء</div>
+                    </div>
 
-                    const variantPhoto =
-                      v.images && v.images.length > 0 ? v.images[0] : primaryImage;
+                    {/* Variants Rows */}
+                    <div className="divide-y divide-brand-border/40 space-y-2 md:space-y-0">
+                      {variants.map((v, vIdx) => {
+                        const attrEntries = Object.entries(v.attributes || {});
+                        const attrSummary = attrEntries.map(([_, val]) => val).join(' · ') || 'افتراضي';
+                        const variantPhoto = v.images && v.images.length > 0 ? v.images[0] : primaryImage;
 
-                    return (
-                      <div
-                        key={v.attrKey || vIdx}
-                        className={`p-3.5 rounded-xl border transition-all ${
-                          v.isActive
-                            ? 'bg-brand-surface/20 border-brand-border/60 hover:border-brand-primary/40'
-                            : 'bg-zinc-50 border-zinc-200 opacity-60'
-                        }`}
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          {/* Left / Identity */}
-                          <div className="flex items-center gap-3">
-                            <img
-                              src={variantPhoto}
-                              alt={attrSummary}
-                              className="w-10 h-10 rounded-xl object-cover border border-brand-border/60 shrink-0 bg-brand-surface"
-                            />
-                            <div>
-                              <div className="text-xs font-black text-brand-dark">{attrSummary}</div>
-                              <div className="text-[10px] text-brand-muted font-mono">{v.sku}</div>
-                            </div>
-                          </div>
-
-                          {/* Right / Inline Controls */}
-                          <div className="flex flex-wrap items-center gap-3 justify-between sm:justify-end">
-                            {/* Price */}
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-brand-muted font-bold">السعر:</span>
-                              <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.5"
-                                  value={v.price}
-                                  onChange={(e) => {
-                                    const updated = [...variants];
-                                    updated[vIdx] = { ...v, price: Number(e.target.value) || 0 };
-                                    setVariants(updated);
-                                  }}
-                                  className="w-20 h-9 px-2 text-base sm:text-xs font-black rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                        return (
+                          <div
+                            key={v.attrKey || vIdx}
+                            className={`p-3 md:py-2.5 md:px-3 rounded-xl md:rounded-none transition-all ${
+                              v.isActive
+                                ? 'bg-brand-surface/20 md:bg-transparent hover:bg-brand-surface/40'
+                                : 'bg-zinc-50/70 md:bg-zinc-50/40 opacity-60'
+                            }`}
+                          >
+                            {/* Desktop Grid Row */}
+                            <div className="hidden md:grid grid-cols-12 items-center gap-3">
+                              {/* Col 1-4: Thumbnail & Attributes */}
+                              <div className="col-span-4 flex items-center gap-2.5">
+                                <img
+                                  src={variantPhoto}
+                                  alt={attrSummary}
+                                  className="w-9 h-9 rounded-xl object-cover border border-brand-border/70 shrink-0 bg-brand-surface shadow-2xs"
                                 />
-                                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-brand-muted">
-                                  ₪
+                                <div className="min-w-0">
+                                  <div className="text-xs font-black text-brand-dark truncate">{attrSummary}</div>
+                                  <div className="flex flex-wrap gap-1 mt-0.5">
+                                    {attrEntries.map(([key, val]) => (
+                                      <span
+                                        key={key}
+                                        className="inline-flex items-center text-[10px] text-brand-muted bg-brand-surface px-1.5 py-0.2 rounded border border-brand-border/50"
+                                      >
+                                        {val}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Col 5-7: SKU */}
+                              <div className="col-span-3">
+                                <span className="font-mono text-[10px] text-brand-muted bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border/60">
+                                  {v.sku}
                                 </span>
                               </div>
-                            </div>
 
-                            {/* Stock with Stepper */}
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-brand-muted font-bold">المخزون:</span>
-                              <div className="flex items-center h-9 bg-brand-card rounded-lg border border-brand-border/70 px-1 shadow-2xs">
+                              {/* Col 8-9: Price */}
+                              <div className="col-span-2">
+                                <div className="relative inline-flex items-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={v.price}
+                                    onChange={(e) => {
+                                      const updated = [...variants];
+                                      updated[vIdx] = { ...v, price: Number(e.target.value) || 0 };
+                                      setVariants(updated);
+                                    }}
+                                    className="w-20 h-8 pr-2 pl-5 text-xs font-black rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                                  />
+                                  <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-brand-muted pointer-events-none">
+                                    ₪
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Col 10-11: Stepper */}
+                              <div className="col-span-2">
+                                <div className="inline-flex items-center h-8 bg-brand-card rounded-lg border border-brand-border/70 px-1 shadow-2xs">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = [...variants];
+                                      updated[vIdx] = { ...v, stock: Math.max(0, v.stock - 1) };
+                                      setVariants(updated);
+                                    }}
+                                    className="w-5 h-5 rounded bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-90"
+                                  >
+                                    -
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={v.stock}
+                                    onChange={(e) => {
+                                      const updated = [...variants];
+                                      updated[vIdx] = {
+                                        ...v,
+                                        stock: Math.max(0, parseInt(e.target.value) || 0),
+                                      };
+                                      setVariants(updated);
+                                    }}
+                                    className="w-9 text-center font-black text-xs bg-transparent focus:outline-none tabular-nums"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = [...variants];
+                                      updated[vIdx] = { ...v, stock: v.stock + 1 };
+                                      setVariants(updated);
+                                    }}
+                                    className="w-5 h-5 rounded bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-90"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Col 12: Actions (Active Toggle + Trash) */}
+                              <div className="col-span-1 flex items-center justify-center gap-1.5">
                                 <button
                                   type="button"
                                   onClick={() => {
                                     const updated = [...variants];
-                                    updated[vIdx] = { ...v, stock: Math.max(0, v.stock - 1) };
+                                    updated[vIdx] = { ...v, isActive: !v.isActive };
                                     setVariants(updated);
                                   }}
-                                  className="w-6 h-6 rounded bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-90"
+                                  className={`w-6 h-6 rounded-md text-[10px] font-bold flex items-center justify-center transition-colors cursor-pointer ${
+                                    v.isActive
+                                      ? 'bg-brand-trust-soft text-brand-trust border border-brand-trust/30'
+                                      : 'bg-zinc-100 text-zinc-400 border border-zinc-200'
+                                  }`}
+                                  title={v.isActive ? 'متاح للطلب - انقر للتعطيل' : 'معطل - انقر للتفعيل'}
                                 >
-                                  -
+                                  {v.isActive ? '✓' : '—'}
                                 </button>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  value={v.stock}
-                                  onChange={(e) => {
-                                    const updated = [...variants];
-                                    updated[vIdx] = {
-                                      ...v,
-                                      stock: Math.max(0, parseInt(e.target.value) || 0),
-                                    };
-                                    setVariants(updated);
-                                  }}
-                                  className="w-10 text-center font-black text-xs bg-transparent focus:outline-none tabular-nums"
-                                />
+
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    const updated = [...variants];
-                                    updated[vIdx] = { ...v, stock: v.stock + 1 };
-                                    setVariants(updated);
+                                    setDeletedVariantKeys((prev) => [...prev, v.attrKey]);
+                                    setVariants((prev) => prev.filter((_, idx) => idx !== vIdx));
                                   }}
-                                  className="w-6 h-6 rounded bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-90"
+                                  className="text-brand-muted hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                                  title="حذف هذا الصنف المحدد"
                                 >
-                                  +
+                                  <IconTrash className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             </div>
 
-                            {/* Active Toggle */}
-                            <label className="flex items-center gap-1 text-[11px] font-bold text-brand-dark cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={v.isActive}
-                                onChange={(e) => {
-                                  const updated = [...variants];
-                                  updated[vIdx] = { ...v, isActive: e.target.checked };
-                                  setVariants(updated);
-                                }}
-                                className="w-3.5 h-3.5 accent-brand-trust rounded cursor-pointer"
-                              />
-                              <span className={v.isActive ? 'text-brand-trust' : 'text-zinc-400'}>
-                                {v.isActive ? 'متاح' : 'معطل'}
-                              </span>
-                            </label>
+                            {/* Mobile Responsive Layout */}
+                            <div className="md:hidden space-y-2.5">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2.5">
+                                  <img
+                                    src={variantPhoto}
+                                    alt={attrSummary}
+                                    className="w-10 h-10 rounded-xl object-cover border border-brand-border/70 shrink-0 bg-brand-surface shadow-2xs"
+                                  />
+                                  <div>
+                                    <div className="text-xs font-black text-brand-dark">{attrSummary}</div>
+                                    <div className="text-[10px] text-brand-muted font-mono">{v.sku}</div>
+                                  </div>
+                                </div>
 
-                            {/* Delete Variant */}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setDeletedVariantKeys((prev) => [...prev, v.attrKey]);
-                                setVariants((prev) => prev.filter((_, idx) => idx !== vIdx));
-                              }}
-                              className="text-brand-muted hover:text-red-600 text-xs font-bold p-1 hover:bg-red-50 rounded transition-colors cursor-pointer"
-                              title="حذف هذا الصنف المحدد"
-                            >
-                              ×
-                            </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = [...variants];
+                                      updated[vIdx] = { ...v, isActive: !v.isActive };
+                                      setVariants(updated);
+                                    }}
+                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                                      v.isActive
+                                        ? 'bg-brand-trust-soft text-brand-trust border-brand-trust/30'
+                                        : 'bg-zinc-100 text-zinc-500 border-zinc-200'
+                                    }`}
+                                  >
+                                    {v.isActive ? 'متاح' : 'معطل'}
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setDeletedVariantKeys((prev) => [...prev, v.attrKey]);
+                                      setVariants((prev) => prev.filter((_, idx) => idx !== vIdx));
+                                    }}
+                                    className="text-brand-muted hover:text-red-600 p-1 cursor-pointer"
+                                    title="حذف الصنف"
+                                  >
+                                    <IconTrash className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 pt-1 border-t border-brand-border/30">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] text-brand-muted font-bold">السعر:</span>
+                                  <div className="relative inline-flex items-center">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.5"
+                                      value={v.price}
+                                      onChange={(e) => {
+                                        const updated = [...variants];
+                                        updated[vIdx] = { ...v, price: Number(e.target.value) || 0 };
+                                        setVariants(updated);
+                                      }}
+                                      className="w-20 h-8 pr-2 pl-4 text-xs font-black rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                                    />
+                                    <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-brand-muted pointer-events-none">
+                                      ₪
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[10px] text-brand-muted font-bold">المخزون:</span>
+                                  <div className="inline-flex items-center h-8 bg-brand-card rounded-lg border border-brand-border/70 px-1 shadow-2xs">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = [...variants];
+                                        updated[vIdx] = { ...v, stock: Math.max(0, v.stock - 1) };
+                                        setVariants(updated);
+                                      }}
+                                      className="w-6 h-6 rounded bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-90"
+                                    >
+                                      -
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={v.stock}
+                                      onChange={(e) => {
+                                        const updated = [...variants];
+                                        updated[vIdx] = {
+                                          ...v,
+                                          stock: Math.max(0, parseInt(e.target.value) || 0),
+                                        };
+                                        setVariants(updated);
+                                      }}
+                                      className="w-10 text-center font-black text-xs bg-transparent focus:outline-none tabular-nums"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = [...variants];
+                                        updated[vIdx] = { ...v, stock: v.stock + 1 };
+                                        setVariants(updated);
+                                      }}
+                                      className="w-6 h-6 rounded bg-brand-surface hover:bg-brand-border/40 text-brand-dark font-black text-xs flex items-center justify-center cursor-pointer active:scale-90"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {variants.length === 0 && (
-                    <div className="text-center py-6 bg-brand-surface/30 rounded-xl border border-dashed border-brand-border/80 text-xs text-brand-muted">
-                      أضف قيم المقاسات أو الألوان في الخطوة 4 أعلاه لتوليد القائمة فورياً
+                        );
+                      })}
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

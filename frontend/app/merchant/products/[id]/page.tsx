@@ -1675,7 +1675,7 @@ export default function MerchantProductStudioPage() {
                     </button>
 
                     {isAddOptionOpen && (
-                      <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-64 bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-1.5 z-50 animate-fadeIn space-y-1">
+                      <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-64 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-1.5 z-50 animate-fadeIn space-y-1">
                         {!options.some((o) => o.type === 'COLOR' || o.name === 'اللون') && (
                           <button
                             type="button"
@@ -1751,151 +1751,19 @@ export default function MerchantProductStudioPage() {
                           key={optIdx}
                           className="py-4 first:pt-1 last:pb-1 flex flex-col md:flex-row md:items-center justify-between gap-3.5"
                         >
-                          {/* Option Name & Count Badge */}
-                          <div className="flex items-center gap-2.5 shrink-0 min-w-28">
-                            <span className="text-xs font-black text-brand-dark">
-                              {opt.name || opt.label}
-                            </span>
-                            <span className="text-[10px] font-bold text-brand-muted bg-brand-surface px-2 py-0.5 rounded-full border border-brand-border/60">
-                              {opt.values.length} {isColor ? 'ألوان' : isSize ? 'مقاسات' : 'قيم'}
-                            </span>
-                          </div>
+                          {/* 1. Fixed Anchor Section: Option Title + Constant Add Popover Button */}
+                          <div className="flex flex-wrap items-center gap-3 shrink-0">
+                            {/* Option Name & Count Badge */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-black text-brand-dark min-w-14">
+                                {opt.name || opt.label}
+                              </span>
+                              <span className="text-[10px] font-bold text-brand-muted bg-brand-surface px-2 py-0.5 rounded-full border border-brand-border/60">
+                                {opt.values.length} {isColor ? 'ألوان' : isSize ? 'مقاسات' : 'قيم'}
+                              </span>
+                            </div>
 
-                          {/* Selected Values Tags + Direct Swatch + Bespoke Popover */}
-                          <div className="flex flex-wrap items-center gap-2 flex-1">
-                            {/* Values Pills */}
-                            {opt.values.map((val) => {
-                              const boundImg = isColor ? colorImageMap[val] || images[0] : null;
-
-                              return (
-                                <div
-                                  key={val}
-                                  className="inline-flex items-center gap-1.5 bg-brand-surface/70 hover:bg-brand-surface text-brand-dark pr-2 pl-2.5 py-1 rounded-xl border border-brand-border/70 text-xs font-bold transition-all shadow-2xs group"
-                                >
-                                  {/* Color image custom popover thumbnail */}
-                                  {isColor && (
-                                    <div className="relative inline-flex items-center" data-popover>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setActiveColorPhotoPopover(
-                                            activeColorPhotoPopover === val ? null : val
-                                          );
-                                          setIsAddOptionOpen(false);
-                                          setActiveValuePopoverIdx(null);
-                                        }}
-                                        className="relative w-5 h-5 rounded-md overflow-hidden border border-brand-border/80 shrink-0 hover:scale-110 transition-transform cursor-pointer shadow-2xs group/thumb"
-                                        title={`تغيير صورة هذا اللون: ${val}`}
-                                      >
-                                        <img
-                                          src={boundImg || primaryImage}
-                                          alt={val}
-                                          className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
-                                          <IconPhoto className="w-3 h-3 text-white" />
-                                        </div>
-                                      </button>
-
-                                      {/* Color Photo Picker Popover */}
-                                      {activeColorPhotoPopover === val && (
-                                        <div className="absolute right-0 top-full mt-2 w-64 bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-2.5">
-                                          <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
-                                            <span className="flex items-center gap-1">
-                                              <IconPhoto className="w-3.5 h-3.5 text-brand-primary" />
-                                              <span>صورة لون «{val}»</span>
-                                            </span>
-                                            <button
-                                              type="button"
-                                              onClick={() => setActiveColorPhotoPopover(null)}
-                                              className="text-brand-muted hover:text-brand-dark cursor-pointer"
-                                            >
-                                              <IconX className="w-3.5 h-3.5" />
-                                            </button>
-                                          </div>
-
-                                          {images.length === 0 ? (
-                                            <div className="py-4 text-center text-[11px] text-brand-muted">
-                                              لا توجد صور في المعرض بعد. أضف صوراً في الخطوة 2 أولاً.
-                                            </div>
-                                          ) : (
-                                            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto no-scrollbar py-1">
-                                              {images.map((imgUrl, imgI) => {
-                                                const isAssigned =
-                                                  colorImageMap[val] === imgUrl ||
-                                                  (!colorImageMap[val] && imgI === 0);
-                                                return (
-                                                  <button
-                                                    key={imgI}
-                                                    type="button"
-                                                    onClick={() => {
-                                                      handleBindColorImage(val, imgUrl);
-                                                      setActiveColorPhotoPopover(null);
-                                                    }}
-                                                    className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer group/item ${
-                                                      isAssigned
-                                                        ? 'border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
-                                                        : 'border-brand-border/70 hover:border-brand-primary/50'
-                                                    }`}
-                                                  >
-                                                    <img
-                                                      src={imgUrl}
-                                                      alt={`صورة ${imgI + 1}`}
-                                                      className="w-full h-full object-cover"
-                                                    />
-                                                    {isAssigned && (
-                                                      <div className="absolute inset-0 bg-brand-primary/25 flex items-center justify-center">
-                                                        <span className="w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
-                                                          <IconCheck className="w-3 h-3" />
-                                                        </span>
-                                                      </div>
-                                                    )}
-                                                    <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] font-bold px-1 rounded">
-                                                      {imgI === 0 ? 'الغلاف' : `#${imgI + 1}`}
-                                                    </span>
-                                                  </button>
-                                                );
-                                              })}
-                                            </div>
-                                          )}
-
-                                          {colorImageMap[val] && (
-                                            <div className="pt-1.5 border-t border-brand-border/40">
-                                              <button
-                                                type="button"
-                                                onClick={() => {
-                                                  const nextMap = { ...colorImageMap };
-                                                  delete nextMap[val];
-                                                  setColorImageMap(nextMap);
-                                                  setActiveColorPhotoPopover(null);
-                                                }}
-                                                className="w-full py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-center"
-                                              >
-                                                إلغاء التخصيص (استخدام الغلاف)
-                                              </button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      )}
-                                    </div>
-                                  )}
-
-                                  <span>{val}</span>
-
-                                  {/* Delete Pill Button */}
-                                  <button
-                                    type="button"
-                                    onClick={() => handleRemoveOptionValue(optIdx, val)}
-                                    className="text-brand-muted hover:text-red-600 transition-colors cursor-pointer text-xs leading-none mr-0.5"
-                                    title="إزالة هذه القيمة"
-                                  >
-                                    <IconX className="w-3 h-3" />
-                                  </button>
-                                </div>
-                              );
-                            })}
-
-                            {/* Bespoke Apple Value Popover */}
+                            {/* FIXED ANCHOR: Bespoke Apple Value Popover (Never shifts when values change!) */}
                             <div className="relative inline-flex items-center" data-popover>
                               <button
                                 type="button"
@@ -1917,8 +1785,9 @@ export default function MerchantProductStudioPage() {
                                 />
                               </button>
 
+                              {/* Popover Content */}
                               {activeValuePopoverIdx === optIdx && (
-                                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-3">
+                                <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-3">
                                   {isColor && (
                                     <>
                                       <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
@@ -2146,7 +2015,147 @@ export default function MerchantProductStudioPage() {
                             </div>
                           </div>
 
-                          {/* Delete Option Action */}
+                          {/* 2. Middle Section: Selected Values Tags (Grow and wrap freely without moving the button) */}
+                          <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
+                            {opt.values.length === 0 ? (
+                              <span className="text-[11px] text-brand-muted/70 italic">
+                                لم يتم تحديد أي {isColor ? 'ألوان' : isSize ? 'مقاسات' : 'قيم'} بعد.
+                              </span>
+                            ) : (
+                              opt.values.map((val) => {
+                                const boundImg = isColor ? colorImageMap[val] || images[0] : null;
+
+                                return (
+                                  <div
+                                    key={val}
+                                    className="inline-flex items-center gap-1.5 bg-brand-surface/70 hover:bg-brand-surface text-brand-dark pr-2 pl-2.5 py-1 rounded-xl border border-brand-border/70 text-xs font-bold transition-all shadow-2xs group"
+                                  >
+                                    {/* Color image custom popover thumbnail */}
+                                    {isColor && (
+                                      <div className="relative inline-flex items-center" data-popover>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setActiveColorPhotoPopover(
+                                              activeColorPhotoPopover === val ? null : val
+                                            );
+                                            setIsAddOptionOpen(false);
+                                            setActiveValuePopoverIdx(null);
+                                          }}
+                                          className="relative w-5 h-5 rounded-md overflow-hidden border border-brand-border/80 shrink-0 hover:scale-110 transition-transform cursor-pointer shadow-2xs group/thumb"
+                                          title={`تغيير صورة هذا اللون: ${val}`}
+                                        >
+                                          <img
+                                            src={boundImg || primaryImage}
+                                            alt={val}
+                                            className="w-full h-full object-cover"
+                                          />
+                                          <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
+                                            <IconPhoto className="w-3 h-3 text-white" />
+                                          </div>
+                                        </button>
+
+                                        {/* Color Photo Picker Popover */}
+                                        {activeColorPhotoPopover === val && (
+                                          <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-2.5">
+                                            <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                              <span className="flex items-center gap-1">
+                                                <IconPhoto className="w-3.5 h-3.5 text-brand-primary" />
+                                                <span>صورة لون «{val}»</span>
+                                              </span>
+                                              <button
+                                                type="button"
+                                                onClick={() => setActiveColorPhotoPopover(null)}
+                                                className="text-brand-muted hover:text-brand-dark cursor-pointer"
+                                              >
+                                                <IconX className="w-3.5 h-3.5" />
+                                              </button>
+                                            </div>
+
+                                            {images.length === 0 ? (
+                                              <div className="py-4 text-center text-[11px] text-brand-muted">
+                                                لا توجد صور في المعرض بعد. أضف صوراً في الخطوة 2 أولاً.
+                                              </div>
+                                            ) : (
+                                              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto no-scrollbar py-1">
+                                                {images.map((imgUrl, imgI) => {
+                                                  const isAssigned =
+                                                    colorImageMap[val] === imgUrl ||
+                                                    (!colorImageMap[val] && imgI === 0);
+                                                  return (
+                                                    <button
+                                                      key={imgI}
+                                                      type="button"
+                                                      onClick={() => {
+                                                        handleBindColorImage(val, imgUrl);
+                                                        setActiveColorPhotoPopover(null);
+                                                      }}
+                                                      className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer group/item ${
+                                                        isAssigned
+                                                          ? 'border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                                                          : 'border-brand-border/70 hover:border-brand-primary/50'
+                                                      }`}
+                                                    >
+                                                      <img
+                                                        src={imgUrl}
+                                                        alt={`صورة ${imgI + 1}`}
+                                                        className="w-full h-full object-cover"
+                                                      />
+                                                      {isAssigned && (
+                                                        <div className="absolute inset-0 bg-brand-primary/25 flex items-center justify-center">
+                                                          <span className="w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
+                                                            <IconCheck className="w-3 h-3" />
+                                                          </span>
+                                                        </div>
+                                                      )}
+                                                      <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] font-bold px-1 rounded">
+                                                        {imgI === 0 ? 'الغلاف' : `#${imgI + 1}`}
+                                                      </span>
+                                                    </button>
+                                                  );
+                                                })}
+                                              </div>
+                                            )}
+
+                                            {colorImageMap[val] && (
+                                              <div className="pt-1.5 border-t border-brand-border/40">
+                                                <button
+                                                  type="button"
+                                                  onClick={() => {
+                                                    const nextMap = { ...colorImageMap };
+                                                    delete nextMap[val];
+                                                    setColorImageMap(nextMap);
+                                                    setActiveColorPhotoPopover(null);
+                                                  }}
+                                                  className="w-full py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-center"
+                                                >
+                                                  إلغاء التخصيص (استخدام الغلاف)
+                                                </button>
+                                              </div>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    <span>{val}</span>
+
+                                    {/* Delete Pill Button */}
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveOptionValue(optIdx, val)}
+                                      className="text-brand-muted hover:text-red-600 transition-colors cursor-pointer text-xs leading-none mr-0.5"
+                                      title="إزالة هذه القيمة"
+                                    >
+                                      <IconX className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {/* 3. Left side: Delete Option Action */}
                           <button
                             type="button"
                             onClick={() => handleRemoveOption(optIdx)}

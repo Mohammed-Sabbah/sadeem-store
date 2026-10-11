@@ -11,6 +11,132 @@ import type {
   OptionDefinition,
 } from '@/features/merchant/types/merchant.types';
 
+// =========================================================
+// Refined Architectural SVG Icons (Strictly Zero Emojis)
+// =========================================================
+
+function IconChartBar({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" />
+    </svg>
+  );
+}
+
+function IconSliders({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+    </svg>
+  );
+}
+
+function IconSettings({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+function IconEye({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+  );
+}
+
+function IconEditPencil({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125" />
+    </svg>
+  );
+}
+
+function IconPackage({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+    </svg>
+  );
+}
+
+function IconCurrencyShekel({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
+function IconStarSolid({ className = 'w-3.5 h-3.5 text-amber-500' }: { className?: string }) {
+  return (
+    <svg className={className} fill="currentColor" viewBox="0 0 20 20">
+      <path fillRule="evenodd" d="M10.868 2.884c-.321-.772-1.415-.772-1.736 0l-1.83 4.401-4.753.381c-.833.067-1.171 1.107-.536 1.651l3.62 3.102-1.106 4.637c-.194.813.691 1.456 1.405 1.02L10 15.591l4.069 2.485c.713.436 1.598-.207 1.404-1.02l-1.106-4.637 3.62-3.102c.635-.544.297-1.584-.536-1.65l-4.752-.382-1.831-4.401z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
+function IconShieldCheck({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+    </svg>
+  );
+}
+
+function IconSpark({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
+    </svg>
+  );
+}
+
+function IconPhoto({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+    </svg>
+  );
+}
+
+function IconPalette({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.098 19.902a3.75 3.75 0 005.304 0l6.401-6.402M6.75 21A3.75 3.75 0 013 17.25V4.125C3 3.504 3.504 3 4.125 3h5.25c.621 0 1.125.504 1.125 1.125v4.072M6.75 21a3.75 3.75 0 003.75-3.75V8.197M6.75 21h13.125c.621 0 1.125-.504 1.125-1.125v-5.25c0-.621-.504-1.125-1.125-1.125h-4.072M10.5 8.197l9.75-9.75" />
+    </svg>
+  );
+}
+
+function IconCheck({ className = 'w-3.5 h-3.5' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+    </svg>
+  );
+}
+
+function IconAlertTriangle({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+    </svg>
+  );
+}
+
+function IconArrowRight({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+  );
+}
+
 // Types for Customer Reviews and Operational Stats
 interface ProductReview {
   id: string;
@@ -31,7 +157,7 @@ const SAMPLE_REVIEWS: ProductReview[] = [
     rating: 5,
     date: 'منذ يومين',
     variantSummary: 'اللون: كحلي ناعم · المقاس: L',
-    comment: 'الخامة ممتازة جداً والتفصيل نظيف، وعاينت القطعة وقستها عند الباب مع المندوب قبل الدفع. تجربة راقية جداً.',
+    comment: 'الخامة ممتازة والتفصيل دقيق، قمت بمعاينة وتجربة القطعة عند الباب مع مندوب سَدِيم قبل دفع المبلغ. مصداقية عالية.',
     verifiedPurchase: true,
   },
   {
@@ -41,7 +167,7 @@ const SAMPLE_REVIEWS: ProductReview[] = [
     rating: 5,
     date: 'منذ 5 أيام',
     variantSummary: 'اللون: بيج طبيعي · المقاس: M',
-    comment: 'اللون بالواقع أجمل من الصور، وصل في طرد سديم الموحد مع طلبيات ثانية والمندوب كان محترماً وصبوراً.',
+    comment: 'اللون في الواقع مطابق للصور تماماً، وصل في طرد سَدِيم الموحد وجمعت معه طلبيات من متاجر أخرى بتوصيل 8 شيكل فقط.',
     verifiedPurchase: true,
   },
   {
@@ -51,7 +177,7 @@ const SAMPLE_REVIEWS: ProductReview[] = [
     rating: 4,
     date: 'منذ أسبوع',
     variantSummary: 'اللون: أبيض سحابي · المقاس: XL',
-    comment: 'القطن مريح وبارد، المقاس مضبوط تماماً، أنصح به بشدة.',
+    comment: 'القطن مريح والمقاس مضبوط ومناسب للطقس، أنصح بتوفير المزيد من الألوان.',
     verifiedPurchase: true,
   },
 ];
@@ -330,7 +456,6 @@ export default function MerchantProductStudioPage() {
     };
     setOptions(updatedOptions);
 
-    // If color removed, clear mapping
     if (colorImageMap[valToRemove]) {
       const nextMap = { ...colorImageMap };
       delete nextMap[valToRemove];
@@ -345,11 +470,10 @@ export default function MerchantProductStudioPage() {
     const nextMap = { ...colorImageMap, [colorVal]: imageUrl };
     setColorImageMap(nextMap);
 
-    // Automatically bind to all variants matching this color
-    const colorOption = options.find(
+    const colorOpt = options.find(
       (o) => o.type === 'COLOR' || o.name === 'اللون' || o.label === 'اللون'
     );
-    const colorKey = colorOption ? colorOption.name || colorOption.label || 'اللون' : 'اللون';
+    const colorKey = colorOpt ? colorOpt.name || colorOpt.label || 'اللون' : 'اللون';
 
     const updatedVariants = variants.map((v) => {
       if (v.attributes[colorKey] === colorVal) {
@@ -384,7 +508,7 @@ export default function MerchantProductStudioPage() {
     const combos = cartesian(arrays);
 
     if (combos.length > 100) {
-      alert(`هذه الخيارات ستنتج ${combos.length} صنف، بينما الحد الأقصى المسموح هو 100 صنف`);
+      alert(`هذه الخيارات ستنتج ${combos.length} صنف، بينما الحد الأقصى المسموح في سَدِيم هو 100 صنف`);
       return;
     }
 
@@ -392,10 +516,10 @@ export default function MerchantProductStudioPage() {
       .slice(0, 3)
       .toUpperCase();
 
-    const colorOption = options.find(
+    const colorOpt = options.find(
       (o) => o.type === 'COLOR' || o.name === 'اللون' || o.label === 'اللون'
     );
-    const colorKey = colorOption ? colorOption.name || colorOption.label || 'اللون' : 'اللون';
+    const colorKey = colorOpt ? colorOpt.name || colorOpt.label || 'اللون' : 'اللون';
 
     const newVariants = combos.map((combo, idx) => {
       const attrs: Record<string, string> = {};
@@ -408,13 +532,11 @@ export default function MerchantProductStudioPage() {
         .map(([k, v]) => `${k}:${v}`)
         .join('|');
 
-      // Keep existing variant pricing/stock if already created
       const existing = variants.find((v) => v.attrKey === attrKey);
       if (existing) {
         return existing;
       }
 
-      // Check if this color already has a bound image
       const boundImage = attrs[colorKey] ? colorImageMap[attrs[colorKey]] : undefined;
 
       const cleanValues = Object.values(attrs)
@@ -476,7 +598,6 @@ export default function MerchantProductStudioPage() {
     );
     setVariants(updatedVariants);
 
-    // Save to service seamlessly
     await merchantService.quickUpdateStock(productId, newStock, targetVariant._id || targetVariant.sku);
   };
 
@@ -556,9 +677,9 @@ export default function MerchantProductStudioPage() {
   if (isLoading) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 text-center font-almarai text-right">
-        <div className="w-10 h-10 border-3 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mb-4" />
-        <h2 className="text-base font-bold text-brand-dark">جاري فتح مركز إدارة الصنف...</h2>
-        <p className="text-xs text-brand-muted mt-1">يتم استدعاء بيانات المبيعات والخيارات والمخزون</p>
+        <div className="w-9 h-9 border-2 border-brand-primary/20 border-t-brand-primary rounded-full animate-spin mb-4" />
+        <h2 className="text-sm font-bold text-brand-dark">جاري فتح مركز إدارة الصنف...</h2>
+        <p className="text-xs text-brand-muted mt-1">يتم استدعاء بيانات المبيعات والمخزون الميداني</p>
       </div>
     );
   }
@@ -566,15 +687,18 @@ export default function MerchantProductStudioPage() {
   if (!product && !isLoading) {
     return (
       <div className="max-w-xl mx-auto p-8 text-center font-almarai text-right">
-        <div className="bg-brand-card p-6 rounded-2xl border border-brand-border shadow-xs">
-          <div className="text-3xl mb-3">🔍</div>
-          <h2 className="text-lg font-bold text-brand-dark mb-1">المنتج غير موجود</h2>
+        <div className="bg-brand-card p-6 rounded-2xl border border-brand-border/80 shadow-2xs">
+          <div className="w-12 h-12 rounded-2xl bg-brand-surface mx-auto flex items-center justify-center text-brand-muted mb-3">
+            <IconAlertTriangle className="w-6 h-6" />
+          </div>
+          <h2 className="text-base font-bold text-brand-dark mb-1">المنتج غير موجود</h2>
           <p className="text-xs text-brand-muted mb-5">قد يكون تم نقله أو حذفه من قبل إدارة المتجر.</p>
           <Link
             href="/merchant/dashboard"
             className="inline-flex items-center gap-2 bg-brand-primary text-white text-xs font-bold px-4 py-2.5 rounded-xl hover:bg-brand-primary-hover transition-all"
           >
-            ← العودة للوحة التحكم
+            <span>العودة للوحة التحكم</span>
+            <IconArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
       </div>
@@ -585,19 +709,19 @@ export default function MerchantProductStudioPage() {
     images[0] ||
     'https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=700&q=80';
 
-  const colorOption = options.find(
+  const colorOpt = options.find(
     (o) => o.type === 'COLOR' || o.name === 'اللون' || o.label === 'اللون'
   );
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6 font-almarai text-right pb-28">
       {/* ========================================================= */}
-      {/* 1. Serene Master Header (Stature & High Dignity)          */}
+      {/* 1. Serene Master Header (Cosmic Quiet Luxury)             */}
       {/* ========================================================= */}
       <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs mb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           {/* Identity & Thumbnail */}
-          <div className="flex items-center gap-3.5">
+          <div className="flex items-center gap-4">
             <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden border border-brand-border/80 bg-brand-surface shrink-0">
               <img src={primaryImage} alt={name} className="w-full h-full object-cover" />
             </div>
@@ -608,7 +732,7 @@ export default function MerchantProductStudioPage() {
                   href="/merchant/dashboard"
                   className="hover:text-brand-primary transition-colors flex items-center gap-1"
                 >
-                  <span>←</span>
+                  <IconArrowRight className="w-3.5 h-3.5" />
                   <span>كتالوج المتجر</span>
                 </Link>
                 <span>/</span>
@@ -626,11 +750,12 @@ export default function MerchantProductStudioPage() {
                       : 'bg-brand-surface text-brand-muted border-brand-border'
                   }`}
                 >
-                  {isActive ? '● معروض بالمتجر' : '○ مخفي مؤقتاً'}
+                  {isActive ? 'معروض بالمتجر' : 'مخفي مؤقتاً'}
                 </span>
                 {isFeatured && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
-                    ★ مميز في الصدارة
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1">
+                    <IconStarSolid className="w-3 h-3 text-amber-600" />
+                    <span>مميز بالصدارة</span>
                   </span>
                 )}
               </div>
@@ -652,10 +777,10 @@ export default function MerchantProductStudioPage() {
             <Link
               href={`/product/${productId}`}
               target="_blank"
-              className="px-3.5 py-2 rounded-xl bg-brand-surface hover:bg-brand-border/50 text-brand-dark text-xs font-bold border border-brand-border transition-colors flex items-center gap-1.5"
+              className="px-3.5 py-2 rounded-xl bg-brand-surface hover:bg-brand-border/40 text-brand-dark text-xs font-bold border border-brand-border transition-colors flex items-center gap-1.5"
               title="معاينة كيف يرى الزبون هذا الصنف في متجر سَدِيم"
             >
-              <span>👁️</span>
+              <IconEye className="w-3.5 h-3.5 text-brand-muted" />
               <span>معاينة كزبون</span>
             </Link>
 
@@ -665,7 +790,7 @@ export default function MerchantProductStudioPage() {
                 onClick={() => setActiveTab('editor')}
                 className="px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-95 shadow-2xs transition-all flex items-center gap-1.5 cursor-pointer"
               >
-                <span>✏️</span>
+                <IconEditPencil className="w-3.5 h-3.5" />
                 <span>تعديل الصنف والخيارات</span>
               </button>
             ) : (
@@ -684,59 +809,61 @@ export default function MerchantProductStudioPage() {
           </div>
         </div>
 
-        {/* Tab Navigation Strip */}
-        <div className="flex items-center gap-2 mt-4 pt-3 border-t border-brand-border/60 overflow-x-auto">
-          <button
-            type="button"
-            onClick={() => setActiveTab('overview')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
-              activeTab === 'overview'
-                ? 'bg-brand-primary text-white shadow-2xs'
-                : 'bg-brand-surface text-brand-dark hover:bg-brand-border/40'
-            }`}
-          >
-            <span>📊</span>
-            <span>لوحة الصنف والتقييمات</span>
-          </button>
+        {/* Tab Navigation Strip (Apple-Style Segmented Pill Control) */}
+        <div className="mt-4 pt-3 border-t border-brand-border/60">
+          <div className="inline-flex p-1 rounded-xl bg-brand-surface/90 border border-brand-border/70 gap-1 overflow-x-auto max-w-full">
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+                activeTab === 'overview'
+                  ? 'bg-brand-card text-brand-dark shadow-2xs border border-brand-border/70'
+                  : 'text-brand-muted hover:text-brand-dark'
+              }`}
+            >
+              <IconChartBar className="w-3.5 h-3.5 text-brand-primary" />
+              <span>لوحة الصنف والتقييمات</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('editor')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
-              activeTab === 'editor'
-                ? 'bg-brand-primary text-white shadow-2xs'
-                : 'bg-brand-surface text-brand-dark hover:bg-brand-border/40'
-            }`}
-          >
-            <span>🛠️</span>
-            <span>استوديو التحرير وهندسة الخيارات</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('editor')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+                activeTab === 'editor'
+                  ? 'bg-brand-card text-brand-dark shadow-2xs border border-brand-border/70'
+                  : 'text-brand-muted hover:text-brand-dark'
+              }`}
+            >
+              <IconSliders className="w-3.5 h-3.5 text-brand-primary" />
+              <span>استوديو التحرير والخيارات</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setActiveTab('settings')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
-              activeTab === 'settings'
-                ? 'bg-brand-primary text-white shadow-2xs'
-                : 'bg-brand-surface text-brand-dark hover:bg-brand-border/40'
-            }`}
-          >
-            <span>⚙️</span>
-            <span>العمليات وإعدادات الأمان</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('settings')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2 shrink-0 ${
+                activeTab === 'settings'
+                  ? 'bg-brand-card text-brand-dark shadow-2xs border border-brand-border/70'
+                  : 'text-brand-muted hover:text-brand-dark'
+              }`}
+            >
+              <IconSettings className="w-3.5 h-3.5 text-brand-muted" />
+              <span>العمليات وإعدادات الأمان</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Notifications */}
       {saveSuccessMessage && (
         <div className="mb-5 p-3.5 bg-brand-trust-soft border border-brand-trust/30 rounded-2xl text-brand-trust text-xs font-bold flex items-center gap-2 shadow-2xs animate-fadeIn">
-          <span className="text-base">✓</span>
+          <IconCheck className="w-4 h-4 shrink-0" />
           <span>{saveSuccessMessage}</span>
         </div>
       )}
       {errorMessage && (
         <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-xs font-bold flex items-center gap-2 shadow-2xs animate-fadeIn">
-          <span className="text-base">⚠️</span>
+          <IconAlertTriangle className="w-4 h-4 shrink-0 text-red-600" />
           <span>{errorMessage}</span>
         </div>
       )}
@@ -750,9 +877,11 @@ export default function MerchantProductStudioPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             {/* Sales */}
             <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-brand-muted">المبيعات الإجمالية</span>
-                <span className="text-sm">📦</span>
+                <div className="w-8 h-8 rounded-xl bg-brand-surface flex items-center justify-center text-brand-dark/70 border border-brand-border/60">
+                  <IconPackage className="w-4 h-4" />
+                </div>
               </div>
               <div>
                 <div className="flex items-baseline gap-1.5">
@@ -765,9 +894,11 @@ export default function MerchantProductStudioPage() {
 
             {/* Revenue */}
             <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-brand-muted">إجمالي الإيرادات</span>
-                <span className="text-sm">💰</span>
+                <div className="w-8 h-8 rounded-xl bg-brand-surface flex items-center justify-center text-brand-dark/70 border border-brand-border/60">
+                  <IconCurrencyShekel className="w-4 h-4" />
+                </div>
               </div>
               <div>
                 <div className="flex items-baseline gap-1.5">
@@ -780,9 +911,11 @@ export default function MerchantProductStudioPage() {
 
             {/* Rating */}
             <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-brand-muted">تقييم الزبائن</span>
-                <span className="text-sm">★</span>
+                <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-700 border border-amber-200">
+                  <IconStarSolid className="w-4 h-4" />
+                </div>
               </div>
               <div>
                 <div className="flex items-baseline gap-1.5">
@@ -795,9 +928,11 @@ export default function MerchantProductStudioPage() {
 
             {/* Door Inspection Pass Rate */}
             <div className="bg-brand-card rounded-2xl border border-brand-border/80 p-4 sm:p-5 shadow-2xs flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold text-brand-muted">القبول عند الباب</span>
-                <span className="text-sm">🔍</span>
+                <div className="w-8 h-8 rounded-xl bg-brand-trust-soft flex items-center justify-center text-brand-trust border border-brand-trust/30">
+                  <IconShieldCheck className="w-4 h-4" />
+                </div>
               </div>
               <div>
                 <div className="flex items-baseline gap-1.5">
@@ -818,16 +953,17 @@ export default function MerchantProductStudioPage() {
                   <span>المخزون الميداني اللحظي للأصناف</span>
                 </h2>
                 <p className="text-[11px] text-brand-muted mt-0.5">
-                  يمكنك زيادة أو إنقاص مخزون أي مقاس أو لون مباشرة بضغطة زر دون الدخول في شاشة التحرير
+                  يمكنك زيادة أو إنقاص مخزون أي مقاس أو لون مباشرة بنقرة زر واحدة دون الحاجة للدخول في شاشة التحرير
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('editor')}
-                className="text-xs font-bold text-brand-primary hover:underline cursor-pointer self-start sm:self-auto"
+                className="text-xs font-bold text-brand-primary hover:underline cursor-pointer self-start sm:self-auto flex items-center gap-1"
               >
-                + إدارة الخيارات والأسعار
+                <span>إدارة الخيارات والأسعار</span>
+                <IconArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
 
@@ -945,9 +1081,12 @@ export default function MerchantProductStudioPage() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-1 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200 text-amber-900 text-xs font-bold self-start sm:self-auto">
-                <span>★ 4.8</span>
-                <span className="text-[11px] text-amber-700">(ممتاز جداً)</span>
+              <div className="flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-xl border border-amber-200 text-amber-900 text-xs font-bold self-start sm:self-auto">
+                <div className="flex items-center gap-0.5 text-amber-500">
+                  <IconStarSolid className="w-3.5 h-3.5" />
+                </div>
+                <span>4.8 من 5</span>
+                <span className="text-[11px] text-amber-700 font-normal">(ممتاز جداً)</span>
               </div>
             </div>
 
@@ -962,14 +1101,19 @@ export default function MerchantProductStudioPage() {
                       <span className="text-xs font-black text-brand-dark">{rev.authorName}</span>
                       <span className="text-[10px] text-brand-muted">({rev.city})</span>
                       {rev.verifiedPurchase && (
-                        <span className="text-[10px] font-bold text-brand-trust bg-brand-trust-soft px-2 py-0.5 rounded-md border border-brand-trust/20">
-                          ✓ مشترٍ موثق
+                        <span className="text-[10px] font-bold text-brand-trust bg-brand-trust-soft px-2 py-0.5 rounded-md border border-brand-trust/20 flex items-center gap-1">
+                          <IconCheck className="w-3 h-3" />
+                          <span>مشترٍ موثق</span>
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-1 text-xs text-amber-500 font-bold">
-                      {'★'.repeat(rev.rating)}
-                      <span className="text-[10px] text-brand-muted mr-1">{rev.date}</span>
+                    <div className="flex items-center gap-1 text-xs">
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: rev.rating }).map((_, i) => (
+                          <IconStarSolid key={i} className="w-3.5 h-3.5" />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-brand-muted mr-1.5">{rev.date}</span>
                     </div>
                   </div>
 
@@ -1099,8 +1243,9 @@ export default function MerchantProductStudioPage() {
               ))}
 
               {images.length === 0 && (
-                <div className="col-span-full py-6 text-center bg-brand-surface/40 rounded-xl border border-dashed border-brand-border text-xs text-brand-muted">
-                  لا توجد صور مضافة للصنف بعد
+                <div className="col-span-full py-6 text-center bg-brand-surface/40 rounded-xl border border-dashed border-brand-border text-xs text-brand-muted flex flex-col items-center justify-center gap-1.5">
+                  <IconPhoto className="w-5 h-5 text-brand-muted/70" />
+                  <span>لا توجد صور مضافة للصنف بعد</span>
                 </div>
               )}
             </div>
@@ -1274,7 +1419,7 @@ export default function MerchantProductStudioPage() {
                       onClick={handleRegenerateCombinations}
                       className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-xl hover:bg-brand-primary-hover shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5"
                     >
-                      <span>⚡</span>
+                      <IconSpark className="w-3.5 h-3.5" />
                       <span>توليد الأصناف</span>
                     </button>
                   </div>
@@ -1385,17 +1530,18 @@ export default function MerchantProductStudioPage() {
                 </div>
 
                 {/* Color-Specific Image Binding Section */}
-                {colorOption && colorOption.values.length > 0 && images.length > 0 && (
+                {colorOpt && colorOpt.values.length > 0 && images.length > 0 && (
                   <div className="mt-5 p-4 rounded-xl bg-brand-surface/70 border border-brand-border/80">
-                    <div className="text-xs font-black text-brand-dark mb-1">
-                      🎨 تخصيص صور الألوان (Color Binding)
+                    <div className="flex items-center gap-2 text-xs font-black text-brand-dark mb-1">
+                      <IconPalette className="w-4 h-4 text-brand-primary" />
+                      <span>تخصيص صور الألوان (Color Binding)</span>
                     </div>
                     <p className="text-[11px] text-brand-muted mb-3 leading-relaxed">
                       اختر صورة المعرض المطابقة لكل لون. عند اختيار الزبون للون في صفحة الشراء، ستتحول الصورة تلقائياً لصورة هذا اللون.
                     </p>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                      {colorOption.values.map((colVal) => {
+                      {colorOpt.values.map((colVal) => {
                         const currentBound = colorImageMap[colVal] || images[0];
                         return (
                           <div
@@ -1410,8 +1556,15 @@ export default function MerchantProductStudioPage() {
                               />
                               <div>
                                 <div className="text-xs font-black text-brand-dark">{colVal}</div>
-                                <div className="text-[10px] text-brand-muted">
-                                  {colorImageMap[colVal] ? 'صورة مخصصة ✓' : 'صورة الغلاف'}
+                                <div className="text-[10px] text-brand-muted flex items-center gap-1">
+                                  {colorImageMap[colVal] ? (
+                                    <>
+                                      <IconCheck className="w-3 h-3 text-brand-trust" />
+                                      <span className="text-brand-trust">مخصصة</span>
+                                    </>
+                                  ) : (
+                                    <span>صورة الغلاف</span>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1441,11 +1594,12 @@ export default function MerchantProductStudioPage() {
               <div className="bg-brand-card rounded-2xl p-4 sm:p-5 border border-brand-border/80 shadow-2xs">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
-                    <h3 className="text-xs font-black text-brand-dark">
-                      ⚡ التطبيق الجماعي للأسعار والمخزون (Bulk Apply)
+                    <h3 className="text-xs font-black text-brand-dark flex items-center gap-1.5">
+                      <IconSpark className="w-3.5 h-3.5 text-brand-primary" />
+                      <span>التطبيق الجماعي للأسعار والمخزون (Bulk Apply)</span>
                     </h3>
                     <p className="text-[10px] text-brand-muted mt-0.5">
-                      وفر وقتك وطبق سعراً أو مخزوناً موحداً على كافة الأصناف الـ {variants.length} بنقرة واحدة
+                      طبق سعراً أو مخزوناً موحداً على كافة الأصناف الـ {variants.length} بنقرة واحدة
                     </p>
                   </div>
 

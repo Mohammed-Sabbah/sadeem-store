@@ -1,5 +1,21 @@
 const mongoose = require('mongoose');
 
+const variantAttributeSchema = new mongoose.Schema(
+    {
+        name: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        values: {
+            type: [String],
+            required: true,
+            default: [],
+        },
+    },
+    { _id: false }
+);
+
 const categorySchema = new mongoose.Schema(
     {
         title: {
@@ -12,22 +28,13 @@ const categorySchema = new mongoose.Schema(
             unique: true,
             index: true,
         },
-        icon: {
-            type: String,
-            default: '',
-        },
-        order: {
-            type: Number,
-            default: 0,
+        variantAttributes: {
+            type: [variantAttributeSchema],
+            default: [],
         },
         isActive: {
             type: Boolean,
             default: true,
-        },
-        topCategoryId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Category',
-            default: null,
         },
     },
     {

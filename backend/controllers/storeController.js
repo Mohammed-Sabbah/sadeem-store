@@ -1,6 +1,6 @@
 const Store = require('../models/Store');
 const User = require('../models/User');
-const { STATUS, STORE_APPROVE_STATUS } = require('../constants/enums');
+const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 
 async function approveStore(req, res, next) {
@@ -13,11 +13,11 @@ async function approveStore(req, res, next) {
             {
                 _id: id,
                 isDeleted: false,
-                approveStatus: STORE_APPROVE_STATUS.PENDING,
+                approveStatus: APPROVE_STATUS.PENDING,
             },
             {
                 $set: {
-                    approveStatus: STORE_APPROVE_STATUS.APPROVED,
+                    approveStatus: APPROVE_STATUS.APPROVED,
                     status: STATUS.ACTIVE
                 }
             },

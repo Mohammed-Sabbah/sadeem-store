@@ -2515,8 +2515,8 @@ export default function MerchantProductStudioPage() {
             </div>
           )}
 
-          {/* Sticky Bottom Save Bar (Translucent Apple Material) */}
-          <div className="fixed bottom-0 left-0 right-0 z-30 bg-brand-card/85 backdrop-blur-xl border-t border-brand-border/70 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-xl font-almarai">
+          {/* Sticky Bottom Save Bar (Translucent Apple Material - docks to main workspace without covering sidebar) */}
+          <div className="fixed bottom-0 left-0 right-0 lg:right-68 z-20 bg-brand-card/85 backdrop-blur-xl border-t border-brand-border/70 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-xl font-almarai">
             <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
               <div className="hidden sm:flex items-center gap-2 text-xs text-brand-muted">
                 <span>الصنف:</span>

@@ -24,9 +24,9 @@ function MerchantLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="min-h-screen bg-brand-bg text-brand-dark font-almarai antialiased flex flex-col lg:flex-row selection:bg-brand-primary-soft selection:text-brand-primary">
-      {/* 1. Desktop Fixed/Sticky Sidebar (Right-hand in RTL) */}
-      <div className="hidden lg:block shrink-0 sticky top-0 h-screen self-start z-30">
+    <div className="min-h-screen bg-brand-bg text-brand-dark font-almarai antialiased flex flex-col selection:bg-brand-primary-soft selection:text-brand-primary">
+      {/* 1. Desktop Fixed Sidebar (Firmly anchored to Right-hand in RTL, never scrolls with page) */}
+      <div className="hidden lg:block fixed top-0 right-0 bottom-0 w-68 z-30">
         <MerchantSidebar />
       </div>
 
@@ -36,9 +36,9 @@ function MerchantLayoutContent({ children }: { children: React.ReactNode }) {
       {/* 3. Mobile Slide-Over Drawer */}
       <MerchantMobileDrawer />
 
-      {/* 4. Main Dynamic Workspace */}
-      <div className="flex-1 min-w-0 flex flex-col justify-between">
-        <main className="w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 flex-1 pb-24 lg:pb-8">
+      {/* 4. Main Dynamic Workspace (Offset by 272px on desktop to perfectly respect the fixed sidebar) */}
+      <div className="flex-1 min-w-0 flex flex-col justify-between lg:mr-68">
+        <main className="w-full max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-7 flex-1 pb-28 lg:pb-24">
           {children}
         </main>
 

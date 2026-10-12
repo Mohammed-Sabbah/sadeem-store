@@ -27,7 +27,11 @@ const variantSchema = new mongoose.Schema(
         approveStatus: {
             type: String,
             enum: APPROVE_STATUS_VALUES,
-            default: APPROVE_STATUS.PENDING,
+            default: APPROVE_STATUS.APPROVED,
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false,
         },
     },
     { timestamps: true }
@@ -79,7 +83,7 @@ const productSchema = new mongoose.Schema(
         approveStatus: {
             type: String,
             enum: APPROVE_STATUS_VALUES,
-            default: APPROVE_STATUS.PENDING,
+            default: APPROVE_STATUS.APPROVED,
         },
         isDeleted: {
             type: Boolean,

@@ -17,6 +17,7 @@ const {
     deleteProduct,
     addVariant,
     updateVariant,
+    deleteVariant,
     updateProductStatus,
     updateVariantStatus,
     updateProductApproval,
@@ -53,8 +54,7 @@ router.get('/seller', ...sellerOnly, getSellerProducts);
 // Get All Products For Admin
 router.get('/admin', ...adminOnly, getAdminProducts);
 
-// Delete Product - Admin
-router.delete('/admin/:id', ...adminOnly, validateProductId, deleteProduct);
+
 
 // Create Product
 router.post('/', ...sellerOnly, validateCreateProduct, createProduct);
@@ -91,6 +91,14 @@ router.patch(
     updateVariant
 );
 
+// Delete Variant - Seller
+router.delete(
+    '/:id/variants/:variantId',
+    ...sellerOnly,
+    validateVariantIds,
+    deleteVariant
+);
+
 // Change Variant Status - Seller
 router.patch(
     '/:id/variants/:variantId/status',
@@ -108,5 +116,8 @@ router.patch(
     validateVariantApproval,
     updateVariantApproval
 );
+
+// Delete Product - Seller
+router.delete('/:id', ...sellerOnly, validateProductId, deleteProduct);
 
 module.exports = router;

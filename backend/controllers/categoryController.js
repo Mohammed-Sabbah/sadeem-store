@@ -10,9 +10,12 @@ const {
 } = require('../utils/category');
 
 async function getVariantAttributeCompatibilityError(categoryId, definitions) {
-    const products = await Product.find({ categoryId }).select('variants.attributes').lean();
+    const products = await Product.find({ categoryId })
+        .select('variants.attributes variants.isDeleted')
+        .lean();
     for (const product of products) {
         for (const variant of product.variants) {
+            if (variant.isDeleted === true) continue;
             if (!hasVariantAttributes(variant.attributes)) continue;
 
             const attributeNames = new Set(
@@ -195,7 +198,7 @@ async function deleteCategoryVariantAttribute(req, res, next) {
 async function deleteCategory(req, res, next) {
     try {
         const { id } = req.params;
-        const hasProducts = await Product.exists({ categoryId: id });
+        const hasProducts = await Product.exists({ categoryId: id, isDeleted: false });
         if (hasProducts) {
             return error(res, 409, 'Category cannot be deleted while it has products');
         }

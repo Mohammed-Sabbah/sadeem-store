@@ -1,3 +1,5 @@
+const { STATUS, APPROVE_STATUS } = require('../constants/enums');
+
 function normalizeAttributes(attributes, definitions) {
     const entries = attributes instanceof Map
         ? Array.from(attributes.entries())
@@ -55,6 +57,7 @@ function getVariantKey(attributes) {
 function findDuplicateVariant(variants, attributes, excludeId) {
     const key = getVariantKey(attributes);
     return variants.find((variant) =>
+        variant.isDeleted == false &&
         String(variant._id) !== String(excludeId || '') &&
         getVariantKey(variant.attributes) === key
     );
@@ -72,12 +75,14 @@ function toProductResponse(product) {
         : product;
     return {
         ...result,
-        variants: result.variants.map((variant) => ({
-            ...variant,
-            attributes: variant.attributes instanceof Map
-                ? Object.fromEntries(variant.attributes)
-                : variant.attributes || {},
-        })),
+        variants: result.variants
+            .filter((variant) => variant.isDeleted == false)
+            .map((variant) => ({
+                ...variant,
+                attributes: variant.attributes instanceof Map
+                    ? Object.fromEntries(variant.attributes)
+                    : variant.attributes || {},
+            })),
     };
 }
 
@@ -92,7 +97,8 @@ const getProductsWithActiveVariants = (products) =>
 
 const getActiveVariants = (product) =>
     product.variants.filter(
-        (variant) => variant.status === STATUS.ACTIVE &&
+        (variant) => variant.isDeleted == false &&
+            variant.status === STATUS.ACTIVE &&
             variant.approveStatus === APPROVE_STATUS.APPROVED
     );
 

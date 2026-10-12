@@ -7,16 +7,15 @@ const {
     hasVariantAttributes,
     normalizeAttributes,
     toProductResponse,
-    getProductsWithActiveVariants,
-    getActiveVariants,
 } = require('../utils/product');
 
 const publicProductFilter = {
-    isDeleted: { $ne: true },
+    isDeleted: false,
     status: STATUS.ACTIVE,
     approveStatus: APPROVE_STATUS.APPROVED,
     variants: {
         $elemMatch: {
+            isDeleted: false,
             status: STATUS.ACTIVE,
             approveStatus: APPROVE_STATUS.APPROVED,
         },
@@ -45,9 +44,8 @@ async function getPublicProducts(req, res, next) {
                 match: { status: STATUS.ACTIVE, approveStatus: APPROVE_STATUS.APPROVED, isDeleted: false },
             })
             .sort({ createdAt: -1 });
-
         return success(res, 200, {
-            products: getProductsWithActiveVariants,
+            products: products.map((product) => toProductResponse(product)),
             count: products.length,
         });
     } catch (err) {
@@ -77,7 +75,6 @@ async function getPublicProduct(req, res, next) {
         }
 
         const publicProduct = toProductResponse(product);
-        publicProduct.variants = getActiveVariants(publicProduct)
 
         return success(res, 200, { product: publicProduct });
     } catch (err) {
@@ -87,12 +84,12 @@ async function getPublicProduct(req, res, next) {
 
 async function getSellerProducts(req, res, next) {
     try {
-        const products = await Product.find({ storeId: req.store._id, isDeleted: { $ne: true } })
+        const products = await Product.find({ storeId: req.store._id, isDeleted: false })
             .populate('categoryId', 'title slug variantAttributes')
             .sort({ createdAt: -1 });
 
         return success(res, 200, {
-            products: products.map((product) => toProductResponse(product)),
+            products: products.map(product => toProductResponse(product)),
             count: products.length,
         });
     } catch (err) {
@@ -102,7 +99,7 @@ async function getSellerProducts(req, res, next) {
 
 async function getAdminProducts(req, res, next) {
     try {
-        const products = await Product.find({ isDeleted: { $ne: true } })
+        const products = await Product.find({ isDeleted: false })
             .populate('categoryId', 'title slug variantAttributes')
             .populate({ path: 'storeId', select: 'name' })
             .sort({ createdAt: -1 });
@@ -150,7 +147,7 @@ async function updateProduct(req, res, next) {
         const product = await Product.findOne({
             _id: req.params.id,
             storeId: req.store._id,
-            isDeleted: { $ne: true },
+            isDeleted: false,
         });
         if (!product) {
             return error(res, 404, 'Product not found');
@@ -158,7 +155,7 @@ async function updateProduct(req, res, next) {
 
         if (req.body.categoryId && String(req.body.categoryId) !== String(product.categoryId)) {
             const hasConfiguredVariants = product.variants.some(
-                (variant) => hasVariantAttributes(variant.attributes)
+                (variant) => variant.isDeleted !== true && hasVariantAttributes(variant.attributes)
             );
             if (hasConfiguredVariants) {
                 return error(
@@ -193,7 +190,7 @@ async function addVariant(req, res, next) {
         const product = await Product.findOne({
             _id: req.params.id,
             storeId: req.store._id,
-            isDeleted: { $ne: true },
+            isDeleted: false,
         })
             .populate('categoryId', 'variantAttributes');
         if (!product) {
@@ -210,22 +207,12 @@ async function addVariant(req, res, next) {
         if (attributes.error) {
             return error(res, 400, attributes.error);
         }
-        if (!Object.keys(attributes.attributes).length) {
-            return error(res, 400, 'A new variant must have category attributes');
-        }
-        if (product.variants.some((variant) => !hasVariantAttributes(variant.attributes))) {
-            return error(
-                res,
-                409,
-                'Update the existing single-product variant with category attributes before adding another variant'
-            );
-        }
         if (findDuplicateVariant(product.variants, attributes.attributes)) {
             return error(res, 409, 'A variant with these attributes already exists');
         }
 
         product.variants.push({
-            attributes: attributes.attributes,
+            attributes: new Map(Object.entries(attributes.attributes)),
             price: req.body.price,
             stock: req.body.stock,
         });
@@ -245,7 +232,7 @@ async function updateVariant(req, res, next) {
         const product = await Product.findOne({
             _id: req.params.id,
             storeId: req.store._id,
-            isDeleted: { $ne: true },
+            isDeleted: false,
         })
             .populate('categoryId', 'variantAttributes');
         if (!product) {
@@ -256,10 +243,9 @@ async function updateVariant(req, res, next) {
         }
 
         const variant = product.variants.id(req.params.variantId);
-        if (!variant) {
+        if (!variant || variant.isDeleted) {
             return error(res, 404, 'Variant not found');
         }
-
         let updatedAttributes = variant.attributes;
         if (req.body.attributes !== undefined) {
             const result = normalizeAttributes(req.body.attributes, product.categoryId.variantAttributes);
@@ -268,7 +254,8 @@ async function updateVariant(req, res, next) {
             }
             updatedAttributes = result.attributes;
         }
-        if (!Object.keys(updatedAttributes).length && product.variants.length > 1) {
+        const activeVariants = product.variants.filter((item) => item.isDeleted == false);
+        if (!hasVariantAttributes(updatedAttributes) && activeVariants.length > 1) {
             return error(res, 400, 'Every variant must have category attributes once a product has multiple variants');
         }
         if (findDuplicateVariant(product.variants, updatedAttributes, variant._id)) {
@@ -277,7 +264,9 @@ async function updateVariant(req, res, next) {
 
         if (req.body.price !== undefined) variant.price = req.body.price;
         if (req.body.stock !== undefined) variant.stock = req.body.stock;
-        if (req.body.attributes !== undefined) variant.attributes = updatedAttributes;
+        if (req.body.attributes !== undefined) {
+            variant.attributes = new Map(Object.entries(updatedAttributes));
+        }
 
         await product.save();
 
@@ -292,14 +281,24 @@ async function updateVariant(req, res, next) {
 
 async function updateProductStatus(req, res, next) {
     try {
-        const product = await Product.findOneAndUpdate(
-            { _id: req.params.id, storeId: req.store._id, isDeleted: { $ne: true } },
-            { $set: { status: req.body.status } },
-            { new: true, runValidators: true }
-        );
+        const product = await Product.findOne({
+            _id: req.params.id,
+            storeId: req.store._id,
+            isDeleted: false,
+        });
         if (!product) {
             return error(res, 404, 'Product not found');
         }
+
+        if (
+            req.body.status === STATUS.ACTIVE &&
+            !product.variants.some((variant) => variant.isDeleted == false)
+        ) {
+            return error(res, 409, 'Add at least one variant before activating this product');
+        }
+
+        product.status = req.body.status;
+        await product.save();
         return success(res, 200, { product: toProductResponse(product) });
     } catch (err) {
         return next(err);
@@ -311,19 +310,52 @@ async function updateVariantStatus(req, res, next) {
         const product = await Product.findOne({
             _id: req.params.id,
             storeId: req.store._id,
-            isDeleted: { $ne: true },
+            isDeleted: false,
         });
         if (!product) {
             return error(res, 404, 'Product not found');
         }
         const variant = product.variants.id(req.params.variantId);
-        if (!variant) {
+        if (!variant || variant.isDeleted) {
             return error(res, 404, 'Variant not found');
         }
 
         variant.status = req.body.status;
         await product.save();
         return success(res, 200, { product: toProductResponse(product) });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function deleteVariant(req, res, next) {
+    try {
+        const product = await Product.findOne({
+            _id: req.params.id,
+            storeId: req.store._id,
+            isDeleted: false,
+        });
+        if (!product) {
+            return error(res, 404, 'Product not found');
+        }
+
+        const variant = product.variants.id(req.params.variantId);
+        if (!variant || variant.isDeleted) {
+            return error(res, 404, 'Variant not found');
+        }
+
+        variant.isDeleted = true;
+        const hasRemainingVariants = product.variants.some((item) => item.isDeleted !== true);
+        if (!hasRemainingVariants) {
+            product.status = STATUS.IN_ACTIVE;
+        }
+
+        await product.save();
+
+        return success(res, 200, {
+            message: 'Variant deleted successfully',
+            product: toProductResponse(product),
+        });
     } catch (err) {
         return next(err);
     }
@@ -352,7 +384,7 @@ async function deleteProduct(req, res, next) {
 async function updateProductApproval(req, res, next) {
     try {
         const product = await Product.findByIdAndUpdate(
-            { _id: req.params.id, isDeleted: { $ne: true } },
+            { _id: req.params.id, isDeleted: false },
             { $set: { approveStatus: req.body.approveStatus } },
             { new: true, runValidators: true }
         )
@@ -374,7 +406,7 @@ async function updateVariantApproval(req, res, next) {
             return error(res, 404, 'Product not found');
         }
         const variant = product.variants.id(req.params.variantId);
-        if (!variant) {
+        if (!variant || variant.isDeleted) {
             return error(res, 404, 'Variant not found');
         }
 
@@ -397,6 +429,7 @@ module.exports = {
     updateProduct,
     addVariant,
     updateVariant,
+    deleteVariant,
     updateProductStatus,
     updateVariantStatus,
     deleteProduct,

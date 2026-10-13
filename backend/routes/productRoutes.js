@@ -67,7 +67,7 @@ router.patch('/:id', ...sellerOnly, validateProductId, validateUpdateProduct, up
 
 // Change Product Approve Status - Admin
 router.patch(
-    '/admin/:id/approval',
+    '/:id/approval',
     ...adminOnly,
     validateProductId,
     validateProductApproval,
@@ -110,7 +110,7 @@ router.patch(
 
 // Change Variant Approve Status - Admin
 router.patch(
-    '/admin/:id/variants/:variantId/approval',
+    '/:id/variants/:variantId/approval',
     ...adminOnly,
     validateVariantIds,
     validateVariantApproval,

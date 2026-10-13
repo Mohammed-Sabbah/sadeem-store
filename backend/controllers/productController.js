@@ -383,7 +383,7 @@ async function deleteProduct(req, res, next) {
 
 async function updateProductApproval(req, res, next) {
     try {
-        const product = await Product.findByIdAndUpdate(
+        const product = await Product.findOneAndUpdate(
             { _id: req.params.id, isDeleted: false },
             { $set: { approveStatus: req.body.approveStatus } },
             { new: true, runValidators: true }
@@ -401,7 +401,7 @@ async function updateProductApproval(req, res, next) {
 
 async function updateVariantApproval(req, res, next) {
     try {
-        const product = await Product.findOne({ _id: req.params.id, isDeleted: { $ne: true } });
+        const product = await Product.findOne({ _id: req.params.id, isDeleted: false });
         if (!product) {
             return error(res, 404, 'Product not found');
         }

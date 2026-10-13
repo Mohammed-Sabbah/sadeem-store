@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { STATUS, STATUS_VALUES, APPROVE_STATUS, APPROVE_STATUS_VALUES } = require('../constants/enums');
 const { isMoney, roundMoney } = require('../utils/money');
 
 const variantSchema = new mongoose.Schema(
@@ -65,13 +66,35 @@ const variantSchema = new mongoose.Schema(
                 message: 'المخزون يجب أن يكون رقماً صحيحاً غير سالب',
             },
         },
+        image: {
+            type: String,
+            default: '',
+            trim: true,
+        },
         images: {
             type: [String],
             default: [],
         },
+        status: {
+            type: String,
+            enum: STATUS_VALUES,
+            default: STATUS.ACTIVE,
+            index: true,
+        },
+        approveStatus: {
+            type: String,
+            enum: APPROVE_STATUS_VALUES,
+            default: APPROVE_STATUS.APPROVED,
+            index: true,
+        },
         isActive: {
             type: Boolean,
             default: true,
+            index: true,
+        },
+        isDeleted: {
+            type: Boolean,
+            default: false,
             index: true,
         },
         isSuspended: {
@@ -90,16 +113,23 @@ const variantSchema = new mongoose.Schema(
     }
 );
 
-// الفهرس المركب لمنع تكرار نفس تركيبة الخصائص لنفس المنتج (مثلاً أحمر + L مرتين)
-variantSchema.index({ productId: 1, attrKey: 1 }, { unique: true });
+// الفهرس المركب لمنع تكرار نفس تركيبة الخصائص لنفس المنتج (فقط للأصناف غير المحذوفة)
+variantSchema.index(
+    { productId: 1, attrKey: 1 },
+    { unique: true, partialFilterExpression: { isDeleted: false } }
+);
 
-// الفهرس المركب لكود SKU: فريد على مستوى المتجر نفسه حصراً (Store-Scoped SKU)
-variantSchema.index({ storeId: 1, sku: 1 }, { unique: true });
+// الفهرس المركب لكود SKU: فريد على مستوى المتجر نفسه حصراً (Store-Scoped SKU للأصناف غير المحذوفة)
+variantSchema.index(
+    { storeId: 1, sku: 1 },
+    { unique: true, partialFilterExpression: { isDeleted: false } }
+);
 
 variantSchema.index({ productId: 1, price: 1 });
 variantSchema.index({ productId: 1, stock: 1 });
+variantSchema.index({ productId: 1, status: 1, approveStatus: 1, isDeleted: 1 });
 
-// Pre-validate hook لحساب attrKey تصاعدياً ومحدداً بشكل حتمي (Deterministic AttrKey)
+// Pre-validate hook لحساب attrKey تصاعدياً ومحدداً بشكل حتمي ومزامنة الصور والحالة
 variantSchema.pre('validate', function (next) {
     if (this.attributes) {
         let entries = [];
@@ -120,6 +150,19 @@ variantSchema.pre('validate', function (next) {
     } else {
         this.attrKey = 'default';
     }
+
+    if (Array.isArray(this.images) && this.images.length > 0 && !this.image) {
+        this.image = this.images[0];
+    } else if (this.image && (!Array.isArray(this.images) || this.images.length === 0)) {
+        this.images = [this.image];
+    }
+
+    if (this.status) {
+        this.isActive = this.status === STATUS.ACTIVE;
+    } else if (this.isActive !== undefined) {
+        this.status = this.isActive ? STATUS.ACTIVE : STATUS.IN_ACTIVE;
+    }
+
     next();
 });
 

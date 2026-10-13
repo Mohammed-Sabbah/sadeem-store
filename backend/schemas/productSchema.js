@@ -7,11 +7,14 @@ const productFields = [
     'slug',
     'categoryId',
     'description',
+    'image',
     'images',
     'options',
     'variants',
     'isFeatured',
     'isActive',
+    'status',
+    'approveStatus',
 ];
 
 const createProductFields = [
@@ -318,14 +321,55 @@ const validateAdminProductStatus = [
         }
         return true;
     }),
+const { STATUS_VALUES, APPROVE_STATUS_VALUES } = require('../constants/enums');
+
+const validateProductStatus = [
+    body().custom((value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error('Status payload must be an object');
+        }
+        if (value.status === undefined && value.isActive === undefined) {
+            throw new Error('Provide status or isActive');
+        }
+        return true;
+    }),
+    body('status')
+        .optional()
+        .isIn(STATUS_VALUES)
+        .withMessage(`Status must be one of: ${STATUS_VALUES.join(', ')}`),
+    body('isActive')
+        .optional()
+        .isBoolean()
+        .withMessage('isActive must be a boolean')
+        .toBoolean(),
+    validateRequest,
+];
+
+const validateProductApproval = [
+    body().custom((value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error('Approval payload must be an object');
+        }
+        return true;
+    }),
+    body('approveStatus')
+        .exists()
+        .withMessage('approveStatus is required')
+        .isIn(APPROVE_STATUS_VALUES)
+        .withMessage(`approveStatus must be one of: ${APPROVE_STATUS_VALUES.join(', ')}`),
     validateRequest,
 ];
 
 module.exports = {
     validateProduct,
+    validateCreateProduct: validateProduct,
     validateProductUpdate,
+    validateUpdateProduct: validateProductUpdate,
     validateProductId,
     validateProductFilters,
+    validatePublicProductQuery: validateProductFilters,
+    validateProductStatus,
     validateProductAvailability,
+    validateProductApproval,
     validateAdminProductStatus,
 };

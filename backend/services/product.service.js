@@ -2,10 +2,18 @@ const mongoose = require('mongoose');
 const Product = require('../models/Product');
 const Variant = require('../models/Variant');
 const Category = require('../models/Category');
-const OptionDefinition = require('../models/OptionDefinition');
+const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 const { roundMoney } = require('../utils/money');
-const { createProductFilter, recomputeProductSummary, generateVariantSku } = require('../utils/product');
+const {
+    createProductFilter,
+    recomputeProductSummary,
+    generateVariantSku,
+    normalizeAttributes,
+    findDuplicateVariant,
+    hasVariantAttributes,
+    toProductResponse,
+} = require('../utils/product');
 
 const MAX_VARIANTS_PER_PRODUCT = 100;
 
@@ -19,7 +27,6 @@ function prepareVariantPayload(rawVariant, productTitle, index = 1, storeId = nu
         variant.attributes = {};
     }
 
-    // دعم الخصائص الموروثة أو المدخلة مباشرة (كـ color أو size)
     if (variant.color && !variant.attributes['اللون'] && !variant.attributes['color']) {
         variant.attributes['اللون'] = variant.color;
     }
@@ -27,7 +34,6 @@ function prepareVariantPayload(rawVariant, productTitle, index = 1, storeId = nu
         variant.attributes['المقاس'] = variant.size;
     }
 
-    // توليد SKU تلقائي في حال عدم توفره
     if (!variant.sku || !String(variant.sku).trim()) {
         variant.sku = generateVariantSku(productTitle, variant.attributes, index);
     } else {
@@ -45,14 +51,31 @@ function prepareVariantPayload(rawVariant, productTitle, index = 1, storeId = nu
 
     if (Array.isArray(variant.images)) {
         variant.images = variant.images.filter(Boolean).map(String);
+        if (variant.images.length > 0 && !variant.image) {
+            variant.image = variant.images[0];
+        }
     } else if (variant.image) {
         variant.images = [String(variant.image)];
     } else {
         variant.images = [];
+        variant.image = '';
     }
 
     if (storeId) {
         variant.storeId = storeId;
+    }
+
+    if (variant.status) {
+        variant.isActive = variant.status === STATUS.ACTIVE;
+    } else if (variant.isActive !== undefined) {
+        variant.status = variant.isActive ? STATUS.ACTIVE : STATUS.IN_ACTIVE;
+    } else {
+        variant.status = STATUS.ACTIVE;
+        variant.isActive = true;
+    }
+
+    if (!variant.approveStatus) {
+        variant.approveStatus = APPROVE_STATUS.APPROVED;
     }
 
     return variant;
@@ -68,15 +91,13 @@ async function validateProductOptionsAndVariants({ categoryId, options, variants
         throw err;
     }
 
-    // التحقق من خيارات التصنيف المسموحة إن وجدت
     if (categoryId && Array.isArray(options) && options.length > 0) {
         const allowedKeys = await Category.resolveAllowedOptions(categoryId);
         if (allowedKeys && allowedKeys.length > 0) {
             const allowedSet = new Set(allowedKeys.map((k) => String(k).toLowerCase().trim()));
             for (const opt of options) {
                 if (opt.source === 'DEFINED' && opt.key && !allowedSet.has(String(opt.key).toLowerCase().trim())) {
-                    // تحذير أو منع الخيارات غير المصرحة للتصنيف المعتمد
-                    // نتيح المرونة إن كان خياراً عاماً أو معرفاً
+                    // المرونة مع الخيارات المخصصة
                 }
             }
         }
@@ -84,53 +105,7 @@ async function validateProductOptionsAndVariants({ categoryId, options, variants
 }
 
 /**
- * إضافة خيار جديد لمنتج قائم وتطبيقه بشكل Idempotent على كافة الأصناف الحالية بقيمة افتراضية
- */
-async function applyOptionAdditionIdempotent({ productId, newOption, defaultValue, session = null }) {
-    const options = session ? { session } : {};
-    const product = await Product.findById(productId).session(session || null);
-    if (!product) {
-        throw new Error('المنتج غير موجود');
-    }
-
-    const optKey = String(newOption.key).toLowerCase().trim();
-    const existingOptIndex = product.options.findIndex((o) => o.key === optKey);
-
-    if (existingOptIndex >= 0) {
-        if (!product.options[existingOptIndex].values.includes(defaultValue)) {
-            product.options[existingOptIndex].values.push(defaultValue);
-        }
-    } else {
-        product.options.push({
-            key: optKey,
-            source: newOption.source || 'DEFINED',
-            label: newOption.label || optKey,
-            type: newOption.type || 'TEXT',
-            unit: newOption.unit || null,
-            values: [defaultValue],
-        });
-    }
-
-    await product.save(options);
-
-    // تحديث كافة الأصناف القائمة لتضمين القيمة الافتراضية للخيار الجديد
-    const existingVariants = await Variant.find({ productId: product._id }).session(session || null);
-
-    for (const v of existingVariants) {
-        const currentAttrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
-        if (!currentAttrs[optKey]) {
-            currentAttrs[optKey] = defaultValue;
-            v.attributes = currentAttrs;
-            await v.save(options);
-        }
-    }
-
-    await recomputeProductSummary(product._id, session);
-    return product;
-}
-
-/**
- * إنشاء مستندات المنتج والأصناف التابعة له
+ * إنشاء مستندات المنتج والأصناف التابعة له في دفعة واحدة (Batch Creation)
  */
 async function createProductDocuments(productData, rawVariants, session = null) {
     const options = session ? { session } : {};
@@ -143,7 +118,12 @@ async function createProductDocuments(productData, rawVariants, session = null) 
     });
 
     try {
-        [product] = await Product.create([productData], options);
+        const payloadToCreate = { ...productData };
+        if (Array.isArray(payloadToCreate.images) && payloadToCreate.images.length > 0 && !payloadToCreate.image) {
+            payloadToCreate.image = payloadToCreate.images[0];
+        }
+
+        [product] = await Product.create([payloadToCreate], options);
 
         const variantsToCreate = (rawVariants || []).map((raw, idx) => {
             const prepared = prepareVariantPayload(raw, product.title, idx + 1, product.storeId);
@@ -154,21 +134,20 @@ async function createProductDocuments(productData, rawVariants, session = null) 
             };
         });
 
-        const createdVariants = await Variant.create(variantsToCreate, options);
+        const createdVariants = variantsToCreate.length > 0
+            ? await Variant.create(variantsToCreate, options)
+            : [];
 
         // احتساب ملخص الأسعار والمخزون آلياً
         await recomputeProductSummary(product._id, session);
 
         const freshProduct = await Product.findById(product._id)
             .populate('storeId', 'name logo address')
-            .populate('categoryId', 'title slug icon allowedOptions')
+            .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
             .session(session || null)
             .lean();
 
-        return {
-            ...freshProduct,
-            variants: createdVariants.map((v) => v.toObject()),
-        };
+        return toProductResponse(freshProduct, createdVariants);
     } catch (err) {
         if (!session && product) {
             try {
@@ -183,11 +162,11 @@ async function createProductDocuments(productData, rawVariants, session = null) 
 }
 
 /**
- * تحديث بيانات المنتج وأصنافه
+ * تحديث بيانات المنتج وأصنافه في دفعة واحدة (Batch Update)
  */
 async function updateProductDocuments({ id, storeId, productUpdates, variants, session = null }) {
     const options = session ? { session } : {};
-    const productQuery = Product.findOne({ _id: id, storeId, isDeleted: { $ne: true } });
+    const productQuery = Product.findOne({ _id: id, storeId, isDeleted: false });
     if (session) productQuery.session(session);
     const product = await productQuery;
     if (!product) return null;
@@ -199,7 +178,7 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
             variants,
         });
 
-        const originalVariants = await Variant.find({ productId: product._id })
+        const originalVariants = await Variant.find({ productId: product._id, isDeleted: false })
             .select('_id')
             .session(session || null)
             .lean();
@@ -212,10 +191,11 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
         const existingFound = await Variant.find({
             _id: { $in: requestedExistingIds },
             productId: product._id,
+            isDeleted: false,
         }).session(session || null);
 
         if (existingFound.length !== requestedExistingIds.length) {
-            const err = new Error('واحد أو أكثر من الأصناف لا ينتمي لهذا المنتج');
+            const err = new Error('واحد أو أكثر من الأصناف لا ينتمي لهذا المنتج أو تم حذفه');
             err.statusCode = 400;
             throw err;
         }
@@ -253,7 +233,7 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
                 updates.storeId = product.storeId;
 
                 const updated = await Variant.findOneAndUpdate(
-                    { _id: v._id, productId: product._id },
+                    { _id: v._id, productId: product._id, isDeleted: false },
                     { $set: updates },
                     { new: true, runValidators: true, ...options }
                 );
@@ -268,12 +248,14 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
                 ...createdVariants.map((v) => v._id),
             ];
 
-            // إزالة الأصناف المحذوفة
-            await Variant.deleteMany(
+            // الحذف الناعم (Soft Delete) للأصناف المستثناة
+            await Variant.updateMany(
                 {
                     productId: product._id,
                     _id: { $nin: retainedIds },
+                    isDeleted: false,
                 },
+                { $set: { isDeleted: true } },
                 options
             );
         } catch (err) {
@@ -301,15 +283,331 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
 
     const updatedProduct = await Product.findById(product._id)
         .populate('storeId', 'name logo address')
-        .populate('categoryId', 'title slug icon allowedOptions')
+        .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
         .session(session || null)
         .lean();
 
-    updatedProduct.variants = await Variant.find({ productId: product._id })
+    const activeVariants = await Variant.find({ productId: product._id, isDeleted: false })
         .session(session || null)
         .lean();
 
-    return updatedProduct;
+    return toProductResponse(updatedProduct, activeVariants);
+}
+
+/**
+ * إضافة صنف مفرد جديد لمنتج قائم (Single Variant Sub-resource)
+ */
+async function addSingleVariant({ productId, storeId, variantData, session = null }) {
+    const options = session ? { session } : {};
+    const product = await Product.findOne({ _id: productId, storeId, isDeleted: false })
+        .populate('categoryId', 'variantAttributes')
+        .session(session || null);
+
+    if (!product) {
+        const err = new Error('Product not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    const categoryDefinitions = product.categoryId?.variantAttributes || [];
+    let normalizedAttrs = variantData.attributes || {};
+
+    if (categoryDefinitions.length > 0 && hasVariantAttributes(normalizedAttrs)) {
+        const normResult = normalizeAttributes(normalizedAttrs, categoryDefinitions);
+        if (normResult.error) {
+            const err = new Error(normResult.error);
+            err.statusCode = 400;
+            throw err;
+        }
+        normalizedAttrs = normResult.attributes;
+    }
+
+    const existingVariants = await Variant.find({ productId: product._id, isDeleted: false })
+        .session(session || null)
+        .lean();
+
+    if (findDuplicateVariant(existingVariants, normalizedAttrs)) {
+        const err = new Error('A variant with these attributes already exists');
+        err.statusCode = 409;
+        throw err;
+    }
+
+    const prepared = prepareVariantPayload(
+        { ...variantData, attributes: normalizedAttrs },
+        product.title,
+        existingVariants.length + 1,
+        storeId
+    );
+
+    const [createdVariant] = await Variant.create([
+        {
+            ...prepared,
+            productId: product._id,
+            storeId: product.storeId,
+            isActive: product.isActive,
+            isSuspended: product.isSuspended,
+        },
+    ], options);
+
+    await recomputeProductSummary(product._id, session);
+
+    const freshProduct = await Product.findById(product._id)
+        .populate('storeId', 'name logo address')
+        .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
+        .session(session || null)
+        .lean();
+
+    const allVariants = await Variant.find({ productId: product._id, isDeleted: false })
+        .session(session || null)
+        .lean();
+
+    return {
+        variant: createdVariant,
+        product: toProductResponse(freshProduct, allVariants),
+    };
+}
+
+/**
+ * تحديث صنف مفرد لمنتج قائم (Update Single Variant)
+ */
+async function updateSingleVariant({ productId, variantId, storeId, variantUpdates, session = null }) {
+    const options = session ? { session } : {};
+    const product = await Product.findOne({ _id: productId, storeId, isDeleted: false })
+        .populate('categoryId', 'variantAttributes')
+        .session(session || null);
+
+    if (!product) {
+        const err = new Error('Product not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    const variant = await Variant.findOne({ _id: variantId, productId: product._id, isDeleted: false })
+        .session(session || null);
+
+    if (!variant) {
+        const err = new Error('Variant not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    if (variantUpdates.attributes !== undefined) {
+        const categoryDefinitions = product.categoryId?.variantAttributes || [];
+        let normalizedAttrs = variantUpdates.attributes;
+
+        if (categoryDefinitions.length > 0 && hasVariantAttributes(normalizedAttrs)) {
+            const normResult = normalizeAttributes(normalizedAttrs, categoryDefinitions);
+            if (normResult.error) {
+                const err = new Error(normResult.error);
+                err.statusCode = 400;
+                throw err;
+            }
+            normalizedAttrs = normResult.attributes;
+        }
+
+        const otherVariants = await Variant.find({
+            productId: product._id,
+            _id: { $ne: variant._id },
+            isDeleted: false,
+        }).session(session || null).lean();
+
+        if (findDuplicateVariant(otherVariants, normalizedAttrs)) {
+            const err = new Error('A variant with these attributes already exists');
+            err.statusCode = 409;
+            throw err;
+        }
+
+        variant.attributes = normalizedAttrs;
+    }
+
+    if (variantUpdates.price !== undefined) variant.price = roundMoney(variantUpdates.price);
+    if (variantUpdates.stock !== undefined) variant.stock = Math.max(0, Math.floor(Number(variantUpdates.stock) || 0));
+    if (variantUpdates.compareAtPrice !== undefined) {
+        variant.compareAtPrice = variantUpdates.compareAtPrice ? roundMoney(variantUpdates.compareAtPrice) : null;
+    }
+    if (variantUpdates.sku !== undefined) variant.sku = String(variantUpdates.sku).trim().toUpperCase();
+    if (variantUpdates.status !== undefined) {
+        variant.status = variantUpdates.status;
+        variant.isActive = variantUpdates.status === STATUS.ACTIVE;
+    }
+
+    await variant.save(options);
+    await recomputeProductSummary(product._id, session);
+
+    const freshProduct = await Product.findById(product._id)
+        .populate('storeId', 'name logo address')
+        .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
+        .session(session || null)
+        .lean();
+
+    const allVariants = await Variant.find({ productId: product._id, isDeleted: false })
+        .session(session || null)
+        .lean();
+
+    return {
+        variant,
+        product: toProductResponse(freshProduct, allVariants),
+    };
+}
+
+/**
+ * حذف صنف مفرد (Soft Delete Single Variant)
+ */
+async function deleteSingleVariant({ productId, variantId, storeId, session = null }) {
+    const options = session ? { session } : {};
+    const product = await Product.findOne({ _id: productId, storeId, isDeleted: false })
+        .session(session || null);
+
+    if (!product) {
+        const err = new Error('Product not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    const variant = await Variant.findOne({ _id: variantId, productId: product._id, isDeleted: false })
+        .session(session || null);
+
+    if (!variant) {
+        const err = new Error('Variant not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    variant.isDeleted = true;
+    await variant.save(options);
+
+    await recomputeProductSummary(product._id, session);
+
+    const freshProduct = await Product.findById(product._id)
+        .populate('storeId', 'name logo address')
+        .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
+        .session(session || null)
+        .lean();
+
+    const allVariants = await Variant.find({ productId: product._id, isDeleted: false })
+        .session(session || null)
+        .lean();
+
+    return {
+        product: toProductResponse(freshProduct, allVariants),
+    };
+}
+
+/**
+ * تعديل حالة صنف مفرد (Variant Status Toggle)
+ */
+async function updateVariantStatus({ productId, variantId, storeId, status, session = null }) {
+    const options = session ? { session } : {};
+    const product = await Product.findOne({ _id: productId, storeId, isDeleted: false })
+        .session(session || null);
+
+    if (!product) {
+        const err = new Error('Product not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    const variant = await Variant.findOne({ _id: variantId, productId: product._id, isDeleted: false })
+        .session(session || null);
+
+    if (!variant) {
+        const err = new Error('Variant not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    variant.status = status;
+    variant.isActive = status === STATUS.ACTIVE;
+    await variant.save(options);
+
+    await recomputeProductSummary(product._id, session);
+
+    const freshProduct = await Product.findById(product._id)
+        .populate('storeId', 'name logo address')
+        .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
+        .session(session || null)
+        .lean();
+
+    const allVariants = await Variant.find({ productId: product._id, isDeleted: false })
+        .session(session || null)
+        .lean();
+
+    return {
+        product: toProductResponse(freshProduct, allVariants),
+    };
+}
+
+/**
+ * تعديل اعتماد صنف من قبل الإدارة (Admin Variant Approval)
+ */
+async function updateVariantApproval({ productId, variantId, approveStatus, session = null }) {
+    const options = session ? { session } : {};
+    const product = await Product.findOne({ _id: productId, isDeleted: false }).session(session || null);
+    if (!product) {
+        const err = new Error('Product not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    const variant = await Variant.findOne({ _id: variantId, productId: product._id, isDeleted: false })
+        .session(session || null);
+
+    if (!variant) {
+        const err = new Error('Variant not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    variant.approveStatus = approveStatus;
+    await variant.save(options);
+
+    await recomputeProductSummary(product._id, session);
+
+    const freshProduct = await Product.findById(product._id)
+        .populate('storeId', 'name logo address')
+        .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
+        .session(session || null)
+        .lean();
+
+    const allVariants = await Variant.find({ productId: product._id, isDeleted: false })
+        .session(session || null)
+        .lean();
+
+    return {
+        product: toProductResponse(freshProduct, allVariants),
+    };
+}
+
+/**
+ * تعديل اعتماد المنتج بالكامل من قبل الإدارة (Admin Product Approval)
+ */
+async function updateProductApproval({ productId, approveStatus, session = null }) {
+    const options = session ? { session } : {};
+    const product = await Product.findOne({ _id: productId, isDeleted: false }).session(session || null);
+    if (!product) {
+        const err = new Error('Product not found');
+        err.statusCode = 404;
+        throw err;
+    }
+
+    product.approveStatus = approveStatus;
+    await product.save(options);
+
+    await recomputeProductSummary(product._id, session);
+
+    const freshProduct = await Product.findById(product._id)
+        .populate('storeId', 'name logo address')
+        .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
+        .session(session || null)
+        .lean();
+
+    const allVariants = await Variant.find({ productId: product._id, isDeleted: false })
+        .session(session || null)
+        .lean();
+
+    return {
+        product: toProductResponse(freshProduct, allVariants),
+    };
 }
 
 /**
@@ -317,29 +615,31 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
  */
 async function getProductDetails(req, res, next, admin = false) {
     try {
-        const filter = { _id: req.params.id, isDeleted: { $ne: true } };
+        const filter = { _id: req.params.id, isDeleted: false };
         if (!admin) {
-            filter.isActive = true;
+            filter.status = STATUS.ACTIVE;
+            filter.approveStatus = APPROVE_STATUS.APPROVED;
             filter.isSuspended = false;
         }
 
         const product = await Product.findOne(filter)
-            .populate('storeId', 'name logo address balance')
-            .populate('categoryId', 'title slug icon allowedOptions')
+            .populate('storeId', 'name logo address')
+            .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
             .lean();
 
-        if (!product) {
-            return error(res, 404, 'المنتج غير موجود');
+        if (!product || !product.storeId || !product.categoryId) {
+            return error(res, 404, 'Product not found');
         }
 
-        const variantFilter = { productId: product._id };
+        const variantFilter = { productId: product._id, isDeleted: false };
         if (!admin) {
-            variantFilter.isActive = true;
+            variantFilter.status = STATUS.ACTIVE;
+            variantFilter.approveStatus = APPROVE_STATUS.APPROVED;
             variantFilter.isSuspended = { $ne: true };
         }
 
-        product.variants = await Variant.find(variantFilter).lean();
-        return success(res, 200, { product });
+        const variants = await Variant.find(variantFilter).lean();
+        return success(res, 200, { product: toProductResponse(product, variants) });
     } catch (err) {
         return next(err);
     }
@@ -359,15 +659,12 @@ async function listProducts(req, res, next, admin = false, sellerStoreId = null)
         const pageNumber = Math.max(1, Number(page) || 1);
         const pageSize = Math.min(100, Math.max(1, Number(limit) || 20));
 
-        const productFilter = createProductFilter(req.query, admin);
-        if (sellerStoreId) {
-            productFilter.storeId = sellerStoreId;
-        }
+        const productFilter = createProductFilter(req.query, admin, sellerStoreId);
 
         const sortOptions = {};
-        if (sort === 'price_asc') {
+        if (sort === 'price_asc' || sort === 'price-asc') {
             sortOptions.minPrice = 1;
-        } else if (sort === 'price_desc') {
+        } else if (sort === 'price_desc' || sort === 'price-desc') {
             sortOptions.maxPrice = -1;
         } else {
             sortOptions.createdAt = -1;
@@ -381,16 +678,23 @@ async function listProducts(req, res, next, admin = false, sellerStoreId = null)
                 .skip((pageNumber - 1) * pageSize)
                 .limit(pageSize)
                 .populate('storeId', 'name logo address')
-                .populate('categoryId', 'title slug icon allowedOptions')
+                .populate('categoryId', 'title slug icon allowedOptions variantAttributes')
                 .lean(),
         ]);
 
         const pageProductIds = products.map((p) => p._id);
-        const variants = await Variant.find({
+        const variantFilter = {
             productId: { $in: pageProductIds },
-            isActive: true,
-            isSuspended: { $ne: true },
-        }).lean();
+            isDeleted: false,
+        };
+
+        if (!admin && !sellerStoreId) {
+            variantFilter.status = STATUS.ACTIVE;
+            variantFilter.approveStatus = APPROVE_STATUS.APPROVED;
+            variantFilter.isSuspended = { $ne: true };
+        }
+
+        const variants = await Variant.find(variantFilter).lean();
 
         const variantsMap = new Map();
         variants.forEach((v) => {
@@ -399,13 +703,13 @@ async function listProducts(req, res, next, admin = false, sellerStoreId = null)
             variantsMap.get(key).push(v);
         });
 
-        const orderedProducts = products.map((p) => ({
-            ...p,
-            variants: variantsMap.get(String(p._id)) || [],
-        }));
+        const orderedProducts = products.map((p) =>
+            toProductResponse(p, variantsMap.get(String(p._id)) || [])
+        );
 
         return success(res, 200, {
             products: orderedProducts,
+            count: orderedProducts.length,
             pagination: {
                 page: pageNumber,
                 limit: pageSize,
@@ -418,10 +722,61 @@ async function listProducts(req, res, next, admin = false, sellerStoreId = null)
     }
 }
 
+/**
+ * إضافة خيار جديد لمنتج قائم وتطبيقه بشكل Idempotent على كافة الأصناف الحالية بقيمة افتراضية
+ */
+async function applyOptionAdditionIdempotent({ productId, newOption, defaultValue, session = null }) {
+    const options = session ? { session } : {};
+    const product = await Product.findById(productId).session(session || null);
+    if (!product) {
+        throw new Error('المنتج غير موجود');
+    }
+
+    const optKey = String(newOption.key).toLowerCase().trim();
+    const existingOptIndex = product.options.findIndex((o) => o.key === optKey);
+
+    if (existingOptIndex >= 0) {
+        if (!product.options[existingOptIndex].values.includes(defaultValue)) {
+            product.options[existingOptIndex].values.push(defaultValue);
+        }
+    } else {
+        product.options.push({
+            key: optKey,
+            source: newOption.source || 'DEFINED',
+            label: newOption.label || optKey,
+            type: newOption.type || 'TEXT',
+            unit: newOption.unit || null,
+            values: [defaultValue],
+        });
+    }
+
+    await product.save(options);
+
+    const existingVariants = await Variant.find({ productId: product._id, isDeleted: false }).session(session || null);
+
+    for (const v of existingVariants) {
+        const currentAttrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
+        if (!currentAttrs[optKey]) {
+            currentAttrs[optKey] = defaultValue;
+            v.attributes = currentAttrs;
+            await v.save(options);
+        }
+    }
+
+    await recomputeProductSummary(product._id, session);
+    return product;
+}
+
 module.exports = {
     MAX_VARIANTS_PER_PRODUCT,
     createProductDocuments,
     updateProductDocuments,
+    addSingleVariant,
+    updateSingleVariant,
+    deleteSingleVariant,
+    updateVariantStatus,
+    updateVariantApproval,
+    updateProductApproval,
     getProductDetails,
     listProducts,
     prepareVariantPayload,

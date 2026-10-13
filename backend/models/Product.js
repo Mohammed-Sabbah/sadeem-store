@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { STATUS, STATUS_VALUES, APPROVE_STATUS, APPROVE_STATUS_VALUES } = require('../constants/enums');
 
 const productOptionSchema = new mongoose.Schema(
     {
@@ -68,6 +69,11 @@ const productSchema = new mongoose.Schema(
             default: '',
             trim: true,
         },
+        image: {
+            type: String,
+            default: '',
+            trim: true,
+        },
         images: {
             type: [String],
             default: [],
@@ -101,6 +107,18 @@ const productSchema = new mongoose.Schema(
         isFeatured: {
             type: Boolean,
             default: false,
+            index: true,
+        },
+        status: {
+            type: String,
+            enum: STATUS_VALUES,
+            default: STATUS.ACTIVE,
+            index: true,
+        },
+        approveStatus: {
+            type: String,
+            enum: APPROVE_STATUS_VALUES,
+            default: APPROVE_STATUS.APPROVED,
             index: true,
         },
         isActive: {
@@ -142,5 +160,22 @@ productSchema.index({ storeId: 1, isActive: 1, isDeleted: 1, createdAt: -1 });
 productSchema.index({ categoryId: 1, isActive: 1, isDeleted: 1, inStock: 1 });
 productSchema.index({ isActive: 1, isDeleted: 1, minPrice: 1 });
 productSchema.index({ isActive: 1, isDeleted: 1, createdAt: -1 });
+productSchema.index({ status: 1, approveStatus: 1, isDeleted: 1 });
+
+// Pre-save hook لمزامنة الصور وحالة النشاط
+productSchema.pre('save', function (next) {
+    if (Array.isArray(this.images) && this.images.length > 0 && !this.image) {
+        this.image = this.images[0];
+    } else if (this.image && (!Array.isArray(this.images) || this.images.length === 0)) {
+        this.images = [this.image];
+    }
+
+    if (this.status) {
+        this.isActive = this.status === STATUS.ACTIVE;
+    } else if (this.isActive !== undefined) {
+        this.status = this.isActive ? STATUS.ACTIVE : STATUS.IN_ACTIVE;
+    }
+    next();
+});
 
 module.exports = mongoose.model('Product', productSchema);

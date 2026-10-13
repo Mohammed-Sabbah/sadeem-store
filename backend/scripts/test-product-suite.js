@@ -9,6 +9,12 @@ const OptionDefinition = require('../models/OptionDefinition');
 const {
     createProductDocuments,
     updateProductDocuments,
+    addSingleVariant,
+    updateSingleVariant,
+    deleteSingleVariant,
+    updateVariantStatus,
+    updateVariantApproval,
+    updateProductApproval,
     listProducts,
     getProductDetails,
     applyOptionAdditionIdempotent,
@@ -357,6 +363,79 @@ async function runProductSuite() {
         }
     } else {
         throw new Error('فشل خصم المخزون الذري!');
+    }
+
+    // ----------------------------------------------------------------
+    // TEST 10: إضافة صنف مفرد جديد عبر addSingleVariant واحتساب الملخص
+    // ----------------------------------------------------------------
+    const singleVariantResult = await addSingleVariant({
+        productId: createdProduct._id,
+        storeId: testStore1._id,
+        variantData: {
+            attributes: { color: 'white', size: 'xl' },
+            price: 250,
+            stock: 5,
+        },
+    });
+
+    const prodAfterAdd = await Product.findById(createdProduct._id).lean();
+    if (prodAfterAdd.maxPrice === 250 && prodAfterAdd.totalStock === 23) {
+        console.log('✔ [PASS] إضافة صنف مفرد عبر addSingleVariant وتحديث maxPrice والمخزون آلياً');
+    } else {
+        throw new Error(`فشل تحديث ملخص المنتج بعد إضافة الصنف المفرد: maxPrice=${prodAfterAdd.maxPrice}, totalStock=${prodAfterAdd.totalStock}`);
+    }
+
+    // ----------------------------------------------------------------
+    // TEST 11: تعديل صنف مفرد عبر updateSingleVariant وتحديث الملخص
+    // ----------------------------------------------------------------
+    const updatedVarResult = await updateSingleVariant({
+        productId: createdProduct._id,
+        variantId: singleVariantResult.variant._id,
+        storeId: testStore1._id,
+        variantUpdates: {
+            price: 300,
+            stock: 10,
+        },
+    });
+
+    const prodAfterUpdate = await Product.findById(createdProduct._id).lean();
+    if (prodAfterUpdate.maxPrice === 300 && prodAfterUpdate.totalStock === 28) {
+        console.log('✔ [PASS] تعديل صنف مفرد عبر updateSingleVariant وتحديث maxPrice=300 والمخزون=28 آلياً');
+    } else {
+        throw new Error(`فشل تحديث ملخص المنتج بعد تعديل الصنف المفرد: maxPrice=${prodAfterUpdate.maxPrice}, totalStock=${prodAfterUpdate.totalStock}`);
+    }
+
+    // ----------------------------------------------------------------
+    // TEST 12: حذف صنف مفرد ناعماً عبر deleteSingleVariant وتحديث الملخص
+    // ----------------------------------------------------------------
+    await deleteSingleVariant({
+        productId: createdProduct._id,
+        variantId: singleVariantResult.variant._id,
+        storeId: testStore1._id,
+    });
+
+    const prodAfterDelete = await Product.findById(createdProduct._id).lean();
+    if (prodAfterDelete.maxPrice === 210 && prodAfterDelete.totalStock === 18) {
+        console.log('✔ [PASS] حذف صنف مفرد ناعماً (Soft Delete) عبر deleteSingleVariant وعودة maxPrice=210 آلياً');
+    } else {
+        throw new Error(`فشل تحديث ملخص المنتج بعد الحذف الناعم: maxPrice=${prodAfterDelete.maxPrice}, totalStock=${prodAfterDelete.totalStock}`);
+    }
+
+    // ----------------------------------------------------------------
+    // TEST 13: تعديل حالة اعتماد الصنف والمنتج (Approval Lifecycle)
+    // ----------------------------------------------------------------
+    await updateVariantApproval({
+        productId: createdProduct._id,
+        variantId: targetVariant._id,
+        approveStatus: 'rejected',
+    });
+
+    const prodAfterReject = await Product.findById(createdProduct._id).lean();
+    // After rejecting targetVariant (stock 8), remaining active stock is 10
+    if (prodAfterReject.totalStock === 10) {
+        console.log('✔ [PASS] دورة موافقة الإدارة (Approval Lifecycle): رفض صنف يستثنيه فوراً من إحصاءات المتجر المعروضة');
+    } else {
+        throw new Error(`فشل استثناء الصنف المرفوض من إحصاءات المنتج: totalStock=${prodAfterReject.totalStock}`);
     }
 
     // ----------------------------------------------------------------

@@ -106,7 +106,111 @@ const validateVariantUpdate = [
     validateRequest,
 ];
 
+const { param } = require('express-validator');
+const { APPROVE_STATUS_VALUES } = require('../constants/enums');
+
+const validateVariantIds = [
+    param('id').isMongoId().withMessage('Product ID must be a valid Mongo id'),
+    param('variantId').isMongoId().withMessage('Variant ID must be a valid Mongo id'),
+    validateRequest,
+];
+
+const validateCreateVariant = [
+    body().custom((value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error('Variant data must be an object');
+        }
+        return true;
+    }),
+    body('price')
+        .exists()
+        .withMessage('Variant price is required')
+        .isFloat({ min: 0 })
+        .withMessage('Variant price must be a non-negative number')
+        .custom((val) => isMoney(val))
+        .withMessage('Variant price must have at most 2 decimal places'),
+    body('stock')
+        .exists()
+        .withMessage('Variant stock is required')
+        .isInt({ min: 0 })
+        .withMessage('Variant stock must be a non-negative integer'),
+    body('attributes')
+        .optional()
+        .custom((val) => {
+            if (val !== null && (typeof val !== 'object' || Array.isArray(val))) {
+                throw new Error('Attributes must be an object');
+            }
+            return true;
+        }),
+    body('sku')
+        .optional()
+        .isString()
+        .trim(),
+    body('compareAtPrice')
+        .optional({ nullable: true })
+        .isFloat({ min: 0 })
+        .withMessage('Variant compareAtPrice must be a non-negative number')
+        .custom((val) => isMoney(val))
+        .withMessage('Variant compareAtPrice must have at most 2 decimal places'),
+    validateRequest,
+];
+
+const validateVariantPatch = [
+    body().custom((value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error('Variant patch data must be an object');
+        }
+        const patchFields = ['price', 'stock', 'compareAtPrice', 'attributes', 'sku', 'image', 'images', 'status', 'isActive'];
+        const keys = Object.keys(value);
+        if (keys.length === 0) {
+            throw new Error('Provide at least one variant field to update');
+        }
+        if (keys.some((k) => !patchFields.includes(k))) {
+            throw new Error('Variant contains unsupported fields');
+        }
+        return true;
+    }),
+    body('price')
+        .optional()
+        .isFloat({ min: 0 })
+        .withMessage('Variant price must be a non-negative number')
+        .custom((val) => isMoney(val))
+        .withMessage('Variant price must have at most 2 decimal places'),
+    body('stock')
+        .optional()
+        .isInt({ min: 0 })
+        .withMessage('Variant stock must be a non-negative integer'),
+    body('compareAtPrice')
+        .optional({ nullable: true })
+        .isFloat({ min: 0 })
+        .withMessage('Variant compareAtPrice must be a non-negative number')
+        .custom((val) => isMoney(val))
+        .withMessage('Variant compareAtPrice must have at most 2 decimal places'),
+    body('attributes')
+        .optional()
+        .custom((val) => {
+            if (val !== null && (typeof val !== 'object' || Array.isArray(val))) {
+                throw new Error('Attributes must be an object');
+            }
+            return true;
+        }),
+    validateRequest,
+];
+
+const validateVariantApproval = [
+    body('approveStatus')
+        .exists()
+        .withMessage('approveStatus is required')
+        .isIn(APPROVE_STATUS_VALUES)
+        .withMessage(`approveStatus must be one of: ${APPROVE_STATUS_VALUES.join(', ')}`),
+    validateRequest,
+];
+
 module.exports = {
     validateVariant,
     validateVariantUpdate,
+    validateVariantIds,
+    validateCreateVariant,
+    validateVariantPatch,
+    validateVariantApproval,
 };

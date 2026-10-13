@@ -35,7 +35,7 @@ async function withMongoTransaction(callback) {
     }
 }
 
-module.exports = {
-    connectDB,
-    withMongoTransaction,
-};
+connectDB.connectDB = connectDB;
+connectDB.withMongoTransaction = withMongoTransaction;
+
+module.exports = connectDB;

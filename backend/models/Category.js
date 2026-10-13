@@ -35,6 +35,21 @@ const categorySchema = new mongoose.Schema(
             type: [String],
             default: [],
         },
+        variantAttributes: {
+            type: [
+                {
+                    name: {
+                        type: String,
+                        trim: true,
+                    },
+                    values: {
+                        type: [String],
+                        default: [],
+                    },
+                },
+            ],
+            default: [],
+        },
     },
     {
         versionKey: false,

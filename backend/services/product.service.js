@@ -185,8 +185,8 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
         const originalVariantIds = originalVariants.map((v) => v._id);
 
         const requestedExistingIds = variants
-            .filter((v) => v._id)
-            .map((v) => String(v._id));
+            .filter((v) => v._id || v.id)
+            .map((v) => String(v._id || v.id));
 
         const existingFound = await Variant.find({
             _id: { $in: requestedExistingIds },
@@ -202,7 +202,7 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
 
         try {
             const newVariantsPayload = variants
-                .filter((v) => !v._id)
+                .filter((v) => !v._id && !v.id)
                 .map((raw, idx) => {
                     const prepared = prepareVariantPayload(raw, productUpdates?.title || product.title, idx + 1, product.storeId);
                     return {
@@ -220,9 +220,26 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
 
             const updatedVariantIds = [];
 
-            for (const v of variants.filter((item) => item._id)) {
+            for (const v of variants.filter((item) => item._id || item.id)) {
+                const variantId = v._id || v.id;
                 const updates = { ...v };
                 delete updates._id;
+                delete updates.id;
+                delete updates.productId;
+                delete updates.storeId;
+                delete updates.isDeleted;
+                delete updates.isSuspended;
+                delete updates.suspensionReason;
+                delete updates.approveStatus;
+                delete updates.createdAt;
+                delete updates.updatedAt;
+                delete updates.__v;
+
+                if (updates.status && updates.isActive === undefined) {
+                    updates.isActive = updates.status === 'ACTIVE';
+                } else if (updates.isActive !== undefined && updates.status === undefined) {
+                    updates.status = updates.isActive ? 'ACTIVE' : 'INACTIVE';
+                }
 
                 if (updates.sku) updates.sku = String(updates.sku).trim().toUpperCase();
                 if (updates.price !== undefined) updates.price = roundMoney(updates.price);
@@ -233,7 +250,7 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
                 updates.storeId = product.storeId;
 
                 const updated = await Variant.findOneAndUpdate(
-                    { _id: v._id, productId: product._id, isDeleted: false },
+                    { _id: variantId, productId: product._id, isDeleted: false },
                     { $set: updates },
                     { new: true, runValidators: true, ...options }
                 );

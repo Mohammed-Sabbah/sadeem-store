@@ -35,6 +35,7 @@ async function createProduct(req, res, next) {
             simpleStock,
             simpleSku,
             isFeatured,
+            isAnonymousVendor,
             status,
             isActive,
         } = req.body;
@@ -70,6 +71,7 @@ async function createProduct(req, res, next) {
                     images: galleryImages,
                     options: options || [],
                     isFeatured: isFeatured || false,
+                    isAnonymousVendor: isAnonymousVendor || false,
                     status: status || (isActive === false ? STATUS.IN_ACTIVE : STATUS.ACTIVE),
                     isActive: isActive !== undefined ? isActive : (status !== STATUS.IN_ACTIVE),
                     approveStatus: APPROVE_STATUS.APPROVED,
@@ -128,6 +130,7 @@ async function updateProduct(req, res, next) {
             options,
             variants,
             isFeatured,
+            isAnonymousVendor,
             status,
             isActive,
         } = req.body;
@@ -149,6 +152,7 @@ async function updateProduct(req, res, next) {
 
         if (options !== undefined) productUpdates.options = options;
         if (isFeatured !== undefined) productUpdates.isFeatured = isFeatured;
+        if (isAnonymousVendor !== undefined) productUpdates.isAnonymousVendor = isAnonymousVendor;
         if (status !== undefined) {
             productUpdates.status = status;
             productUpdates.isActive = status === STATUS.ACTIVE;

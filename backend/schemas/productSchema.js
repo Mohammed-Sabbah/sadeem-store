@@ -13,8 +13,12 @@ const productFields = [
     'variants',
     'isFeatured',
     'isActive',
+    'isAnonymousVendor',
     'status',
     'approveStatus',
+    'minPrice',
+    'maxPrice',
+    'totalStock',
 ];
 
 const createProductFields = [
@@ -321,6 +325,9 @@ const validateAdminProductStatus = [
         }
         return true;
     }),
+    validateRequest,
+];
+
 const { STATUS_VALUES, APPROVE_STATUS_VALUES } = require('../constants/enums');
 
 const validateProductStatus = [

@@ -126,6 +126,11 @@ const productSchema = new mongoose.Schema(
             default: true,
             index: true,
         },
+        isAnonymousVendor: {
+            type: Boolean,
+            default: false,
+            index: true,
+        },
         isDeleted: {
             type: Boolean,
             default: false,

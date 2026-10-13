@@ -4,6 +4,7 @@ const { isMoney } = require('../utils/money');
 
 const variantFields = [
     '_id',
+    'id',
     'sku',
     'attributes',
     'attrKey',
@@ -15,6 +16,16 @@ const variantFields = [
     'price',
     'compareAtPrice',
     'isActive',
+    'status',
+    'productId',
+    'storeId',
+    'approveStatus',
+    'isDeleted',
+    'isSuspended',
+    'suspensionReason',
+    'createdAt',
+    'updatedAt',
+    '__v',
 ];
 
 function validateVariants(value, allowExisting) {
@@ -36,12 +47,18 @@ function validateVariants(value, allowExisting) {
             throw new Error(`Variant contains unsupported fields: ${unsupported.join(', ')}`);
         }
 
-        const hasId = Object.prototype.hasOwnProperty.call(variant, '_id');
-        if (hasId && (!allowExisting || !/^[0-9a-fA-F]{24}$/.test(String(variant._id)))) {
+        const rawId = variant._id || variant.id;
+        const hasId = rawId !== undefined && rawId !== null;
+        if (hasId && (!allowExisting || !/^[0-9a-fA-F]{24}$/.test(String(rawId)))) {
             throw new Error(allowExisting ? 'Invalid variant ID' : 'Variant id is not allowed when creating a product');
         }
-        if (allowExisting && hasId && Object.keys(variant).length === 1) {
-            throw new Error('At least one variant field is required for an update');
+        if (allowExisting && hasId) {
+            const nonMetaKeys = Object.keys(variant).filter(
+                (k) => !['_id', 'id', 'productId', 'storeId', 'createdAt', 'updatedAt', '__v'].includes(k)
+            );
+            if (nonMetaKeys.length === 0) {
+                throw new Error('At least one variant field is required for an update');
+            }
         }
         if (!hasId && (variant.stock === undefined || variant.price === undefined)) {
             throw new Error('New variants require stock and price');

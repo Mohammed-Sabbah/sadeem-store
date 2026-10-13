@@ -204,19 +204,23 @@ export const merchantService = {
    */
   async getMyProducts(): Promise<{ success: boolean; data: ProductItem[] }> {
     let prods: ProductItem[] = [];
+    let fetchedFromApi = false;
     try {
       const res = await getRequest<{ products: any[] }>('/api/products/merchant/my-products');
-      if (res.success && res.data?.products) {
+      if (res.success && Array.isArray(res.data?.products)) {
+        fetchedFromApi = true;
         prods = res.data.products.map((p) => ({
           ...p,
           name: p.title || p.name || 'بدون عنوان',
+          title: p.title || p.name || 'بدون عنوان',
         }));
+        saveLocalProducts(prods);
       }
     } catch {
-      // Fallback during frontend-first dev
+      // Fallback during offline / network error
     }
 
-    if (prods.length === 0) {
+    if (!fetchedFromApi) {
       prods = getLocalProducts();
     }
 
@@ -253,21 +257,30 @@ export const merchantService = {
       options: formData.isSimple ? [] : formData.options,
       isFeatured: formData.isFeatured,
       isActive: formData.isActive,
+      isAnonymousVendor: Boolean(formData.isAnonymousVendor),
       variants: formData.isSimple
         ? [
             {
               price: Number(formData.simplePrice) || 0,
               stock: Number(formData.simpleStock) || 0,
               sku: formData.simpleSku || '',
-              compareAtPrice: formData.simpleCompareAtPrice,
+              compareAtPrice: formData.simpleCompareAtPrice ? Number(formData.simpleCompareAtPrice) : null,
               attributes: {},
             },
           ]
-        : formData.variants.map((v) => ({
-            ...v,
-            price: Number(v.price) || 0,
-            stock: Number(v.stock) || 0,
-          })),
+        : formData.variants.map((v) => {
+            const item: any = {
+              sku: v.sku,
+              attributes: v.attributes || {},
+              price: Number(v.price) || 0,
+              stock: Number(v.stock) || 0,
+              compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+              isActive: v.isActive !== undefined ? v.isActive : true,
+            };
+            if (v.images) item.images = v.images;
+            if (v.image) item.image = v.image;
+            return item;
+          }),
     };
 
     try {
@@ -276,10 +289,11 @@ export const merchantService = {
         const prod = {
           ...res.data.product,
           name: res.data.product.title || res.data.product.name,
+          title: res.data.product.title || res.data.product.name,
         };
         const current = getLocalProducts();
-        saveLocalProducts([prod, ...current]);
-        return { success: true, data: prod, message: res.message };
+        saveLocalProducts([prod, ...current.filter((p) => p._id !== prod._id)]);
+        return { success: true, data: prod, message: res.message || 'تم حفظ ونشر المنتج بنجاح' };
       }
     } catch {
       // Offline fallback handling below
@@ -352,7 +366,10 @@ export const merchantService = {
   async toggleProduct(productId: string, currentActive: boolean): Promise<{ success: boolean; data?: any }> {
     const nextState = !currentActive;
     try {
-      const res = await patchRequest(`/api/products/${productId}/toggle`, { isActive: nextState });
+      const res = await patchRequest(`/api/products/${productId}/status`, {
+        isActive: nextState,
+        status: nextState ? 'ACTIVE' : 'INACTIVE',
+      });
       if (res.success) {
         // sync local
         const current = getLocalProducts().map((p) => (p._id === productId ? { ...p, isActive: nextState } : p));
@@ -377,7 +394,7 @@ export const merchantService = {
     variantId?: string
   ): Promise<{ success: boolean; data?: ProductItem }> {
     const currentProducts = getLocalProducts();
-    const cleanStock = Math.max(0, Number(newStock) || 0);
+    const cleanStock = Math.max(0, Math.floor(Number(newStock) || 0));
 
     const updatedProducts = currentProducts.map((p) => {
       if (p._id !== productId) return p;
@@ -409,13 +426,11 @@ export const merchantService = {
     const updatedProd = updatedProducts.find((p) => p._id === productId);
 
     try {
-      const payload: any = {};
       if (variantId) {
-        payload.variants = [{ _id: variantId, stock: cleanStock }];
+        await patchRequest(`/api/products/${productId}/variants/${variantId}`, { stock: cleanStock });
       } else {
-        payload.totalStock = cleanStock;
+        await patchRequest(`/api/products/${productId}`, { stock: cleanStock });
       }
-      await patchRequest(`/api/products/${productId}`, payload);
     } catch {
       // offline fallback is already saved
     }

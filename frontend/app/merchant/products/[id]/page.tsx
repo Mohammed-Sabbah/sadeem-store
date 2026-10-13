@@ -188,6 +188,22 @@ function IconX({ className = 'w-3.5 h-3.5' }: { className?: string }) {
   );
 }
 
+function IconTruck({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.25V4.875c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v9.375m12-9.375H3.375" />
+    </svg>
+  );
+}
+
+function IconClock({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  );
+}
+
 // Color Swatches Palette (Accurate RGB/Hex for Central Gaza Merchants)
 const COLOR_SWATCHES: Record<string, { hex: string; border?: boolean }> = {
   'أسود': { hex: '#18181B' },
@@ -920,12 +936,6 @@ export default function MerchantProductStudioPage() {
                 >
                   {isActive ? 'معروض بالمتجر' : 'مخفي مؤقتاً'}
                 </span>
-                {isFeatured && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200/80 flex items-center gap-1">
-                    <IconStarSolid className="w-3 h-3 text-amber-600" />
-                    <span>مميز بالصدارة</span>
-                  </span>
-                )}
               </div>
 
               <div className="flex items-center gap-3 text-xs mt-1 text-brand-muted">
@@ -1219,64 +1229,75 @@ export default function MerchantProductStudioPage() {
             )}
           </div>
 
-          {/* Customer Reviews & Feedback Section */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/60 shadow-xs">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-brand-border/40">
+          {/* Customer Reviews & Feedback Section (Serene Quiet Luxury, Zero Card-in-Card Noise) */}
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/60 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3.5 border-b border-brand-border/40">
               <div>
                 <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-amber-500" />
-                  <span>تقييمات وملاحظات الزبائن ({SAMPLE_REVIEWS.length})</span>
+                  <IconStarSolid className="w-4 h-4 text-amber-500" />
+                  <span>تقييمات ومعاينة الزبائن</span>
                 </h2>
                 <p className="text-[11px] text-brand-muted mt-0.5">
-                  انطباعات حقيقية من زبائن استلموا وعاينوا هذا الصنف في المحافظة الوسطى
+                  انطباعات موثقة من زبائن استلموا وعاينوا هذا الصنف عند باب المنزل في المحافظة الوسطى
                 </p>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-amber-50/80 px-3 py-1 rounded-xl border border-amber-200/70 text-amber-900 text-xs font-bold self-start sm:self-auto">
+              <div className="flex items-center gap-2 self-start sm:self-auto bg-brand-surface/70 px-3 py-1.5 rounded-xl border border-brand-border/70 text-xs">
+                <span className="text-sm font-black text-brand-dark">4.8</span>
                 <div className="flex items-center gap-0.5 text-amber-500">
-                  <IconStarSolid className="w-3.5 h-3.5" />
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <IconStarSolid key={i} className="w-3 h-3 text-amber-500" />
+                  ))}
                 </div>
-                <span>4.8 من 5</span>
-                <span className="text-[11px] text-amber-700 font-normal">(ممتاز جداً)</span>
+                <span className="text-[11px] text-brand-muted font-bold mr-1">
+                  • {SAMPLE_REVIEWS.length} تقييمات
+                </span>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="divide-y divide-brand-border/40">
               {SAMPLE_REVIEWS.map((rev) => (
-                <div
-                  key={rev.id}
-                  className="p-4 rounded-xl bg-brand-surface/20 border border-brand-border/40 space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-brand-dark">{rev.authorName}</span>
-                      <span className="text-[10px] text-brand-muted">({rev.city})</span>
+                <div key={rev.id} className="py-3.5 first:pt-0 last:pb-0 space-y-1.5">
+                  {/* Top metadata line: Author name, city, verification, date, and rating stars */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                      <span className="font-bold text-brand-dark">{rev.authorName}</span>
+                      <span className="text-brand-muted/40">•</span>
+                      <span className="text-[11px] text-brand-muted">{rev.city}</span>
                       {rev.verifiedPurchase && (
-                        <span className="text-[10px] font-bold text-brand-trust bg-brand-trust-soft px-2 py-0.5 rounded-md border border-brand-trust/20 flex items-center gap-1">
-                          <IconCheck className="w-3 h-3" />
-                          <span>مشترٍ موثق</span>
-                        </span>
+                        <>
+                          <span className="text-brand-muted/40">•</span>
+                          <span className="text-[11px] font-bold text-brand-trust flex items-center gap-0.5">
+                            <IconCheck className="w-3 h-3" />
+                            <span>معاينة مؤكدة</span>
+                          </span>
+                        </>
                       )}
+                      <span className="text-brand-muted/40">•</span>
+                      <span className="text-[11px] text-brand-muted">{rev.date}</span>
                     </div>
-                    <div className="flex items-center gap-1 text-xs">
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: rev.rating }).map((_, i) => (
-                          <IconStarSolid key={i} className="w-3.5 h-3.5 text-amber-500" />
-                        ))}
-                      </div>
-                      <span className="text-[10px] text-brand-muted mr-1.5">{rev.date}</span>
+
+                    <div className="flex items-center gap-0.5 text-amber-500 self-start sm:self-auto">
+                      {Array.from({ length: rev.rating }).map((_, i) => (
+                        <IconStarSolid key={i} className="w-3 h-3" />
+                      ))}
                     </div>
                   </div>
 
+                  {/* Comment text */}
+                  <p className="text-xs text-brand-dark/90 leading-relaxed font-normal">
+                    {rev.comment}
+                  </p>
+
+                  {/* Purchased variant summary */}
                   {rev.variantSummary && (
-                    <div className="text-[10px] text-brand-muted font-bold">
-                      القطعة المشتراة: {rev.variantSummary}
+                    <div className="text-[10px] text-brand-muted flex items-center gap-1.5 pt-0.5">
+                      <span className="font-medium text-brand-muted/70">المواصفات المشتراة:</span>
+                      <span className="font-bold text-brand-dark/80 bg-brand-surface/80 px-2 py-0.5 rounded-md border border-brand-border/50">
+                        {rev.variantSummary}
+                      </span>
                     </div>
                   )}
-
-                  <p className="text-xs text-brand-dark/90 leading-relaxed font-medium">
-                    «{rev.comment}»
-                  </p>
                 </div>
               ))}
             </div>
@@ -1299,22 +1320,24 @@ export default function MerchantProductStudioPage() {
             </h2>
 
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                  اسم الصنف المعروض للزبائن *
-                </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="مثال: قميص كتان سديمي ناعم"
-                  className="w-full h-11 px-3.5 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-brand-dark mb-1.5">التصنيف المعتمد *</label>
+                  <label className="block text-xs font-bold text-brand-dark mb-1.5">
+                    اسم الصنف المعروض للزبائن <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="مثال: قميص كتان سديمي ناعم"
+                    className="w-full h-11 px-3.5 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-brand-dark mb-1.5">
+                    التصنيف المعتمد <span className="text-red-500">*</span>
+                  </label>
                   <div className="relative flex items-center">
                     <IconPackage className="w-4 h-4 text-brand-muted absolute right-3.5 pointer-events-none" />
                     <select
@@ -1330,30 +1353,6 @@ export default function MerchantProductStudioPage() {
                     </select>
                     <IconChevronDown className="w-3.5 h-3.5 text-brand-muted absolute left-3.5 pointer-events-none" />
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-brand-dark mb-1.5">الظهور في الصدارة</label>
-                  <label
-                    className={`flex items-center justify-between h-11 px-3.5 rounded-xl border text-xs font-bold cursor-pointer select-none transition-all ${
-                      isFeatured
-                        ? 'bg-amber-50/70 text-amber-950 border-amber-300 ring-2 ring-amber-400/20'
-                        : 'bg-brand-surface/40 text-brand-dark border-brand-border/70 hover:bg-brand-surface/70'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <IconStarSolid
-                        className={`w-4 h-4 ${isFeatured ? 'text-amber-500' : 'text-brand-muted/40'}`}
-                      />
-                      <span>إبراز الصنف في واجهة المتجر الرئيسية</span>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={isFeatured}
-                      onChange={(e) => setIsFeatured(e.target.checked)}
-                      className="w-4 h-4 accent-amber-600 rounded cursor-pointer"
-                    />
-                  </label>
                 </div>
               </div>
 
@@ -1663,12 +1662,12 @@ export default function MerchantProductStudioPage() {
                         setActiveValuePopoverIdx(null);
                         setActiveColorPhotoPopover(null);
                       }}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-surface hover:bg-brand-card text-brand-dark transition-all shadow-2xs active:scale-[0.98] cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-black rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover active:scale-[0.98] transition-all shadow-xs cursor-pointer"
                     >
-                      <IconPlus className="w-3.5 h-3.5 text-brand-primary" />
+                      <IconPlus className="w-3.5 h-3.5 text-white" />
                       <span>إضافة خيار جديد</span>
                       <IconChevronDown
-                        className={`w-3.5 h-3.5 text-brand-muted transition-transform duration-200 ${
+                        className={`w-3.5 h-3.5 text-white/80 transition-transform duration-200 ${
                           isAddOptionOpen ? 'rotate-180' : ''
                         }`}
                       />
@@ -1774,12 +1773,12 @@ export default function MerchantProductStudioPage() {
                                   setIsAddOptionOpen(false);
                                   setActiveColorPhotoPopover(null);
                                 }}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-card hover:bg-brand-surface text-brand-dark transition-all shadow-2xs active:scale-[0.98] cursor-pointer"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl border border-brand-primary/40 bg-brand-primary-soft text-brand-primary hover:bg-brand-primary hover:text-white transition-all shadow-2xs active:scale-[0.98] cursor-pointer group"
                               >
-                                <IconPlus className="w-3 h-3 text-brand-primary" />
+                                <IconPlus className="w-3 h-3 text-brand-primary group-hover:text-white transition-colors" />
                                 <span>{isColor ? 'إضافة لون...' : isSize ? 'إضافة مقاس...' : 'إضافة قيمة...'}</span>
                                 <IconChevronDown
-                                  className={`w-3 h-3 text-brand-muted transition-transform duration-200 ${
+                                  className={`w-3 h-3 text-brand-primary group-hover:text-white transition-transform duration-200 ${
                                     activeValuePopoverIdx === optIdx ? 'rotate-180' : ''
                                   }`}
                                 />
@@ -2174,66 +2173,87 @@ export default function MerchantProductStudioPage() {
 
               {/* Step 5: Generated Combinations List (Clean Tabular Layout) */}
               <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-brand-border/40">
-                  <div>
-                    <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
-                        5
-                      </span>
-                      <span>قائمة المقاسات والأصناف المتوفرة ({variants.length})</span>
-                    </h2>
-                    <p className="text-[11px] text-brand-muted mt-0.5">
-                      تتولد التوليفات تلقائياً. يمكنك توحيد السعر بنقرة واحدة، أو تعديل أي مقاس بشكل منفصل.
-                    </p>
-                  </div>
-
-                  {/* Fast Bulk Toolbar */}
-                  <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto bg-brand-surface/60 p-1.5 rounded-xl border border-brand-border/70">
-                    <span className="text-[10px] font-bold text-brand-muted px-1.5 hidden md:inline">
-                      إجراءات سريعة:
+                <div className="pb-3 border-b border-brand-border/40">
+                  <h2 className="text-sm font-black text-brand-dark flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-black flex items-center justify-center">
+                      5
                     </span>
-                    <div className="flex items-center gap-1 bg-brand-card rounded-lg border border-brand-border/70 px-2 py-0.5 shadow-2xs">
-                      <span className="text-[10px] text-brand-muted font-bold">₪</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        placeholder="السعر"
-                        value={bulkPriceInput}
-                        onChange={(e) => setBulkPriceInput(e.target.value)}
-                        className="w-16 h-7 text-xs font-bold text-brand-dark bg-transparent focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleApplyBulkPrice}
-                        disabled={!bulkPriceInput}
-                        className="px-2 py-1 bg-brand-surface hover:bg-brand-primary hover:text-white text-brand-dark text-[10px] font-bold rounded-md transition-colors disabled:opacity-30 cursor-pointer active:scale-95"
-                      >
-                        توحيد السعر
-                      </button>
+                    <span>قائمة المقاسات والأصناف المتوفرة ({variants.length})</span>
+                  </h2>
+                  <p className="text-[11px] text-brand-muted mt-0.5">
+                    تتولد التوليفات تلقائياً من الخيارات المحددة. يمكنك توحيد الأسعار والكميات بنقرة واحدة، أو تعديل كل مقاس بشكل منفصل.
+                  </p>
+                </div>
+
+                {/* Prominent Fast Bulk Operations Banner (Unmissable, High Contrast & Tactile) */}
+                {variants.length > 0 && (
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-brand-surface/70 border border-brand-primary/25 shadow-2xs space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                      <div className="flex items-center gap-2 text-brand-dark">
+                        <span className="w-6 h-6 rounded-lg bg-brand-primary/15 text-brand-primary flex items-center justify-center shrink-0">
+                          <IconSpark className="w-3.5 h-3.5 text-brand-primary" />
+                        </span>
+                        <span className="text-xs font-black text-brand-dark">
+                          لوحة الإجراءات السريعة (تطبيق موحد على جميع الأصناف الـ {variants.length})
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-brand-muted font-medium">
+                        وفر وقتك: حدد سعراً أو مخزوناً ليتم تطبيقه فورياً على كافة التوليفات
+                      </span>
                     </div>
 
-                    <div className="flex items-center gap-1 bg-brand-card rounded-lg border border-brand-border/70 px-2 py-0.5 shadow-2xs">
-                      <IconPackage className="w-3 h-3 text-brand-muted" />
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="المخزون"
-                        value={bulkStockInput}
-                        onChange={(e) => setBulkStockInput(e.target.value)}
-                        className="w-14 h-7 text-xs font-bold text-brand-dark bg-transparent focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleApplyBulkStock}
-                        disabled={!bulkStockInput}
-                        className="px-2 py-1 bg-brand-surface hover:bg-brand-primary hover:text-white text-brand-dark text-[10px] font-bold rounded-md transition-colors disabled:opacity-30 cursor-pointer active:scale-95"
-                      >
-                        توحيد المخزون
-                      </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      {/* Bulk Price Capsule */}
+                      <div className="flex items-center gap-2 bg-brand-card p-1.5 pr-3 rounded-xl border border-brand-border/80 shadow-2xs">
+                        <span className="text-xs font-black text-brand-muted shrink-0">السعر الموحد:</span>
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                          <span className="text-xs font-bold text-brand-primary">₪</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            placeholder="مثال: 45"
+                            value={bulkPriceInput}
+                            onChange={(e) => setBulkPriceInput(e.target.value)}
+                            className="w-full h-8 text-xs font-black text-brand-dark bg-transparent focus:outline-none"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleApplyBulkPrice}
+                          disabled={!bulkPriceInput}
+                          className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-primary-hover active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0 shadow-2xs"
+                        >
+                          تطبيق على الكل
+                        </button>
+                      </div>
+
+                      {/* Bulk Stock Capsule */}
+                      <div className="flex items-center gap-2 bg-brand-card p-1.5 pr-3 rounded-xl border border-brand-border/80 shadow-2xs">
+                        <span className="text-xs font-black text-brand-muted shrink-0">المخزون الموحد:</span>
+                        <div className="flex items-center gap-1 flex-1 min-w-0">
+                          <IconPackage className="w-3.5 h-3.5 text-brand-trust shrink-0" />
+                          <input
+                            type="number"
+                            min="0"
+                            placeholder="مثال: 12"
+                            value={bulkStockInput}
+                            onChange={(e) => setBulkStockInput(e.target.value)}
+                            className="w-full h-8 text-xs font-black text-brand-dark bg-transparent focus:outline-none px-1"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleApplyBulkStock}
+                          disabled={!bulkStockInput}
+                          className="px-3.5 py-1.5 bg-brand-trust text-white text-xs font-bold rounded-lg hover:bg-brand-trust/90 active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0 shadow-2xs"
+                        >
+                          تطبيق على الكل
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Streamlined Variants Table / List */}
                 {variants.length === 0 ? (
@@ -2553,66 +2573,181 @@ export default function MerchantProductStudioPage() {
       )}
 
       {/* ========================================================= */}
-      {/* TAB 3: SETTINGS & DANGER ZONE                             */}
+      {/* TAB 3: SETTINGS & POLICIES (Apple-Grade Quiet Luxury)     */}
       {/* ========================================================= */}
       {activeTab === 'settings' && (
-        <div className="space-y-6 animate-fadeIn max-w-3xl">
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-brand-border/60 shadow-xs space-y-5">
-            <h2 className="text-sm font-black text-brand-dark pb-3 border-b border-brand-border/40">
-              إعدادات العرض والعمليات الميدانية
-            </h2>
-
-            {/* Visibility Toggle */}
-            <div className="flex items-center justify-between p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60">
+        <div className="space-y-6 animate-fadeIn max-w-4xl">
+          {/* 1. Storefront Visibility & Live State */}
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-brand-border/40">
+              <span className="w-8 h-8 rounded-xl bg-brand-surface border border-brand-border/70 flex items-center justify-center text-brand-dark">
+                <IconEye className="w-4 h-4 text-brand-primary" />
+              </span>
               <div>
-                <div className="text-xs font-black text-brand-dark">ظهور الصنف في المتجر</div>
-                <div className="text-[11px] text-brand-muted mt-0.5">
-                  عند الإخفاء، يتوقف الصنف فورياً عن الظهور للزبائن دون حذف أي بيانات أو أصناف.
-                </div>
+                <h2 className="text-sm font-black text-brand-dark">حالة العرض في متجر سَدِيم</h2>
+                <p className="text-[11px] text-brand-muted mt-0.5">
+                  تحكم فوري في ظهور الصنف للزبائن في المحافظة الوسطى
+                </p>
               </div>
+            </div>
+
+            <div className="p-4 sm:p-5 rounded-2xl bg-brand-surface/40 border border-brand-border/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      isActive ? 'bg-brand-trust shadow-xs animate-pulse' : 'bg-brand-muted/60'
+                    }`}
+                  />
+                  <span className="text-xs font-black text-brand-dark">
+                    {isActive ? 'الصنف معروض ونشط بالمتجر' : 'الصنف مخفي مؤقتاً عن الزبائن'}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      isActive
+                        ? 'bg-brand-trust-soft text-brand-trust border-brand-trust/30'
+                        : 'bg-brand-card text-brand-muted border-brand-border/70'
+                    }`}
+                  >
+                    {isActive ? 'متاح للطلب' : 'مسودة غير معروضة'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  {isActive
+                    ? 'الصنف ظاهر لزبائن دير البلح والنصيرات ومتاح للإضافة للسلة الموحدة والمعاينة عند الباب.'
+                    : 'الصنف محجوب تماماً عن واجهة المتجر دون حذف بياناته أو كميات مخزونه. يمكنك إعادة تنشيطه بأي وقت.'}
+                </p>
+              </div>
+
+              {/* iOS-Style Tactile Toggle Switch */}
               <button
                 type="button"
                 onClick={() => setIsActive(!isActive)}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer active:scale-[0.97] ${
-                  isActive
-                    ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100'
-                    : 'border-brand-trust text-brand-trust bg-brand-trust-soft hover:bg-brand-trust-soft/80'
+                className={`relative inline-flex h-7 w-13 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none self-start sm:self-center ${
+                  isActive ? 'bg-brand-trust' : 'bg-brand-border'
                 }`}
+                role="switch"
+                aria-checked={isActive}
+                title={isActive ? 'تعطيل وإخفاء الصنف' : 'تفعيل وإظهار الصنف'}
               >
-                {isActive ? 'إخفاء مؤقت عن الزبائن' : 'إعادة إظهار الصنف'}
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    isActive ? '-translate-x-6' : 'translate-x-0'
+                  }`}
+                />
               </button>
-            </div>
-
-            {/* Operational Policies Summary */}
-            <div className="p-4 rounded-xl bg-brand-surface/20 border border-brand-border/40 space-y-2 text-xs">
-              <div className="font-bold text-brand-dark">سياسات سَدِيم الميدانية المطبقة على الصنف:</div>
-              <ul className="text-[11px] text-brand-muted space-y-1.5 list-disc list-inside">
-                <li>
-                  <span className="text-brand-dark font-bold">طرد موحد 8 ₪:</span> يتم شحن هذا الصنف في طرد موحد لزبائن المحافظة الوسطى.
-                </li>
-                <li>
-                  <span className="text-brand-dark font-bold">معاينة عند الباب:</span> للزبون حق فحص وتجربة القطعة قبل دفع أي مبلغ.
-                </li>
-                <li>
-                  <span className="text-brand-dark font-bold">الاستبدال خلال 3 أيام:</span> يحق للزبون طلب استبدال المقاس أو اللون خلال 3 أيام من الاستلام.
-                </li>
-              </ul>
             </div>
           </div>
 
-          {/* Danger Zone */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-6 border border-red-200/80 shadow-xs space-y-3">
-            <h2 className="text-sm font-black text-red-700">منطقة الخطر</h2>
-            <p className="text-xs text-brand-muted leading-relaxed">
-              حذف الصنف يؤدي لإزالته نهائياً من قاعدة بيانات المتجر. إذا كان الصنف مرتبطاً بطلبات سابقة، سيتم إيقاف تفعيله للحفاظ على سلامة فواتير الزبائن.
-            </p>
-            <button
-              type="button"
-              onClick={handleDeleteProduct}
-              className="px-5 py-2.5 rounded-xl text-xs font-bold bg-red-600 text-white hover:bg-red-700 active:scale-[0.97] transition-transform duration-100 cursor-pointer shadow-2xs"
-            >
-              حذف هذا الصنف نهائياً من المتجر
-            </button>
+          {/* 2. Gaza Operational & Delivery Realities */}
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-brand-border/40">
+              <span className="w-8 h-8 rounded-xl bg-brand-surface border border-brand-border/70 flex items-center justify-center text-brand-dark">
+                <IconShieldCheck className="w-4 h-4 text-brand-trust" />
+              </span>
+              <div>
+                <h2 className="text-sm font-black text-brand-dark">السياسات اللوجستية الميدانية المعتمدة</h2>
+                <p className="text-[11px] text-brand-muted mt-0.5">
+                  معايير التشغيل الإلزامية التي يضمنها نظام سَدِيم لهذا الصنف في المحافظة الوسطى
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+              {/* Pillar 1 */}
+              <div className="p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-2">
+                <div className="w-7 h-7 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center">
+                  <IconTruck className="w-4 h-4" />
+                </div>
+                <div className="text-xs font-black text-brand-dark">طرد موحد (8 ₪ ثابت)</div>
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  يُجمع هذا الصنف مع طلبيات المتاجر الأخرى في طرد سَدِيم الموحد بمندوب واحد وأجر توصيل ثابت.
+                </p>
+              </div>
+
+              {/* Pillar 2 */}
+              <div className="p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-2">
+                <div className="w-7 h-7 rounded-lg bg-brand-trust/10 text-brand-trust flex items-center justify-center">
+                  <IconShieldCheck className="w-4 h-4" />
+                </div>
+                <div className="text-xs font-black text-brand-dark">المعاينة قبل الدفع</div>
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  حق إلزامي وأساسي للزبون بفحص وتجربة القطعة والتأكد من المقاس عند باب المنزل قبل دفع أي مبلغ.
+                </p>
+              </div>
+
+              {/* Pillar 3 */}
+              <div className="p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
+                  <IconClock className="w-4 h-4" />
+                </div>
+                <div className="text-xs font-black text-brand-dark">الاستبدال خلال 3 أيام</div>
+                <p className="text-[11px] text-brand-muted leading-relaxed">
+                  يحق للزبون طلب استبدال المقاس أو اللون خلال 3 أيام من الاستلام بسلاسة عبر مستودع سَدِيم المركزي.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Reference SKU & Inventory Meta */}
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-brand-border/40">
+              <span className="w-8 h-8 rounded-xl bg-brand-surface border border-brand-border/70 flex items-center justify-center text-brand-dark">
+                <IconPackage className="w-4 h-4 text-brand-muted" />
+              </span>
+              <div>
+                <h2 className="text-sm font-black text-brand-dark">البيانات المرجعية والمخزون</h2>
+                <p className="text-[11px] text-brand-muted mt-0.5">
+                  معلومات التتبع الداخلي للمستودع والربط المحاسبي
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3.5 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-1">
+                <div className="text-[10px] font-bold text-brand-muted">الرمز المرجعي (SKU):</div>
+                <div className="text-xs font-black text-brand-dark font-mono">{productId || 'PROD_001'}</div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-1">
+                <div className="text-[10px] font-bold text-brand-muted">إجمالي الأصناف المصفوفية:</div>
+                <div className="text-xs font-black text-brand-dark">{variants.length} مقاسات وتوليفات</div>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-1">
+                <div className="text-[10px] font-bold text-brand-muted">إجمالي المخزون الحالي:</div>
+                <div className="text-xs font-black text-brand-trust">{totalStock} قطعة بالمستودع</div>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Sensitive Danger Zone (Apple-Grade Quiet Restraint) */}
+          <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-red-200/60 shadow-xs space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-red-100">
+              <span className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
+                <IconAlertTriangle className="w-4 h-4" />
+              </span>
+              <div>
+                <h2 className="text-sm font-black text-red-800">الإجراءات الحساسة وحذف الصنف</h2>
+                <p className="text-[11px] text-red-700/70 mt-0.5">
+                  إزالة الصنف نهائياً من قاعدة بيانات المتجر
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-red-50/40 border border-red-100">
+              <p className="text-xs text-brand-muted leading-relaxed flex-1">
+                عند حذف هذا الصنف، سيتم إزالته من المتجر نهائياً. في حال ارتباطه بطلبات سابقة تم تسليمها، ستحتفظ سجلات سَدِيم بالفواتير التاريخية لضمان حقوق الزبائن والمستحقات المالية.
+              </p>
+              <button
+                type="button"
+                onClick={handleDeleteProduct}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-red-700 bg-white hover:bg-red-50 border border-red-200 shadow-2xs hover:border-red-300 transition-all cursor-pointer active:scale-95 shrink-0"
+              >
+                <IconTrash className="w-3.5 h-3.5 text-red-600" />
+                <span>حذف الصنف من المتجر</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

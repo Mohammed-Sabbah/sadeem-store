@@ -9,6 +9,11 @@ export default function MerchantMobileBottomNav() {
   const pathname = usePathname();
   const { metrics, setIsDrawerOpen } = useMerchantContext();
 
+  // Hide general bottom navigation when inside dedicated product studio
+  if (pathname?.startsWith('/merchant/products/')) {
+    return null;
+  }
+
   const isProductsActive = pathname === '/merchant/dashboard';
 
   return (

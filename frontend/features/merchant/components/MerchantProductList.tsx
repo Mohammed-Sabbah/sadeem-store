@@ -193,10 +193,17 @@ export default function MerchantProductList({
                 {filteredProducts.map((p) => {
                   const hasVariants = p.variants && p.variants.length > 1;
                   const isExpanded = expandedVariantsId === p._id;
+                  const activeVariants = (p.variants || []).filter((v) => v.isActive !== false);
+                  const effectiveVariants = activeVariants.length > 0 ? activeVariants : (p.variants || []);
+                  const variantPrices = effectiveVariants
+                    .map((v) => Number(v.price) || 0)
+                    .filter((pr) => pr > 0);
+                  const effectiveMin = variantPrices.length > 0 ? Math.min(...variantPrices) : (Number(p.minPrice) || 0);
+                  const effectiveMax = variantPrices.length > 0 ? Math.max(...variantPrices) : (Number(p.maxPrice) || 0);
                   const priceLabel =
-                    p.minPrice === p.maxPrice
-                      ? `${p.minPrice} ₪`
-                      : `${p.minPrice} – ${p.maxPrice} ₪`;
+                    effectiveMin === effectiveMax
+                      ? `${effectiveMin} ₪`
+                      : `${effectiveMin} – ${effectiveMax} ₪`;
 
                   return (
                     <React.Fragment key={p._id}>
@@ -228,6 +235,11 @@ export default function MerchantProductList({
                             {p.isFeatured && (
                               <span className="text-[9px] font-extrabold text-brand-dark bg-brand-primary-soft px-1.5 py-0.2 rounded border border-brand-primary-border">
                                 مميز
+                              </span>
+                            )}
+                            {p.isAnonymousVendor && (
+                              <span className="text-[9px] font-extrabold text-zinc-600 bg-zinc-100 px-1.5 py-0.2 rounded border border-zinc-200">
+                                توريد مباشر
                               </span>
                             )}
                           </div>
@@ -448,10 +460,17 @@ export default function MerchantProductList({
             {filteredProducts.map((p) => {
               const hasVariants = p.variants && p.variants.length > 1;
               const isExpanded = expandedVariantsId === p._id;
+              const activeVariants = (p.variants || []).filter((v) => v.isActive !== false);
+              const effectiveVariants = activeVariants.length > 0 ? activeVariants : (p.variants || []);
+              const variantPrices = effectiveVariants
+                .map((v) => Number(v.price) || 0)
+                .filter((pr) => pr > 0);
+              const effectiveMin = variantPrices.length > 0 ? Math.min(...variantPrices) : (Number(p.minPrice) || 0);
+              const effectiveMax = variantPrices.length > 0 ? Math.max(...variantPrices) : (Number(p.maxPrice) || 0);
               const priceLabel =
-                p.minPrice === p.maxPrice
-                  ? `${p.minPrice} ₪`
-                  : `${p.minPrice} – ${p.maxPrice} ₪`;
+                effectiveMin === effectiveMax
+                  ? `${effectiveMin} ₪`
+                  : `${effectiveMin} – ${effectiveMax} ₪`;
 
               return (
                 <div key={p._id} className="p-4 space-y-3">
@@ -482,9 +501,16 @@ export default function MerchantProductList({
                         >
                           {p.name}
                         </Link>
-                        <span className="text-xs font-black text-brand-dark bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border">
-                          {priceLabel}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-black text-brand-dark bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border">
+                            {priceLabel}
+                          </span>
+                          {p.isAnonymousVendor && (
+                            <span className="text-[9px] font-extrabold text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
+                              توريد مباشر
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 

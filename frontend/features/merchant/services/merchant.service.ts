@@ -203,19 +203,41 @@ export const merchantService = {
    * جلب كافة منتجات متجر التاجر الحالي
    */
   async getMyProducts(): Promise<{ success: boolean; data: ProductItem[] }> {
+    let prods: ProductItem[] = [];
     try {
       const res = await getRequest<{ products: any[] }>('/api/products/merchant/my-products');
       if (res.success && res.data?.products) {
-        const normalized = res.data.products.map((p) => ({
+        prods = res.data.products.map((p) => ({
           ...p,
           name: p.title || p.name || 'بدون عنوان',
         }));
-        return { success: true, data: normalized };
       }
     } catch {
       // Fallback during frontend-first dev
     }
-    return { success: true, data: getLocalProducts() };
+
+    if (prods.length === 0) {
+      prods = getLocalProducts();
+    }
+
+    // Ensure minPrice and maxPrice dynamically respect variants
+    const synced = prods.map((p) => {
+      if (p.variants && p.variants.length > 0) {
+        const activeV = p.variants.filter((v) => v.isActive !== false);
+        const pool = activeV.length > 0 ? activeV : p.variants;
+        const prices = pool.map((v) => Number(v.price) || 0).filter((pr) => pr > 0);
+        if (prices.length > 0) {
+          return {
+            ...p,
+            minPrice: Math.min(...prices),
+            maxPrice: Math.max(...prices),
+          };
+        }
+      }
+      return p;
+    });
+
+    return { success: true, data: synced };
   },
 
   /**
@@ -429,180 +451,214 @@ export const merchantService = {
       const res = await getRequest<{ product: any }>(`/api/products/${productId}`);
       if (res.success && res.data?.product) {
         const prod = res.data.product;
+        const vPrices = (prod.variants || []).filter((v: any) => v.isActive !== false).map((v: any) => Number(v.price) || 0).filter((pr: number) => pr > 0);
+        const computedMin = vPrices.length > 0 ? Math.min(...vPrices) : (prod.minPrice || 0);
+        const computedMax = vPrices.length > 0 ? Math.max(...vPrices) : (prod.maxPrice || 0);
         const mapped: ProductItem = {
-          _id: prod._id,
-          storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
-          categoryId: prod.categoryId,
-          categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
-          name: prod.title || prod.name,
-          title: prod.title || prod.name,
-          slug: prod.slug,
-          description: prod.description || '',
-          images: prod.images || [],
-          options: (prod.options || []).map((o: any) => ({
-            key: o.key,
-            source: o.source,
-            label: o.label || o.name,
-            name: o.name || o.label || o.key,
-            type: o.type,
-            unit: o.unit,
-            values: o.values || [],
-          })),
-          minPrice: prod.minPrice || 0,
-          maxPrice: prod.maxPrice || 0,
-          inStock: prod.inStock || false,
-          isFeatured: prod.isFeatured || false,
-          isActive: prod.isActive !== undefined ? prod.isActive : true,
-          variants: (prod.variants || []).map((v: any) => ({
-            _id: v._id,
-            productId: v.productId,
-            storeId: v.storeId,
-            sku: v.sku,
-            attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
-            attrKey: v.attrKey,
-            price: v.price,
-            compareAtPrice: v.compareAtPrice,
-            stock: v.stock,
-            isActive: v.isActive !== undefined ? v.isActive : true,
-            images: v.images || (v.image ? [v.image] : []),
-          })),
-          variantsCount: (prod.variants || []).length,
-          totalStock: prod.totalStock || (prod.variants || []).reduce((s: number, v: any) => s + (v.stock || 0), 0),
-          createdAt: prod.createdAt || new Date().toISOString(),
-          updatedAt: prod.updatedAt,
-        };
-        return { success: true, data: mapped };
+            _id: prod._id,
+            storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
+            categoryId: prod.categoryId,
+            categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
+            name: prod.title || prod.name,
+            title: prod.title || prod.name,
+            slug: prod.slug,
+            description: prod.description || '',
+            images: prod.images || [],
+            options: (prod.options || []).map((o: any) => ({
+              key: o.key,
+              source: o.source,
+              label: o.label || o.name,
+              name: o.name || o.label || o.key,
+              type: o.type,
+              unit: o.unit,
+              values: o.values || [],
+            })),
+            minPrice: computedMin,
+            maxPrice: computedMax,
+            inStock: prod.inStock || false,
+            isFeatured: prod.isFeatured || false,
+            isActive: prod.isActive !== undefined ? prod.isActive : true,
+            isAnonymousVendor: prod.isAnonymousVendor || false,
+            variants: (prod.variants || []).map((v: any) => ({
+              _id: v._id,
+              productId: v.productId,
+              storeId: v.storeId,
+              sku: v.sku,
+              attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
+              attrKey: v.attrKey,
+              price: v.price,
+              compareAtPrice: v.compareAtPrice,
+              stock: v.stock,
+              isActive: v.isActive !== undefined ? v.isActive : true,
+              images: v.images || (v.image ? [v.image] : []),
+            })),
+            variantsCount: (prod.variants || []).length,
+            totalStock: prod.totalStock || (prod.variants || []).reduce((s: number, v: any) => s + (v.stock || 0), 0),
+            createdAt: prod.createdAt || new Date().toISOString(),
+            updatedAt: prod.updatedAt,
+          };
+          return { success: true, data: mapped };
+        }
+      } catch {
+        // Offline / mock fallback
       }
-    } catch {
-      // Offline / mock fallback
-    }
 
-    const local = getLocalProducts().find((p) => p._id === productId);
-    if (local) {
-      return { success: true, data: local };
-    }
-    return { success: false, message: 'المنتج غير موجود' };
-  },
+      const local = getLocalProducts().find((p) => p._id === productId);
+      if (local) {
+        if (local.variants && local.variants.length > 0) {
+          const activeV = local.variants.filter((v) => v.isActive !== false);
+          const pool = activeV.length > 0 ? activeV : local.variants;
+          const prices = pool.map((v) => Number(v.price) || 0).filter((pr) => pr > 0);
+          if (prices.length > 0) {
+            local.minPrice = Math.min(...prices);
+            local.maxPrice = Math.max(...prices);
+          }
+        }
+        return { success: true, data: local };
+      }
+      return { success: false, message: 'المنتج غير موجود' };
+    },
 
-  /**
-   * تحديث تفاصيل منتج وأصنافه
-   */
-  async updateProduct(
-    productId: string,
-    formData: Partial<ProductFormData>
-  ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
-    try {
-      const payload: any = {
-        title: formData.name || formData.title,
-        description: formData.description,
-        categoryId: formData.categoryId,
-        images: formData.images,
-        isFeatured: formData.isFeatured,
-        isActive: formData.isActive,
+    /**
+     * تحديث تفاصيل منتج وأصنافه
+     */
+    async updateProduct(
+      productId: string,
+      formData: Partial<ProductFormData>
+    ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
+      try {
+        let calcMinPrice = 0;
+        let calcMaxPrice = 0;
+        let calcTotalStock = 0;
+        if (formData.variants && formData.variants.length > 0) {
+          const activeV = formData.variants.filter((v) => v.isActive !== false);
+          const pool = activeV.length > 0 ? activeV : formData.variants;
+          const prs = pool.map((v) => Number(v.price) || 0).filter((p) => p > 0);
+          calcMinPrice = prs.length > 0 ? Math.min(...prs) : 0;
+          calcMaxPrice = prs.length > 0 ? Math.max(...prs) : 0;
+          calcTotalStock = formData.variants.reduce((s, v) => s + (Number(v.stock) || 0), 0);
+        }
+
+        const payload: any = {
+          title: formData.name || formData.title,
+          description: formData.description,
+          categoryId: formData.categoryId,
+          images: formData.images,
+          isFeatured: formData.isFeatured,
+          isActive: formData.isActive,
+          isAnonymousVendor: formData.isAnonymousVendor,
+          minPrice: calcMinPrice,
+          maxPrice: calcMaxPrice,
+          totalStock: calcTotalStock,
+        };
+
+        if (formData.options) {
+          payload.options = formData.options.map((opt) => ({
+            key: opt.key || opt.name.toLowerCase().trim(),
+            source: opt.source || 'DEFINED',
+            label: opt.label || opt.name,
+            type: opt.type || 'TEXT',
+            unit: opt.unit || null,
+            values: opt.values,
+          }));
+        }
+
+        if (formData.variants) {
+          payload.variants = formData.variants.map((v) => ({
+            _id: v._id,
+            sku: v.sku,
+            attributes: v.attributes,
+            price: Number(v.price) || 0,
+            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+            isActive: v.isActive !== undefined ? v.isActive : true,
+            images: v.images || [],
+          }));
+        }
+
+        const res = await patchRequest<{ product: any }>(`/api/products/${productId}`, payload);
+        if (res.success && res.data?.product) {
+          const prod = res.data.product;
+          const mapped: ProductItem = {
+            _id: prod._id,
+            storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
+            categoryId: prod.categoryId,
+            categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
+            name: prod.title || prod.name,
+            title: prod.title || prod.name,
+            slug: prod.slug,
+            description: prod.description || '',
+            images: prod.images || [],
+            options: prod.options || [],
+            minPrice: calcMinPrice || prod.minPrice || 0,
+            maxPrice: calcMaxPrice || prod.maxPrice || 0,
+            inStock: prod.inStock || false,
+            isFeatured: prod.isFeatured || false,
+            isActive: prod.isActive !== undefined ? prod.isActive : true,
+            isAnonymousVendor: formData.isAnonymousVendor !== undefined ? formData.isAnonymousVendor : (prod.isAnonymousVendor || false),
+            variants: prod.variants || [],
+            variantsCount: (prod.variants || []).length,
+            totalStock: calcTotalStock || prod.totalStock || 0,
+            createdAt: prod.createdAt || new Date().toISOString(),
+            updatedAt: prod.updatedAt,
+          };
+
+          // Update local storage
+          const current = getLocalProducts();
+          const updated = current.map((p) => (p._id === productId ? mapped : p));
+          saveLocalProducts(updated);
+
+          return { success: true, data: mapped, message: 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
+        }
+      } catch {
+        // offline fallback
+      }
+
+      // Local update fallback
+      const current = getLocalProducts();
+      const existing = current.find((p) => p._id === productId);
+      if (!existing) {
+        return { success: false, message: 'المنتج غير موجود' };
+      }
+
+      const updatedItem: ProductItem = {
+        ...existing,
+        name: formData.name || existing.name,
+        description: formData.description !== undefined ? formData.description : existing.description,
+        categoryId: formData.categoryId || existing.categoryId,
+        images: formData.images || existing.images,
+        options: formData.options || existing.options,
+        isFeatured: formData.isFeatured !== undefined ? formData.isFeatured : existing.isFeatured,
+        isActive: formData.isActive !== undefined ? formData.isActive : existing.isActive,
+        isAnonymousVendor: formData.isAnonymousVendor !== undefined ? formData.isAnonymousVendor : existing.isAnonymousVendor,
+        updatedAt: new Date().toISOString(),
       };
 
-      if (formData.options) {
-        payload.options = formData.options.map((opt) => ({
-          key: opt.key || opt.name.toLowerCase().trim(),
-          source: opt.source || 'DEFINED',
-          label: opt.label || opt.name,
-          type: opt.type || 'TEXT',
-          unit: opt.unit || null,
-          values: opt.values,
-        }));
-      }
-
       if (formData.variants) {
-        payload.variants = formData.variants.map((v) => ({
-          _id: v._id,
+        const vList = formData.variants.map((v, i) => ({
+          _id: v._id || `var_${i}`,
           sku: v.sku,
           attributes: v.attributes,
+          attrKey: v.attrKey || 'default',
           price: Number(v.price) || 0,
           compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-          stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+          stock: Number(v.stock) || 0,
           isActive: v.isActive !== undefined ? v.isActive : true,
-          images: v.images || [],
         }));
+        const activeV = vList.filter((v) => v.isActive !== false);
+        const pool = activeV.length > 0 ? activeV : vList;
+        const prs = pool.map((v) => v.price).filter((p) => p > 0);
+        updatedItem.variants = vList;
+        updatedItem.variantsCount = vList.length;
+        updatedItem.totalStock = vList.reduce((s, v) => s + v.stock, 0);
+        updatedItem.minPrice = prs.length > 0 ? Math.min(...prs) : 0;
+        updatedItem.maxPrice = prs.length > 0 ? Math.max(...prs) : 0;
+        updatedItem.inStock = updatedItem.totalStock > 0;
       }
 
-      const res = await patchRequest<{ product: any }>(`/api/products/${productId}`, payload);
-      if (res.success && res.data?.product) {
-        const prod = res.data.product;
-        const mapped: ProductItem = {
-          _id: prod._id,
-          storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
-          categoryId: prod.categoryId,
-          categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
-          name: prod.title || prod.name,
-          title: prod.title || prod.name,
-          slug: prod.slug,
-          description: prod.description || '',
-          images: prod.images || [],
-          options: prod.options || [],
-          minPrice: prod.minPrice || 0,
-          maxPrice: prod.maxPrice || 0,
-          inStock: prod.inStock || false,
-          isFeatured: prod.isFeatured || false,
-          isActive: prod.isActive !== undefined ? prod.isActive : true,
-          variants: prod.variants || [],
-          variantsCount: (prod.variants || []).length,
-          totalStock: prod.totalStock || 0,
-          createdAt: prod.createdAt || new Date().toISOString(),
-          updatedAt: prod.updatedAt,
-        };
-
-        // Update local storage
-        const current = getLocalProducts();
-        const updated = current.map((p) => (p._id === productId ? mapped : p));
-        saveLocalProducts(updated);
-
-        return { success: true, data: mapped, message: 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
-      }
-    } catch {
-      // offline fallback
-    }
-
-    // Local update fallback
-    const current = getLocalProducts();
-    const existing = current.find((p) => p._id === productId);
-    if (!existing) {
-      return { success: false, message: 'المنتج غير موجود' };
-    }
-
-    const updatedItem: ProductItem = {
-      ...existing,
-      name: formData.name || existing.name,
-      description: formData.description !== undefined ? formData.description : existing.description,
-      categoryId: formData.categoryId || existing.categoryId,
-      images: formData.images || existing.images,
-      options: formData.options || existing.options,
-      isFeatured: formData.isFeatured !== undefined ? formData.isFeatured : existing.isFeatured,
-      isActive: formData.isActive !== undefined ? formData.isActive : existing.isActive,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (formData.variants) {
-      const vList = formData.variants.map((v, i) => ({
-        _id: v._id || `var_${i}`,
-        sku: v.sku,
-        attributes: v.attributes,
-        attrKey: v.attrKey || 'default',
-        price: Number(v.price) || 0,
-        compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-        stock: Number(v.stock) || 0,
-        isActive: v.isActive !== undefined ? v.isActive : true,
-      }));
-      updatedItem.variants = vList;
-      updatedItem.variantsCount = vList.length;
-      updatedItem.totalStock = vList.reduce((s, v) => s + v.stock, 0);
-      updatedItem.minPrice = vList.length > 0 ? Math.min(...vList.map((v) => v.price)) : 0;
-      updatedItem.maxPrice = vList.length > 0 ? Math.max(...vList.map((v) => v.price)) : 0;
-      updatedItem.inStock = updatedItem.totalStock > 0;
-    }
-
-    saveLocalProducts(current.map((p) => (p._id === productId ? updatedItem : p)));
-    return { success: true, data: updatedItem, message: 'تم حفظ التعديلات محلياً بنجاح' };
-  },
+      saveLocalProducts(current.map((p) => (p._id === productId ? updatedItem : p)));
+      return { success: true, data: updatedItem, message: 'تم حفظ التعديلات محلياً بنجاح' };
+    },
 
   /**
    * جلب تعريفات الخيارات العامة والوحدات المتاحة

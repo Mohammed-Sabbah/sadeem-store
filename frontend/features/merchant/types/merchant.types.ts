@@ -85,6 +85,7 @@ export interface ProductItem {
   inStock: boolean;
   isFeatured: boolean;
   isActive: boolean;
+  isAnonymousVendor?: boolean;
   isDeleted?: boolean;
   variants?: ProductVariant[];
   variantsCount?: number;
@@ -119,6 +120,7 @@ export interface ProductFormData {
   }>;
   isFeatured: boolean;
   isActive: boolean;
+  isAnonymousVendor?: boolean;
 }
 
 export interface MerchantMetrics {

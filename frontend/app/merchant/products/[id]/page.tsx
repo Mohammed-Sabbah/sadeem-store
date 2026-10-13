@@ -121,6 +121,14 @@ function IconArrowRight({ className = 'w-4 h-4' }: { className?: string }) {
   );
 }
 
+function IconEyeOff({ className = 'w-4 h-4' }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+    </svg>
+  );
+}
+
 function IconPhoto({ className = 'w-4 h-4' }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -302,6 +310,7 @@ export default function MerchantProductStudioPage() {
   const [categoryId, setCategoryId] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [isFeatured, setIsFeatured] = useState(false);
+  const [isAnonymousVendor, setIsAnonymousVendor] = useState(false);
 
   // Gallery (Device Upload & Cloud Readiness)
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -393,6 +402,7 @@ export default function MerchantProductStudioPage() {
           setImages(p.images && p.images.length > 0 ? p.images : []);
           setIsActive(p.isActive !== undefined ? p.isActive : true);
           setIsFeatured(p.isFeatured || false);
+          setIsAnonymousVendor(p.isAnonymousVendor || false);
 
           const hasOptions = Array.isArray(p.options) && p.options.length > 0;
           setIsSimple(!hasOptions);
@@ -825,6 +835,7 @@ export default function MerchantProductStudioPage() {
         : variants,
       isActive,
       isFeatured,
+      isAnonymousVendor,
     });
 
     setIsSaving(false);
@@ -927,15 +938,20 @@ export default function MerchantProductStudioPage() {
                 <h1 className="text-xl sm:text-2xl font-black text-brand-dark tracking-tight leading-tight">
                   {name || 'صنف بدون اسم'}
                 </h1>
-                <span
-                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
-                    isActive
-                      ? 'bg-brand-trust-soft text-brand-trust border-brand-trust/30'
-                      : 'bg-brand-surface text-brand-muted border-brand-border/60'
-                  }`}
-                >
-                  {isActive ? 'معروض بالمتجر' : 'مخفي مؤقتاً'}
-                </span>
+                {isActive ? (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-brand-trust-soft text-brand-trust border-brand-trust/30">
+                    معروض بالمتجر
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-brand-surface text-brand-muted border-brand-border/60">
+                    مخفي مؤقتاً
+                  </span>
+                )}
+                {isAnonymousVendor && (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border bg-zinc-100 text-zinc-600 border-zinc-200">
+                    توريد مباشر (هوية المتجر مخفية)
+                  </span>
+                )}
               </div>
 
               <div className="flex items-center gap-3 text-xs mt-1 text-brand-muted">
@@ -962,7 +978,7 @@ export default function MerchantProductStudioPage() {
               <span>معاينة كزبون</span>
             </Link>
 
-            {activeTab !== 'editor' ? (
+            {activeTab === 'overview' ? (
               <button
                 type="button"
                 onClick={() => setActiveTab('editor')}
@@ -2381,23 +2397,27 @@ export default function MerchantProductStudioPage() {
                                 </div>
                               </div>
 
-                              {/* Col 12: Actions (Active Toggle + Trash) */}
+                              {/* Col 12: Actions (Tactile Active Switch + Trash) */}
                               <div className="col-span-1 flex items-center justify-center gap-1.5">
                                 <button
                                   type="button"
+                                  role="switch"
+                                  aria-checked={v.isActive}
                                   onClick={() => {
                                     const updated = [...variants];
                                     updated[vIdx] = { ...v, isActive: !v.isActive };
                                     setVariants(updated);
                                   }}
-                                  className={`w-6 h-6 rounded-md text-[10px] font-bold flex items-center justify-center transition-colors cursor-pointer ${
-                                    v.isActive
-                                      ? 'bg-brand-trust-soft text-brand-trust border border-brand-trust/30'
-                                      : 'bg-zinc-100 text-zinc-400 border border-zinc-200'
+                                  className={`relative inline-flex h-4.5 w-8 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                    v.isActive ? 'bg-brand-trust' : 'bg-brand-border'
                                   }`}
-                                  title={v.isActive ? 'متاح للطلب - انقر للتعطيل' : 'معطل - انقر للتفعيل'}
+                                  title={v.isActive ? 'نشط ومتاح للطلب - انقر للتعطيل' : 'معطل مؤقتاً - انقر للتفعيل'}
                                 >
-                                  {v.isActive ? '✓' : '—'}
+                                  <span
+                                    className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                                      v.isActive ? '-translate-x-3.5' : 'translate-x-0'
+                                    }`}
+                                  />
                                 </button>
 
                                 <button
@@ -2432,18 +2452,23 @@ export default function MerchantProductStudioPage() {
                                 <div className="flex items-center gap-2">
                                   <button
                                     type="button"
+                                    role="switch"
+                                    aria-checked={v.isActive}
                                     onClick={() => {
                                       const updated = [...variants];
                                       updated[vIdx] = { ...v, isActive: !v.isActive };
                                       setVariants(updated);
                                     }}
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border transition-colors cursor-pointer ${
-                                      v.isActive
-                                        ? 'bg-brand-trust-soft text-brand-trust border-brand-trust/30'
-                                        : 'bg-zinc-100 text-zinc-500 border-zinc-200'
+                                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                      v.isActive ? 'bg-brand-trust' : 'bg-brand-border'
                                     }`}
+                                    title={v.isActive ? 'نشط ومتاح للطلب - انقر للتعطيل' : 'معطل مؤقتاً - انقر للتفعيل'}
                                   >
-                                    {v.isActive ? 'متاح' : 'معطل'}
+                                    <span
+                                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-xs ring-0 transition duration-200 ease-in-out ${
+                                        v.isActive ? '-translate-x-4' : 'translate-x-0'
+                                      }`}
+                                    />
                                   </button>
 
                                   <button
@@ -2535,48 +2560,14 @@ export default function MerchantProductStudioPage() {
             </div>
           )}
 
-          {/* Sticky Bottom Save Bar (Translucent Apple Material - docks to main workspace without covering sidebar) */}
-          <div className="fixed bottom-0 left-0 right-0 lg:right-68 z-20 bg-brand-card/85 backdrop-blur-xl border-t border-brand-border/70 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-xl font-almarai">
-            <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
-              <div className="hidden sm:flex items-center gap-2 text-xs text-brand-muted">
-                <span>الصنف:</span>
-                <span className="font-bold text-brand-dark">{name || 'بدون اسم'}</span>
-                <span>•</span>
-                <span>{variantsCount} أصناف</span>
-                <span>•</span>
-                <span className="font-bold text-brand-trust">{totalStock} قطعة بالمخزون</span>
-              </div>
-
-              <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('overview')}
-                  className="px-4 py-2.5 rounded-xl border border-brand-border/80 text-brand-dark text-xs font-bold hover:bg-brand-surface active:scale-[0.97] transition-all cursor-pointer"
-                >
-                  إلغاء
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSaveProduct}
-                  disabled={isSaving}
-                  className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-[0.97] shadow-xs transition-transform duration-100 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
-                >
-                  {isSaving && (
-                    <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  )}
-                  <span>حفظ التعديلات في المتجر</span>
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* TAB 3: SETTINGS & POLICIES (Apple-Grade Quiet Luxury)     */}
+      {/* TAB 3: SETTINGS (Apple-Grade Quiet Luxury & Full Width)   */}
       {/* ========================================================= */}
       {activeTab === 'settings' && (
-        <div className="space-y-6 animate-fadeIn max-w-4xl">
+        <div className="space-y-6 animate-fadeIn w-full">
           {/* 1. Storefront Visibility & Live State */}
           <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-brand-border/40">
@@ -2639,89 +2630,87 @@ export default function MerchantProductStudioPage() {
             </div>
           </div>
 
-          {/* 2. Gaza Operational & Delivery Realities */}
+          {/* 2. Anonymous / White-label Vendor Supply (New Dedicated Feature) */}
           <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-brand-border/40">
               <span className="w-8 h-8 rounded-xl bg-brand-surface border border-brand-border/70 flex items-center justify-center text-brand-dark">
-                <IconShieldCheck className="w-4 h-4 text-brand-trust" />
+                <IconEyeOff className="w-4 h-4 text-brand-primary" />
               </span>
               <div>
-                <h2 className="text-sm font-black text-brand-dark">السياسات اللوجستية الميدانية المعتمدة</h2>
+                <h2 className="text-sm font-black text-brand-dark">
+                  عرض الصنف كجهة مجهولة / إخفاء هوية المتجر
+                </h2>
                 <p className="text-[11px] text-brand-muted mt-0.5">
-                  معايير التشغيل الإلزامية التي يضمنها نظام سَدِيم لهذا الصنف في المحافظة الوسطى
+                  توريد الصنف كمنتج مباشر من سَدِيم دون الكشف عن اسم أو بيانات متجرك للزبائن
                 </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-              {/* Pillar 1 */}
-              <div className="p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-2">
-                <div className="w-7 h-7 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center">
-                  <IconTruck className="w-4 h-4" />
+            <div className="p-4 sm:p-5 rounded-2xl bg-brand-surface/40 border border-brand-border/70 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                      isAnonymousVendor ? 'bg-brand-primary shadow-xs animate-pulse' : 'bg-brand-muted/60'
+                    }`}
+                  />
+                  <span className="text-xs font-black text-brand-dark">
+                    {isAnonymousVendor
+                      ? 'توريد مباشر من سَدِيم (هوية المتجر مخفية بالكامل)'
+                      : 'عرض اعتيادي (مرتبط باسم متجرك المعتمد)'}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                      isAnonymousVendor
+                        ? 'bg-brand-primary-soft text-brand-primary border-brand-primary-border'
+                        : 'bg-brand-card text-brand-muted border-brand-border/70'
+                    }`}
+                  >
+                    {isAnonymousVendor ? 'مفعل' : 'معطل'}
+                  </span>
                 </div>
-                <div className="text-xs font-black text-brand-dark">طرد موحد (8 ₪ ثابت)</div>
                 <p className="text-[11px] text-brand-muted leading-relaxed">
-                  يُجمع هذا الصنف مع طلبيات المتاجر الأخرى في طرد سَدِيم الموحد بمندوب واحد وأجر توصيل ثابت.
+                  عند تفعيل هذا الخيار:
+                  <span className="block mt-1 font-bold text-brand-dark">
+                    1. يُحجب الصنف نهائياً من الظهور في صفحة متجرك العام للزبائن.
+                  </span>
+                  <span className="block mt-0.5 font-bold text-brand-dark">
+                    2. في صفحة تفاصيل المنتج (PDP)، يُخفى اسم وشعار متجرك ويُعرض كـ «توريد مباشر وموثق عبر سَدِيم» مع بقاء أرباحك ومستحقاتك محفوظة لك بالكامل.
+                  </span>
                 </p>
               </div>
 
-              {/* Pillar 2 */}
-              <div className="p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-2">
-                <div className="w-7 h-7 rounded-lg bg-brand-trust/10 text-brand-trust flex items-center justify-center">
-                  <IconShieldCheck className="w-4 h-4" />
-                </div>
-                <div className="text-xs font-black text-brand-dark">المعاينة قبل الدفع</div>
-                <p className="text-[11px] text-brand-muted leading-relaxed">
-                  حق إلزامي وأساسي للزبون بفحص وتجربة القطعة والتأكد من المقاس عند باب المنزل قبل دفع أي مبلغ.
-                </p>
-              </div>
-
-              {/* Pillar 3 */}
-              <div className="p-4 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-2">
-                <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-                  <IconClock className="w-4 h-4" />
-                </div>
-                <div className="text-xs font-black text-brand-dark">الاستبدال خلال 3 أيام</div>
-                <p className="text-[11px] text-brand-muted leading-relaxed">
-                  يحق للزبون طلب استبدال المقاس أو اللون خلال 3 أيام من الاستلام بسلاسة عبر مستودع سَدِيم المركزي.
-                </p>
-              </div>
+              {/* iOS-Style Tactile Toggle Switch */}
+              <button
+                type="button"
+                onClick={() => setIsAnonymousVendor(!isAnonymousVendor)}
+                className={`relative inline-flex h-7 w-13 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none self-start sm:self-center ${
+                  isAnonymousVendor ? 'bg-brand-primary' : 'bg-brand-border'
+                }`}
+                role="switch"
+                aria-checked={isAnonymousVendor}
+                title={isAnonymousVendor ? 'إلغاء وضع التوريد المجهول' : 'تفعيل إخفاء هوية المتجر'}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    isAnonymousVendor ? '-translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
+
+            {isAnonymousVendor && (
+              <div className="p-3.5 rounded-xl bg-brand-primary-soft/60 border border-brand-primary-border/80 flex items-center gap-2.5 text-xs text-brand-dark animate-fadeIn">
+                <span className="w-2 h-2 rounded-full bg-brand-primary shrink-0" />
+                <span className="font-extrabold text-brand-dark">حالة التوريد:</span>
+                <span className="text-brand-muted text-[11px]">
+                  الصنف محمي؛ لن يظهر في صفحة متجرك، والزبون يراه في المتجر العام كمنتج مورد مباشرة عبر سَدِيم المركزي.
+                </span>
+              </div>
+            )}
           </div>
 
-          {/* 3. Reference SKU & Inventory Meta */}
-          <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-brand-border/60 shadow-xs space-y-4">
-            <div className="flex items-center gap-2 pb-3 border-b border-brand-border/40">
-              <span className="w-8 h-8 rounded-xl bg-brand-surface border border-brand-border/70 flex items-center justify-center text-brand-dark">
-                <IconPackage className="w-4 h-4 text-brand-muted" />
-              </span>
-              <div>
-                <h2 className="text-sm font-black text-brand-dark">البيانات المرجعية والمخزون</h2>
-                <p className="text-[11px] text-brand-muted mt-0.5">
-                  معلومات التتبع الداخلي للمستودع والربط المحاسبي
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3.5 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-1">
-                <div className="text-[10px] font-bold text-brand-muted">الرمز المرجعي (SKU):</div>
-                <div className="text-xs font-black text-brand-dark font-mono">{productId || 'PROD_001'}</div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-1">
-                <div className="text-[10px] font-bold text-brand-muted">إجمالي الأصناف المصفوفية:</div>
-                <div className="text-xs font-black text-brand-dark">{variants.length} مقاسات وتوليفات</div>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-brand-surface/30 border border-brand-border/60 space-y-1">
-                <div className="text-[10px] font-bold text-brand-muted">إجمالي المخزون الحالي:</div>
-                <div className="text-xs font-black text-brand-trust">{totalStock} قطعة بالمستودع</div>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. Sensitive Danger Zone (Apple-Grade Quiet Restraint) */}
+          {/* 3. Sensitive Danger Zone (Apple-Grade Quiet Restraint) */}
           <div className="bg-brand-card rounded-2xl p-5 sm:p-7 border border-red-200/60 shadow-xs space-y-4">
             <div className="flex items-center gap-2 pb-3 border-b border-red-100">
               <span className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
@@ -2746,6 +2735,54 @@ export default function MerchantProductStudioPage() {
               >
                 <IconTrash className="w-3.5 h-3.5 text-red-600" />
                 <span>حذف الصنف من المتجر</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 4. STICKY BOTTOM SAVE ACTION BAR (Apple Material Dock)    */}
+      {/* Rendered on both Editor and Settings tabs, thumb-friendly */}
+      {/* ========================================================= */}
+      {(activeTab === 'editor' || activeTab === 'settings') && (
+        <div className="fixed bottom-0 left-0 right-0 lg:right-68 z-40 bg-brand-card/95 backdrop-blur-xl border-t border-brand-border/70 px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-xl font-almarai">
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-4">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-brand-muted">
+              <span>الصنف:</span>
+              <span className="font-bold text-brand-dark">{name || 'بدون اسم'}</span>
+              <span>•</span>
+              <span>{variantsCount} أصناف</span>
+              <span>•</span>
+              <span className="font-bold text-brand-trust">{totalStock} قطعة بالمخزون</span>
+              {isAnonymousVendor && (
+                <>
+                  <span>•</span>
+                  <span className="text-zinc-600 font-bold bg-zinc-100 px-1.5 py-0.5 rounded text-[10px]">
+                    توريد مباشر
+                  </span>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <button
+                type="button"
+                onClick={() => setActiveTab('overview')}
+                className="px-4 py-2.5 rounded-xl border border-brand-border/80 text-brand-dark text-xs font-bold hover:bg-brand-surface active:scale-[0.97] transition-all cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveProduct}
+                disabled={isSaving}
+                className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-[0.97] shadow-xs transition-transform duration-100 disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+              >
+                {isSaving && (
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                )}
+                <span>حفظ التعديلات في المتجر</span>
               </button>
             </div>
           </div>

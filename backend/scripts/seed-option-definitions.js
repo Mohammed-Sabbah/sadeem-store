@@ -72,13 +72,68 @@ const DEFAULT_DEFINITIONS = [
             { key: '1tb', label: '1 تيرابايت', sortOrder: 5 },
         ],
     },
+    {
+        key: 'size_kids',
+        label: 'مقاس الأطفال',
+        type: 'SIZE',
+        unit: null,
+        values: [
+            { key: '0-3m', label: '0-3 شهور', sortOrder: 1 },
+            { key: '3-6m', label: '3-6 شهور', sortOrder: 2 },
+            { key: '6-12m', label: '6-12 شهر', sortOrder: 3 },
+            { key: '1-2y', label: '1-2 سنة', sortOrder: 4 },
+            { key: '2-4y', label: '2-4 سنوات', sortOrder: 5 },
+            { key: '4-6y', label: '4-6 سنوات', sortOrder: 6 },
+            { key: '6-8y', label: '6-8 سنوات', sortOrder: 7 },
+        ],
+    },
+    {
+        key: 'weight',
+        label: 'الوزن',
+        type: 'NUMERIC',
+        unit: 'kg',
+        values: [
+            { key: '250g', label: '250 جرام', sortOrder: 1 },
+            { key: '500g', label: '500 جرام', sortOrder: 2 },
+            { key: '1kg', label: '1 كجم', sortOrder: 3 },
+            { key: '2kg', label: '2 كجم', sortOrder: 4 },
+            { key: '5kg', label: '5 كجم', sortOrder: 5 },
+        ],
+    },
+    {
+        key: 'volume',
+        label: 'الحجم / السعة',
+        type: 'NUMERIC',
+        unit: 'ml',
+        values: [
+            { key: '50ml', label: '50 مل', sortOrder: 1 },
+            { key: '100ml', label: '100 مل', sortOrder: 2 },
+            { key: '250ml', label: '250 مل', sortOrder: 3 },
+            { key: '500ml', label: '500 مل', sortOrder: 4 },
+            { key: '1l', label: '1 لتر', sortOrder: 5 },
+        ],
+    },
+    {
+        key: 'battery_capacity',
+        label: 'سعة البطارية',
+        type: 'NUMERIC',
+        unit: 'mah',
+        values: [
+            { key: '10000mah', label: '10,000 mAh', sortOrder: 1 },
+            { key: '20000mah', label: '20,000 mAh', sortOrder: 2 },
+            { key: '30000mah', label: '30,000 mAh', sortOrder: 3 },
+            { key: '50000mah', label: '50,000 mAh', sortOrder: 4 },
+        ],
+    },
 ];
 
 const CATEGORY_ALLOWED_OPTIONS_MAP = {
-    fashion: ['color', 'size_clothing', 'size_shoes'],
-    'power-electronics': ['color', 'storage'],
-    'beauty-perfumes': ['color'],
-    crafts: ['color'],
+    fashion: ['color', 'size_clothing', 'size_shoes', 'size_kids'],
+    'power-electronics': ['color', 'storage', 'battery_capacity'],
+    'beauty-perfumes': ['color', 'volume'],
+    crafts: ['color', 'weight'],
+    'honey-provisions': ['weight', 'volume'],
+    food: ['weight', 'volume'],
 };
 
 async function seedOptionDefinitions() {

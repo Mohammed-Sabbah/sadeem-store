@@ -83,6 +83,7 @@ export default function MerchantProductStudioPage() {
           errorMessage={studio.errorMessage}
           setErrorMessage={studio.setErrorMessage}
           categories={studio.categories}
+          allowedDefinitions={studio.allowedDefinitions}
           images={studio.images}
           fileInputRef={studio.fileInputRef}
           handleDeviceFileUpload={studio.handleDeviceFileUpload}

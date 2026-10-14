@@ -142,6 +142,12 @@ async function updateProduct(req, res, next) {
         if (categoryId !== undefined) productUpdates.categoryId = categoryId;
         if (description !== undefined) productUpdates.description = description;
 
+        if (req.body.stock !== undefined) productUpdates.stock = req.body.stock;
+        else if (req.body.simpleStock !== undefined) productUpdates.stock = req.body.simpleStock;
+
+        if (req.body.price !== undefined) productUpdates.price = req.body.price;
+        else if (req.body.simplePrice !== undefined) productUpdates.price = req.body.simplePrice;
+
         if (images !== undefined) {
             productUpdates.images = images;
             if (images.length > 0 && !image) productUpdates.image = images[0];

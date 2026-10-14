@@ -368,7 +368,7 @@ export const merchantService = {
     try {
       const res = await patchRequest(`/api/products/${productId}/status`, {
         isActive: nextState,
-        status: nextState ? 'ACTIVE' : 'INACTIVE',
+        status: nextState ? 'active' : 'inActive',
       });
       if (res.success) {
         // sync local
@@ -426,8 +426,22 @@ export const merchantService = {
     const updatedProd = updatedProducts.find((p) => p._id === productId);
 
     try {
+      let resolvedVariantId: string | undefined = undefined;
       if (variantId) {
-        await patchRequest(`/api/products/${productId}/variants/${variantId}`, { stock: cleanStock });
+        const match = updatedProd?.variants?.find((v) => v._id === variantId || v.sku === variantId);
+        if (match?._id && /^[0-9a-fA-F]{24}$/.test(match._id)) {
+          resolvedVariantId = match._id;
+        }
+      }
+      if (!resolvedVariantId && updatedProd?.variants?.[0]?._id) {
+        const firstId = updatedProd.variants[0]._id;
+        if (/^[0-9a-fA-F]{24}$/.test(firstId)) {
+          resolvedVariantId = firstId;
+        }
+      }
+
+      if (resolvedVariantId) {
+        await patchRequest(`/api/products/${productId}/variants/${resolvedVariantId}`, { stock: cleanStock });
       } else {
         await patchRequest(`/api/products/${productId}`, { stock: cleanStock });
       }
@@ -463,7 +477,10 @@ export const merchantService = {
    */
   async getProductById(productId: string): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
     try {
-      const res = await getRequest<{ product: any }>(`/api/products/${productId}`);
+      let res = await getRequest<{ product: any }>(`/api/products/seller/${productId}`);
+      if (!res.success) {
+        res = await getRequest<{ product: any }>(`/api/products/${productId}`);
+      }
       if (res.success && res.data?.product) {
         const prod = res.data.product;
         const vPrices = (prod.variants || []).filter((v: any) => v.isActive !== false).map((v: any) => Number(v.price) || 0).filter((pr: number) => pr > 0);
@@ -705,6 +722,9 @@ export const merchantService = {
               { key: 'navy', label: 'كحلي', hex: '#1E3A8A' },
               { key: 'beige', label: 'بيج', hex: '#D4B996' },
               { key: 'amber', label: 'كهرماني', hex: '#B8621B' },
+              { key: 'grey', label: 'رمادي', hex: '#6B7280' },
+              { key: 'green', label: 'أخضر', hex: '#15803D' },
+              { key: 'red', label: 'أحمر', hex: '#DC2626' },
             ],
             isActive: true,
           },
@@ -717,6 +737,82 @@ export const merchantService = {
               { key: 'm', label: 'M' },
               { key: 'l', label: 'L' },
               { key: 'xl', label: 'XL' },
+              { key: '2xl', label: '2XL' },
+              { key: '3xl', label: '3XL' },
+            ],
+            isActive: true,
+          },
+          {
+            key: 'size_shoes',
+            label: 'مقاس الأحذية',
+            type: 'SIZE',
+            values: [
+              { key: '37', label: '37' },
+              { key: '38', label: '38' },
+              { key: '39', label: '39' },
+              { key: '40', label: '40' },
+              { key: '41', label: '41' },
+              { key: '42', label: '42' },
+              { key: '43', label: '43' },
+              { key: '44', label: '44' },
+              { key: '45', label: '45' },
+            ],
+            isActive: true,
+          },
+          {
+            key: 'size_kids',
+            label: 'مقاس الأطفال',
+            type: 'SIZE',
+            values: [
+              { key: '0-3m', label: '0-3 شهور' },
+              { key: '3-6m', label: '3-6 شهور' },
+              { key: '6-12m', label: '6-12 شهر' },
+              { key: '1-2y', label: '1-2 سنة' },
+              { key: '2-4y', label: '2-4 سنوات' },
+              { key: '4-6y', label: '4-6 سنوات' },
+              { key: '6-8y', label: '6-8 سنوات' },
+            ],
+            isActive: true,
+          },
+          {
+            key: 'storage',
+            label: 'سعة التخزين',
+            type: 'NUMERIC',
+            unit: 'gb',
+            values: [
+              { key: '64gb', label: '64 جيجابايت' },
+              { key: '128gb', label: '128 جيجابايت' },
+              { key: '256gb', label: '256 جيجابايت' },
+              { key: '512gb', label: '512 جيجابايت' },
+              { key: '1tb', label: '1 تيرابايت' },
+            ],
+            isActive: true,
+          },
+          {
+            key: 'weight',
+            label: 'الوزن',
+            type: 'NUMERIC',
+            unit: 'kg',
+            values: [
+              { key: '250g', label: '250 جرام' },
+              { key: '500g', label: '500 جرام' },
+              { key: '1kg', label: '1 كجم' },
+              { key: '2kg', label: '2 كجم' },
+              { key: '5kg', label: '5 كجم' },
+            ],
+            isActive: true,
+          },
+          {
+            key: 'volume',
+            label: 'الحجم / السعة',
+            type: 'NUMERIC',
+            unit: 'ml',
+            values: [
+              { key: '50ml', label: '50 مل' },
+              { key: '100ml', label: '100 مل' },
+              { key: '250ml', label: '250 مل' },
+              { key: '500ml', label: '500 مل' },
+              { key: '1l', label: '1 لتر' },
             ],
             isActive: true,
           },

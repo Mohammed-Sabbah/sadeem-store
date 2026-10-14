@@ -337,8 +337,26 @@ export function useProductStudio(productId: string) {
   };
 
   // Options Helpers
-  const handleAddPredefinedOption = (type: 'COLOR' | 'SIZE' | 'CUSTOM') => {
-    if (type === 'COLOR') {
+  const handleAddPredefinedOption = (typeOrDef: 'COLOR' | 'SIZE' | 'CUSTOM' | OptionDefinition) => {
+    if (typeof typeOrDef === 'object') {
+      const def = typeOrDef;
+      if (options.some((o) => o.key === def.key || o.name === def.label || o.label === def.label)) return;
+      setOptions((prev) => [
+        ...prev,
+        {
+          key: def.key,
+          source: 'DEFINED',
+          label: def.label,
+          name: def.label,
+          type: def.type || 'TEXT',
+          unit: def.unit || null,
+          values: [],
+        },
+      ]);
+      return;
+    }
+
+    if (typeOrDef === 'COLOR') {
       if (options.some((o) => o.type === 'COLOR' || o.name === 'اللون')) return;
       setOptions((prev) => [
         ...prev,
@@ -352,7 +370,7 @@ export function useProductStudio(productId: string) {
           values: ['أسود', 'أبيض'],
         },
       ]);
-    } else if (type === 'SIZE') {
+    } else if (typeOrDef === 'SIZE') {
       if (options.some((o) => o.type === 'SIZE' || o.name === 'المقاس')) return;
       setOptions((prev) => [
         ...prev,

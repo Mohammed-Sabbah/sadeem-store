@@ -320,6 +320,23 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
         }
     }
 
+    if (!variants && (productUpdates?.stock !== undefined || productUpdates?.price !== undefined)) {
+        const variantUpdates = {};
+        if (productUpdates.stock !== undefined) {
+            variantUpdates.stock = Math.max(0, Math.floor(Number(productUpdates.stock) || 0));
+            delete productUpdates.stock;
+        }
+        if (productUpdates.price !== undefined) {
+            variantUpdates.price = roundMoney(productUpdates.price);
+            delete productUpdates.price;
+        }
+        await Variant.updateMany(
+            { productId: product._id, isDeleted: false },
+            { $set: variantUpdates },
+            options
+        );
+    }
+
     if (productUpdates && Object.keys(productUpdates).length > 0) {
         Object.assign(product, productUpdates);
         await product.save(options);
@@ -663,7 +680,19 @@ async function updateProductApproval({ productId, approveStatus, session = null 
 async function getProductDetails(req, res, next, admin = false) {
     try {
         const filter = { _id: req.params.id, isDeleted: false };
-        if (!admin) {
+        const candidate = await Product.findOne(filter).select('storeId').lean();
+        if (!candidate) {
+            return error(res, 404, 'Product not found');
+        }
+
+        const isOwnerSeller = Boolean(
+            req.store &&
+            req.user &&
+            req.user.role === ROLE.SELLER &&
+            String(candidate.storeId) === String(req.store._id)
+        );
+
+        if (!admin && !isOwnerSeller) {
             filter.status = STATUS.ACTIVE;
             filter.approveStatus = APPROVE_STATUS.APPROVED;
             filter.isSuspended = false;
@@ -679,7 +708,7 @@ async function getProductDetails(req, res, next, admin = false) {
         }
 
         const variantFilter = { productId: product._id, isDeleted: false };
-        if (!admin) {
+        if (!admin && !isOwnerSeller) {
             variantFilter.status = STATUS.ACTIVE;
             variantFilter.approveStatus = APPROVE_STATUS.APPROVED;
             variantFilter.isSuspended = { $ne: true };

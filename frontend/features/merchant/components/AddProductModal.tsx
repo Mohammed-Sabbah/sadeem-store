@@ -529,6 +529,8 @@ export default function AddProductModal({
         setSimpleCompareAtPrice('');
         setSimpleStock(10);
         setIsSimple(true);
+        setOptions([]);
+        setVariantsRows([]);
         onClose();
       }
     } catch (err: any) {
@@ -898,47 +900,63 @@ export default function AddProductModal({
 
                 {/* Option Category Selectors */}
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                  <button
-                    type="button"
-                    onClick={() => addOption('اللون', 'COLOR')}
-                    disabled={options.some((o) => o.name.includes('لون') || o.name.toLowerCase().includes('color'))}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-amber-600 via-rose-500 to-blue-500" />
-                    <span>+ اللون</span>
-                  </button>
+                  {categoryOptionDefinitions && categoryOptionDefinitions.length > 0 ? (
+                    categoryOptionDefinitions.map((def) => {
+                      const isColor = def.type === 'COLOR' || def.key === 'color';
+                      const isAlreadyAdded = options.some(
+                        (o) =>
+                          o.key === def.key ||
+                          o.name === def.label ||
+                          (isColor && (o.type === 'COLOR' || o.name.includes('لون')))
+                      );
 
-                  <button
-                    type="button"
-                    onClick={() => addOption('مقاس الملابس', 'CLOTHING_SIZE')}
-                    disabled={options.some((o) => o.name === 'مقاس الملابس')}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
-                  >
-                    + مقاس ملابس
-                  </button>
+                      return (
+                        <button
+                          key={def.key}
+                          type="button"
+                          onClick={() => addOption(def.label, isColor ? 'COLOR' : 'CUSTOM', def)}
+                          disabled={isAlreadyAdded || options.length >= 3}
+                          className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all duration-150 active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            isAlreadyAdded
+                              ? 'opacity-40 border-brand-border/60 bg-brand-surface/40 text-brand-muted cursor-not-allowed'
+                              : 'border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary'
+                          }`}
+                        >
+                          {isColor && (
+                            <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-amber-600 via-rose-500 to-blue-500 shrink-0" />
+                          )}
+                          <span>+ {def.label}</span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => addOption('اللون', 'COLOR')}
+                        disabled={options.some((o) => o.name.includes('لون') || o.name.toLowerCase().includes('color')) || options.length >= 3}
+                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+                      >
+                        <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-amber-600 via-rose-500 to-blue-500" />
+                        <span>+ اللون</span>
+                      </button>
 
-                  <button
-                    type="button"
-                    onClick={() => addOption('مقاس الأحذية', 'SHOE_SIZE')}
-                    disabled={options.some((o) => o.name === 'مقاس الأحذية')}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
-                  >
-                    + مقاس أحذية
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => addOption('مقاس أطفال', 'KIDS_SIZE')}
-                    disabled={options.some((o) => o.name === 'مقاس أطفال')}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
-                  >
-                    + مقاس أطفال
-                  </button>
+                      <button
+                        type="button"
+                        onClick={() => addOption('المقاس', 'CLOTHING_SIZE')}
+                        disabled={options.some((o) => o.name === 'المقاس') || options.length >= 3}
+                        className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
+                      >
+                        + المقاس
+                      </button>
+                    </>
+                  )}
 
                   <button
                     type="button"
                     onClick={() => addOption('', 'CUSTOM')}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
+                    disabled={options.length >= 3}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs disabled:opacity-40"
                   >
                     + مخصص
                   </button>
@@ -948,12 +966,35 @@ export default function AddProductModal({
               {/* Options Cards */}
               <div className="space-y-3.5">
                 {options.map((opt, optIdx) => {
-                  const isColorOption = opt.name.includes('لون') || opt.name.toLowerCase().includes('color');
-                  const isShoeSize = opt.name.includes('حذاء') || opt.name.includes('أحذية');
+                  const matchingDef = categoryOptionDefinitions.find(
+                    (d) => d.key === opt.key || d.label === opt.name
+                  );
+                  const isColorOption =
+                    opt.type === 'COLOR' ||
+                    opt.name.includes('لون') ||
+                    opt.name.toLowerCase().includes('color') ||
+                    matchingDef?.type === 'COLOR' ||
+                    matchingDef?.key === 'color';
+                  const isShoeSize =
+                    matchingDef?.key === 'size_shoes' ||
+                    opt.name.includes('حذاء') ||
+                    opt.name.includes('أحذية');
+                  const isKidsSize =
+                    matchingDef?.key === 'size_kids' || opt.name.includes('أطفال');
                   const isClothingSize =
-                    !isShoeSize &&
-                    (opt.name.includes('ملابس') || (opt.name.includes('مقاس') && !opt.name.includes('أطفال')));
-                  const isKidsSize = opt.name.includes('أطفال') || opt.name.includes('رقمي');
+                    matchingDef?.key === 'size_clothing' ||
+                    (!isShoeSize &&
+                      !isKidsSize &&
+                      (opt.name.includes('ملابس') ||
+                        (opt.name.includes('مقاس') && !matchingDef)));
+                  const hasDefPresets = Boolean(
+                    matchingDef?.values &&
+                      matchingDef.values.length > 0 &&
+                      !isColorOption &&
+                      !isShoeSize &&
+                      !isKidsSize &&
+                      !isClothingSize
+                  );
 
                   return (
                     <div
@@ -1004,6 +1045,8 @@ export default function AddProductModal({
                                   ? 'إضافة مقاس ملابس...'
                                   : isKidsSize
                                   ? 'إضافة مقاس أطفال...'
+                                  : matchingDef?.label
+                                  ? `إضافة ${matchingDef.label}...`
                                   : 'إضافة قيمة...'}
                               </span>
                               <span className="text-[9px]">
@@ -1184,6 +1227,50 @@ export default function AddProductModal({
                                               }`}
                                             >
                                               <span>{sz}</span>
+                                              {isSelected && (
+                                                <span className="text-brand-primary text-xs">✓</span>
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* 5. Definition Predefined Values Grid (storage, weight, volume, battery...) */}
+                                  {hasDefPresets && matchingDef?.values && (
+                                    <>
+                                      <div className="flex items-center justify-between pb-2 border-b border-brand-border/40 text-xs font-black text-brand-dark">
+                                        <span>قيم «{matchingDef.label}» المقترحة</span>
+                                        {matchingDef.unit && (
+                                          <span className="text-[10px] text-brand-muted font-normal bg-brand-surface px-1.5 py-0.5 rounded">
+                                            {matchingDef.unit}
+                                          </span>
+                                        )}
+                                      </div>
+
+                                       <div className="flex flex-wrap gap-2 max-h-52 overflow-y-auto py-1">
+                                        {matchingDef.values.map((valItem) => {
+                                          const val = typeof valItem === 'string' ? valItem : valItem.label || valItem.key;
+                                          const isSelected = opt.values.includes(val);
+                                          return (
+                                            <button
+                                              key={val}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  removeTagValue(optIdx, val);
+                                                } else {
+                                                  addTagValue(optIdx, val);
+                                                }
+                                              }}
+                                              className={`min-w-11 h-9 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
+                                              }`}
+                                            >
+                                              <span>{val}</span>
                                               {isSelected && (
                                                 <span className="text-brand-primary text-xs">✓</span>
                                               )}

@@ -30,6 +30,10 @@ const productFields = [
     'minPrice',
     'maxPrice',
     'totalStock',
+    'price',
+    'stock',
+    'simplePrice',
+    'simpleStock',
 ];
 
 const createProductFields = [

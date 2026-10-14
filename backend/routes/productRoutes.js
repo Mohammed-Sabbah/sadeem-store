@@ -2,7 +2,7 @@ const express = require('express');
 const { ROLE } = require('../constants/enums');
 
 // Middlewares
-const { authenticate, authorize, verifyActiveStore } = require('../middleware/auth');
+const { authenticate, authorize, verifyActiveStore, optionalAuthenticate } = require('../middleware/auth');
 const sellerOnly = [authenticate, authorize(ROLE.SELLER), verifyActiveStore];
 const adminOnly = [authenticate, authorize(ROLE.ADMIN)];
 
@@ -61,6 +61,7 @@ router.delete('/admin/:id', ...adminOnly, validateProductId, deleteProduct);
 // Seller Routes (Dashboard & Management)
 // ==========================================
 router.get('/seller', ...sellerOnly, validateProductFilters, getSellerProducts);
+router.get('/seller/:id', ...sellerOnly, validateProductId, getProductById);
 
 // Create Product (Composite Product + Variants)
 router.post('/', ...sellerOnly, validateProduct, validateVariant, createProduct);
@@ -86,6 +87,6 @@ router.patch('/:id/variants/:variantId/status', ...sellerOnly, validateVariantId
 // Public Storefront Routes
 // ==========================================
 router.get('/', validateProductFilters, getPublicProducts);
-router.get('/:id', validateProductId, getPublicProduct);
+router.get('/:id', optionalAuthenticate, validateProductId, getPublicProduct);
 
 module.exports = router;

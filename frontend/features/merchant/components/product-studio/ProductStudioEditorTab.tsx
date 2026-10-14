@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CategoryItem } from '@/features/store/services/taxonomy.service';
-import type { ProductOption } from '@/features/merchant/types/merchant.types';
+import type { ProductOption, OptionDefinition } from '@/features/merchant/types/merchant.types';
 import type { VariantItemState } from '../../hooks/useProductStudio';
 import {
   COLOR_SWATCHES,
@@ -70,7 +70,8 @@ interface ProductStudioEditorTabProps {
   setCustomSizeInput: (val: string) => void;
   colorImageMap: Record<string, string>;
   setColorImageMap: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  handleAddPredefinedOption: (type: 'COLOR' | 'SIZE' | 'CUSTOM') => void;
+  allowedDefinitions?: OptionDefinition[];
+  handleAddPredefinedOption: (type: 'COLOR' | 'SIZE' | 'CUSTOM' | OptionDefinition) => void;
   handleRemoveOption: (idx: number) => void;
   handleAddOptionValue: (optIdx: number, val?: string) => void;
   handleRemoveOptionValue: (optIdx: number, val: string) => void;
@@ -133,6 +134,7 @@ export function ProductStudioEditorTab({
   setCustomSizeInput,
   colorImageMap,
   setColorImageMap,
+  allowedDefinitions = [],
   handleAddPredefinedOption,
   handleRemoveOption,
   handleAddOptionValue,
@@ -571,43 +573,105 @@ export function ProductStudioEditorTab({
                 </button>
 
                 {isAddOptionOpen && (
-                  <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-64 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-1.5 z-50 animate-fadeIn space-y-1">
-                    {!options.some((o) => o.type === 'COLOR' || o.name === 'اللون') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleAddPredefinedOption('COLOR');
-                          setIsAddOptionOpen(false);
-                        }}
-                        className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0 mt-0.5">
-                          <IconPalette className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-brand-dark">الألوان (Colors)</div>
-                          <div className="text-[10px] text-brand-muted">إضافة ألوان مع ربط صور مخصصة لكل لون</div>
-                        </div>
-                      </button>
-                    )}
+                  <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-72 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-1.5 z-50 animate-fadeIn space-y-1 max-h-80 overflow-y-auto no-scrollbar">
+                    {allowedDefinitions && allowedDefinitions.length > 0 ? (
+                      allowedDefinitions.map((def) => {
+                        const isColor = def.type === 'COLOR' || def.key === 'color';
+                        const isAlreadyAdded = options.some(
+                          (o) =>
+                            o.key === def.key ||
+                            o.name === def.label ||
+                            o.label === def.label ||
+                            (isColor && (o.type === 'COLOR' || o.name === 'اللون'))
+                        );
 
-                    {!options.some((o) => o.type === 'SIZE' || o.name === 'المقاس') && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleAddPredefinedOption('SIZE');
-                          setIsAddOptionOpen(false);
-                        }}
-                        className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-brand-trust/10 text-brand-trust flex items-center justify-center shrink-0 mt-0.5">
-                          <IconRuler className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-xs font-bold text-brand-dark">المقاسات (Sizes)</div>
-                          <div className="text-[10px] text-brand-muted">مقاسات ملابس (S, M, L) أو أحذية (38-45)</div>
-                        </div>
-                      </button>
+                        if (isAlreadyAdded) return null;
+
+                        return (
+                          <button
+                            key={def.key}
+                            type="button"
+                            onClick={() => {
+                              handleAddPredefinedOption(def);
+                              setIsAddOptionOpen(false);
+                            }}
+                            className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
+                          >
+                            <div
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                                isColor
+                                  ? 'bg-brand-primary/10 text-brand-primary'
+                                  : def.key.includes('size')
+                                  ? 'bg-brand-trust/10 text-brand-trust'
+                                  : 'bg-amber-50 text-amber-700'
+                              }`}
+                            >
+                              {isColor ? (
+                                <IconPalette className="w-4 h-4" />
+                              ) : def.key.includes('size') ? (
+                                <IconRuler className="w-4 h-4" />
+                              ) : (
+                                <IconSliders className="w-4 h-4" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-brand-dark flex items-center justify-between">
+                                <span>{def.label}</span>
+                                {def.unit && (
+                                  <span className="text-[10px] text-brand-muted font-normal bg-brand-surface px-1.5 py-0.5 rounded">
+                                    {def.unit}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-brand-muted truncate">
+                                {def.values && def.values.length > 0
+                                  ? def.values.slice(0, 4).map((v) => (typeof v === 'string' ? v : v.label || v.key)).join('، ')
+                                  : 'إضافة خيارات وقيم مخصصة'}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <>
+                        {!options.some((o) => o.type === 'COLOR' || o.name === 'اللون') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleAddPredefinedOption('COLOR');
+                              setIsAddOptionOpen(false);
+                            }}
+                            className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0 mt-0.5">
+                              <IconPalette className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-brand-dark">الألوان (Colors)</div>
+                              <div className="text-[10px] text-brand-muted">إضافة ألوان مع ربط صور مخصصة لكل لون</div>
+                            </div>
+                          </button>
+                        )}
+
+                        {!options.some((o) => o.type === 'SIZE' || o.name === 'المقاس') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleAddPredefinedOption('SIZE');
+                              setIsAddOptionOpen(false);
+                            }}
+                            className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-brand-trust/10 text-brand-trust flex items-center justify-center shrink-0 mt-0.5">
+                              <IconRuler className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-brand-dark">المقاسات (Sizes)</div>
+                              <div className="text-[10px] text-brand-muted">مقاسات ملابس (S, M, L) أو أحذية (38-45)</div>
+                            </div>
+                          </button>
+                        )}
+                      </>
                     )}
 
                     <button
@@ -616,14 +680,14 @@ export function ProductStudioEditorTab({
                         handleAddPredefinedOption('CUSTOM');
                         setIsAddOptionOpen(false);
                       }}
-                      className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
+                      className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer border-t border-brand-border/40 mt-1 pt-2"
                     >
                       <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
                         <IconSliders className="w-4 h-4" />
                       </div>
                       <div>
                         <div className="text-xs font-bold text-brand-dark">خيار مخصص آخر</div>
-                        <div className="text-[10px] text-brand-muted">مثل الحجم، الخامة، أو النوع</div>
+                        <div className="text-[10px] text-brand-muted">مثل الحجم، الخامة، أو نوع التغليف</div>
                       </div>
                     </button>
                   </div>
@@ -639,8 +703,36 @@ export function ProductStudioEditorTab({
             ) : (
               <div className="divide-y divide-brand-border/50">
                 {options.map((opt, optIdx) => {
-                  const isColor = opt.type === 'COLOR' || opt.name === 'اللون';
-                  const isSize = opt.type === 'SIZE' || opt.name === 'المقاس';
+                  const matchingDef = allowedDefinitions?.find(
+                    (d) => d.key === opt.key || d.label === opt.name
+                  );
+                  const isColor =
+                    opt.type === 'COLOR' ||
+                    opt.name === 'اللون' ||
+                    matchingDef?.type === 'COLOR' ||
+                    matchingDef?.key === 'color';
+                  const isShoeSize =
+                    matchingDef?.key === 'size_shoes' ||
+                    opt.name.includes('حذاء') ||
+                    opt.name.includes('أحذية');
+                  const isKidsSize =
+                    matchingDef?.key === 'size_kids' || opt.name.includes('أطفال');
+                  const isClothingSize =
+                    matchingDef?.key === 'size_clothing' ||
+                    (!isShoeSize &&
+                      !isKidsSize &&
+                      (opt.name.includes('ملابس') ||
+                        (opt.name.includes('مقاس') && !matchingDef)));
+                  const isSize =
+                    opt.type === 'SIZE' ||
+                    opt.name.includes('مقاس') ||
+                    isShoeSize ||
+                    isKidsSize ||
+                    isClothingSize ||
+                    matchingDef?.key?.includes('size');
+                  const hasCustomPresets = Boolean(
+                    matchingDef?.values && matchingDef.values.length > 0 && !isColor && !isSize
+                  );
 
                   return (
                     <div
@@ -763,74 +855,113 @@ export function ProductStudioEditorTab({
 
                               {isSize && (
                                 <>
-                                  <div className="space-y-2">
-                                    <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
-                                      <span className="flex items-center gap-1">
-                                        <IconRuler className="w-3.5 h-3.5 text-brand-primary" />
-                                        <span>مقاسات الملابس</span>
-                                      </span>
-                                      <span className="text-[10px] text-brand-muted font-normal">S إلى 3XL</span>
+                                  {(isClothingSize || (!isShoeSize && !isKidsSize)) && (
+                                    <div className="space-y-2">
+                                      <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
+                                        <span className="flex items-center gap-1">
+                                          <IconRuler className="w-3.5 h-3.5 text-brand-primary" />
+                                          <span>مقاسات الملابس</span>
+                                        </span>
+                                        <span className="text-[10px] text-brand-muted font-normal">S إلى 3XL</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {PRESET_CLOTHING_SIZES.map((sz) => {
+                                          const isSelected = opt.values.includes(sz);
+                                          return (
+                                            <button
+                                              key={sz}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  handleRemoveOptionValue(optIdx, sz);
+                                                } else {
+                                                  handleAddOptionValue(optIdx, sz);
+                                                }
+                                              }}
+                                              className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
+                                              }`}
+                                            >
+                                              <span>{sz}</span>
+                                              {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {PRESET_CLOTHING_SIZES.map((sz) => {
-                                        const isSelected = opt.values.includes(sz);
-                                        return (
-                                          <button
-                                            key={sz}
-                                            type="button"
-                                            onClick={() => {
-                                              if (isSelected) {
-                                                handleRemoveOptionValue(optIdx, sz);
-                                              } else {
-                                                handleAddOptionValue(optIdx, sz);
-                                              }
-                                            }}
-                                            className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                              isSelected
-                                                ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
-                                                : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
-                                            }`}
-                                          >
-                                            <span>{sz}</span>
-                                            {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
+                                  )}
 
-                                  <div className="space-y-2 pt-1">
-                                    <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
-                                      <span>مقاسات الأحذية</span>
-                                      <span className="text-[10px] text-brand-muted font-normal">38 إلى 45</span>
+                                  {(isShoeSize || (!isClothingSize && !isKidsSize)) && (
+                                    <div className="space-y-2 pt-1">
+                                      <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
+                                        <span>مقاسات الأحذية</span>
+                                        <span className="text-[10px] text-brand-muted font-normal">38 إلى 45</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {['38', ...PRESET_SHOE_SIZES].map((sz) => {
+                                          const isSelected = opt.values.includes(sz);
+                                          return (
+                                            <button
+                                              key={sz}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  handleRemoveOptionValue(optIdx, sz);
+                                                } else {
+                                                  handleAddOptionValue(optIdx, sz);
+                                                }
+                                              }}
+                                              className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
+                                              }`}
+                                            >
+                                              <span>{sz}</span>
+                                              {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {['38', ...PRESET_SHOE_SIZES].map((sz) => {
-                                        const isSelected = opt.values.includes(sz);
-                                        return (
-                                          <button
-                                            key={sz}
-                                            type="button"
-                                            onClick={() => {
-                                              if (isSelected) {
-                                                handleRemoveOptionValue(optIdx, sz);
-                                              } else {
-                                                handleAddOptionValue(optIdx, sz);
-                                              }
-                                            }}
-                                            className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                              isSelected
-                                                ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
-                                                : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
-                                            }`}
-                                          >
-                                            <span>{sz}</span>
-                                            {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
-                                          </button>
-                                        );
-                                      })}
+                                  )}
+
+                                  {isKidsSize && (
+                                    <div className="space-y-2 pt-1">
+                                      <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
+                                        <span>مقاسات الأطفال والشهور</span>
+                                        <span className="text-[10px] text-brand-muted font-normal">أعمار وشهور</span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {['0-3M', '3-6M', '6-12M', '1-2Y', '2-3Y', '3-4Y', '4-5Y', '5-6Y'].map((sz) => {
+                                          const isSelected = opt.values.includes(sz);
+                                          return (
+                                            <button
+                                              key={sz}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  handleRemoveOptionValue(optIdx, sz);
+                                                } else {
+                                                  handleAddOptionValue(optIdx, sz);
+                                                }
+                                              }}
+                                              className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
+                                              }`}
+                                            >
+                                              <span>{sz}</span>
+                                              {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
                                     </div>
-                                  </div>
+                                  )}
 
                                   <div className="pt-2 border-t border-brand-border/40 flex items-center gap-1.5">
                                     <input
@@ -868,8 +999,48 @@ export function ProductStudioEditorTab({
 
                               {!isColor && !isSize && (
                                 <div className="space-y-2.5">
+                                  {hasCustomPresets && matchingDef?.values && (
+                                    <div className="space-y-1.5">
+                                      <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
+                                        <span>قيم «{matchingDef.label}» الشائعة</span>
+                                        {matchingDef.unit && (
+                                          <span className="text-[10px] text-brand-muted font-normal bg-brand-surface px-1.5 py-0.5 rounded">
+                                            {matchingDef.unit}
+                                          </span>
+                                        )}
+                                      </div>
+                                       <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto py-0.5">
+                                        {matchingDef.values.map((valItem) => {
+                                          const val = typeof valItem === 'string' ? valItem : valItem.label || valItem.key;
+                                          const isSelected = opt.values.includes(val);
+                                          return (
+                                            <button
+                                              key={val}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  handleRemoveOptionValue(optIdx, val);
+                                                } else {
+                                                  handleAddOptionValue(optIdx, val);
+                                                }
+                                              }}
+                                              className={`min-w-8 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
+                                              }`}
+                                            >
+                                              <span>{val}</span>
+                                              {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  )}
+
                                   <div className="text-[11px] font-bold text-brand-dark pb-1 border-b border-brand-border/40">
-                                    إضافة قيمة لهذا الخيار
+                                    {hasCustomPresets ? 'أو اكتب قيمة مخصصة' : 'إضافة قيمة لهذا الخيار'}
                                   </div>
                                   <div className="flex items-center gap-1.5">
                                     <input

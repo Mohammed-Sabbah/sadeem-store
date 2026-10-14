@@ -50,7 +50,7 @@ export const COMPREHENSIVE_COLOR_SWATCHES: Record<string, { hex: string; border?
   'برتقالي': { hex: '#EA580C' },
 };
 
-// مقاسات الملابس العالمية
+// مقاسات الملابس القياسية
 export const CLOTHING_SIZE_PRESETS = [
   'XXS',
   'XS',
@@ -181,6 +181,10 @@ export default function AddProductModal({
   const [customValueInput, setCustomValueInput] = useState('');
   const [variantsRows, setVariantsRows] = useState<VariantRow[]>([]);
 
+  // Color to Image Binding Map
+  const [colorImageMap, setColorImageMap] = useState<Record<string, string>>({});
+  const [activeColorPhotoPopover, setActiveColorPhotoPopover] = useState<string | null>(null);
+
   // Bulk Apply for Variants
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
   const [bulkCompareAtPrice, setBulkCompareAtPrice] = useState<number | ''>('');
@@ -221,6 +225,19 @@ export default function AddProductModal({
       }
     });
   }, [categoryId]);
+
+  // Category Change with Guard against active variants
+  const handleCategoryChange = (newCatId: string) => {
+    const hasActiveVariants = !isSimple && options.some((o) => o.values.length > 0);
+    if (hasActiveVariants && newCatId !== categoryId) {
+      setErrorMessage(
+        'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
+      );
+      return;
+    }
+    setErrorMessage(null);
+    setCategoryId(newCatId);
+  };
 
   // Compute Cartesian product for Variants
   useEffect(() => {
@@ -272,7 +289,10 @@ export default function AddProductModal({
           attrKey,
           sku: `SDM-${cleanSkuPart}-${randomNum}`,
           price: typeof bulkPrice === 'number' && bulkPrice > 0 ? bulkPrice : 50,
-          compareAtPrice: typeof bulkCompareAtPrice === 'number' && bulkCompareAtPrice > 0 ? bulkCompareAtPrice : undefined,
+          compareAtPrice:
+            typeof bulkCompareAtPrice === 'number' && bulkCompareAtPrice > 0
+              ? bulkCompareAtPrice
+              : undefined,
           stock: typeof bulkStock === 'number' && bulkStock >= 0 ? bulkStock : 10,
           isActive: true,
         };
@@ -313,7 +333,23 @@ export default function AddProductModal({
   };
 
   const handleRemoveImage = (idx: number) => {
+    const removedUrl = images[idx];
     setImages((prev) => prev.filter((_, i) => i !== idx));
+
+    // Clear from colorImageMap if assigned
+    setColorImageMap((prev) => {
+      const copy = { ...prev };
+      for (const col in copy) {
+        if (copy[col] === removedUrl) {
+          delete copy[col];
+        }
+      }
+      return copy;
+    });
+  };
+
+  const handleBindColorImage = (color: string, imgUrl: string) => {
+    setColorImageMap((prev) => ({ ...prev, [color]: imgUrl }));
   };
 
   const addOption = (
@@ -456,16 +492,29 @@ export default function AddProductModal({
         options: isSimple ? [] : options.filter((o) => o.name.trim() && o.values.length > 0),
         variants: isSimple
           ? []
-          : variantsRows.map((r) => ({
-              attributes: r.attributes,
-              attrKey: r.attrKey,
-              sku: r.sku,
-              price: Number(r.price),
-              compareAtPrice: r.compareAtPrice ? Number(r.compareAtPrice) : undefined,
-              stock: Number(r.stock) || 0,
-              isActive: r.isActive,
-              images: images.length > 0 ? [images[0]] : [],
-            })),
+          : variantsRows.map((r) => {
+              // Check if any attribute matches a bound color image
+              let boundImg: string | undefined = undefined;
+              for (const [attrName, attrVal] of Object.entries(r.attributes)) {
+                if (attrName.includes('لون') || attrName.toLowerCase().includes('color')) {
+                  if (colorImageMap[attrVal]) {
+                    boundImg = colorImageMap[attrVal];
+                    break;
+                  }
+                }
+              }
+
+              return {
+                attributes: r.attributes,
+                attrKey: r.attrKey,
+                sku: r.sku,
+                price: Number(r.price),
+                compareAtPrice: r.compareAtPrice ? Number(r.compareAtPrice) : undefined,
+                stock: Number(r.stock) || 0,
+                isActive: r.isActive,
+                images: boundImg ? [boundImg] : images.length > 0 ? [images[0]] : [],
+              };
+            }),
         isFeatured: false,
         isActive,
       };
@@ -475,6 +524,7 @@ export default function AddProductModal({
         setName('');
         setDescription('');
         setImages([]);
+        setColorImageMap({});
         setSimplePrice('');
         setSimpleCompareAtPrice('');
         setSimpleStock(10);
@@ -491,27 +541,22 @@ export default function AddProductModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 lg:p-6 font-almarai text-right animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 lg:p-6 font-almarai text-right animate-fadeIn">
       {/* Apple-style Backdrop Blur Scrim */}
       <div
         onClick={onClose}
         className="fixed inset-0 bg-black/50 backdrop-blur-xs transition-opacity cursor-pointer"
       />
 
-      {/* Centered Dialog on Desktop, Bottom-Sheet on Mobile */}
-      <div className="relative w-full sm:max-w-2xl md:max-w-3xl bg-brand-card max-h-[92vh] sm:max-h-[88vh] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col z-10 overflow-hidden border border-brand-border/80 transition-all">
-        {/* Mobile Grab Handle Bar */}
-        <div className="sm:hidden w-full pt-3 pb-1 flex justify-center shrink-0">
-          <div className="w-10 h-1 rounded-full bg-zinc-300" />
-        </div>
-
+      {/* Full-Screen on Mobile, Centered Luxury Modal on Desktop */}
+      <div className="relative w-full h-full sm:h-auto sm:max-w-3xl sm:max-h-[88vh] bg-brand-card sm:rounded-2xl shadow-2xl flex flex-col z-10 overflow-hidden sm:border border-brand-border/80 transition-all">
         {/* Translucent Frosted Glass Header */}
-        <div className="px-5 sm:px-7 py-4 border-b border-brand-border/60 flex items-center justify-between gap-4 shrink-0 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+        <div className="px-4 sm:px-7 py-3.5 sm:py-4 border-b border-brand-border/60 flex items-center justify-between gap-4 shrink-0 bg-white/90 backdrop-blur-md sticky top-0 z-20">
           <div>
-            <span className="text-[11px] font-bold text-brand-primary block mb-0.5">
+            <span className="text-[10px] sm:text-[11px] font-bold text-brand-primary block mb-0.5">
               إدارة المخزون والتوريد
             </span>
-            <h2 className="text-base sm:text-lg font-black text-brand-dark m-0 tracking-tight">
+            <h2 className="text-sm sm:text-lg font-black text-brand-dark m-0 tracking-tight">
               إضافة صنف جديد إلى سَدِيم
             </h2>
           </div>
@@ -525,11 +570,18 @@ export default function AddProductModal({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 space-y-6">
+        {/* Form Body with Smooth Mobile-First Scroll */}
+        <form onSubmit={handleSave} className="flex-1 overflow-y-auto px-4 sm:px-7 py-4 sm:py-6 space-y-5 sm:space-y-6">
           {errorMessage && (
-            <div className="p-3.5 rounded-xl bg-red-50 text-red-800 text-xs font-bold border border-red-200/80 animate-fadeIn">
-              {errorMessage}
+            <div className="p-3.5 rounded-xl bg-red-50 text-red-800 text-xs font-bold border border-red-200/80 animate-fadeIn flex items-center justify-between gap-2">
+              <span>{errorMessage}</span>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-red-600 hover:text-red-900 font-black text-xs cursor-pointer"
+              >
+                ✕
+              </button>
             </div>
           )}
 
@@ -587,7 +639,7 @@ export default function AddProductModal({
                 </label>
                 <select
                   value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
                   disabled={isLoadingCategories}
                   className="w-full h-11 px-3 text-xs font-bold rounded-xl border border-brand-border/80 bg-brand-surface/50 text-brand-dark focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all cursor-pointer"
                 >
@@ -894,22 +946,22 @@ export default function AddProductModal({
               </div>
 
               {/* Options Cards */}
-              <div className="space-y-3">
+              <div className="space-y-3.5">
                 {options.map((opt, optIdx) => {
                   const isColorOption = opt.name.includes('لون') || opt.name.toLowerCase().includes('color');
-                  const isClothingSize =
-                    opt.name.includes('ملابس') ||
-                    (opt.name.includes('مقاس') && !opt.name.includes('حذاء') && !opt.name.includes('أطفال'));
                   const isShoeSize = opt.name.includes('حذاء') || opt.name.includes('أحذية');
+                  const isClothingSize =
+                    !isShoeSize &&
+                    (opt.name.includes('ملابس') || (opt.name.includes('مقاس') && !opt.name.includes('أطفال')));
                   const isKidsSize = opt.name.includes('أطفال') || opt.name.includes('رقمي');
 
                   return (
                     <div
                       key={optIdx}
-                      className="bg-brand-surface/70 p-3.5 rounded-2xl border border-brand-border/70 space-y-3 relative"
+                      className="bg-brand-surface/70 p-3.5 sm:p-4 rounded-2xl border border-brand-border/70 space-y-3 relative"
                     >
-                      {/* Option Header */}
-                      <div className="flex items-center justify-between gap-2">
+                      {/* Fixed Option Header Row */}
+                      <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-brand-border/40">
                         <div className="flex items-center gap-2">
                           <input
                             type="text"
@@ -930,294 +982,420 @@ export default function AddProductModal({
                           </span>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => removeOption(optIdx)}
-                          className="text-[11px] text-red-500 hover:text-red-700 font-bold p-1 cursor-pointer"
-                        >
-                          حذف الخيار ✕
-                        </button>
-                      </div>
-
-                      {/* Values Pills + Compact Popover Launcher */}
-                      <div className="flex flex-wrap items-center gap-2 pt-1">
-                        {/* Selected Chips */}
-                        {opt.values.map((v) => {
-                          const swatch = COMPREHENSIVE_COLOR_SWATCHES[v];
-                          return (
-                            <span
-                              key={v}
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-brand-border/80 text-xs font-bold text-brand-dark shadow-2xs"
+                        {/* Fixed Actions Slot: Launcher Button + Delete Option */}
+                        <div className="flex items-center gap-2">
+                          {/* Dedicated Fixed Launcher Button */}
+                          <div className="relative inline-flex items-center" data-popover>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setActiveValuePopoverIdx(
+                                  activeValuePopoverIdx === optIdx ? null : optIdx
+                                )
+                              }
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl border border-brand-primary/40 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all shadow-2xs active:scale-95 cursor-pointer"
                             >
-                              {isColorOption && swatch && (
-                                <span
-                                  className="w-3 h-3 rounded-full shrink-0"
-                                  style={{
-                                    backgroundColor: swatch.hex,
-                                    border: swatch.border ? '1px solid #D1D5DB' : 'none',
-                                  }}
-                                />
-                              )}
-                              <span>{v}</span>
-                              <button
-                                type="button"
-                                onClick={() => removeTagValue(optIdx, v)}
-                                className="text-zinc-400 hover:text-red-600 font-bold text-xs cursor-pointer"
-                              >
-                                ×
-                              </button>
-                            </span>
-                          );
-                        })}
+                              <span>
+                                + {isColorOption
+                                  ? 'إضافة لون...'
+                                  : isShoeSize
+                                  ? 'إضافة مقاس حذاء...'
+                                  : isClothingSize
+                                  ? 'إضافة مقاس ملابس...'
+                                  : isKidsSize
+                                  ? 'إضافة مقاس أطفال...'
+                                  : 'إضافة قيمة...'}
+                              </span>
+                              <span className="text-[9px]">
+                                {activeValuePopoverIdx === optIdx ? '▲' : '▼'}
+                              </span>
+                            </button>
 
-                        {/* Popover Launcher Button */}
-                        <div className="relative inline-flex items-center">
+                            {/* Floating Popover on Desktop / Smooth Bottom Sheet on Mobile */}
+                            {activeValuePopoverIdx === optIdx && (
+                              <>
+                                {/* Mobile Backdrop Scrim */}
+                                <div
+                                  onClick={() => setActiveValuePopoverIdx(null)}
+                                  className="sm:hidden fixed inset-0 bg-black/50 backdrop-blur-xs z-50 animate-fadeIn"
+                                />
+
+                                {/* Container */}
+                                <div className="fixed inset-x-0 bottom-0 sm:bottom-auto sm:inset-x-auto sm:absolute sm:left-0 sm:top-full sm:mt-2 w-full sm:w-84 max-h-[75vh] sm:max-h-[26rem] bg-white rounded-t-3xl sm:rounded-2xl border-t sm:border border-brand-border shadow-2xl p-4 z-50 flex flex-col animate-slideUp sm:animate-fadeIn">
+                                  {/* Mobile Handle Bar */}
+                                  <div className="sm:hidden w-10 h-1 rounded-full bg-zinc-300 mx-auto mb-3 shrink-0" />
+
+                                  {/* 1. Color Palette Grid */}
+                                  {isColorOption && (
+                                    <>
+                                      <div className="flex items-center justify-between pb-2 border-b border-brand-border/40 text-xs font-black text-brand-dark">
+                                        <span>لوحة الألوان الجاهزة ({Object.keys(COMPREHENSIVE_COLOR_SWATCHES).length} لون)</span>
+                                        <span className="text-[10px] text-brand-muted font-normal">انقر للتضمين</span>
+                                      </div>
+
+                                      <div className="grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto no-scrollbar py-1">
+                                        {Object.entries(COMPREHENSIVE_COLOR_SWATCHES).map(
+                                          ([colName, swatch]) => {
+                                            const isSelected = opt.values.includes(colName);
+                                            return (
+                                              <button
+                                                key={colName}
+                                                type="button"
+                                                onClick={() => {
+                                                  if (isSelected) {
+                                                    removeTagValue(optIdx, colName);
+                                                  } else {
+                                                    addTagValue(optIdx, colName);
+                                                  }
+                                                }}
+                                                className={`flex items-center gap-1.5 p-2 rounded-xl border text-right transition-all cursor-pointer active:scale-95 ${
+                                                  isSelected
+                                                    ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                                    : 'border-brand-border/60 hover:bg-brand-surface text-brand-muted hover:text-brand-dark'
+                                                }`}
+                                              >
+                                                <span
+                                                  className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs"
+                                                  style={{
+                                                    backgroundColor: swatch.hex,
+                                                    border: swatch.border ? '1px solid #D1D5DB' : 'none',
+                                                  }}
+                                                />
+                                                <span className="text-[11px] truncate flex-1">
+                                                  {colName}
+                                                </span>
+                                                {isSelected && (
+                                                  <span className="text-brand-primary font-bold text-xs">
+                                                    ✓
+                                                  </span>
+                                                )}
+                                              </button>
+                                            );
+                                          }
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* 2. Clothing Size Grid */}
+                                  {isClothingSize && (
+                                    <>
+                                      <div className="flex items-center justify-between pb-2 border-b border-brand-border/40 text-xs font-black text-brand-dark">
+                                        <span>مقاسات الملابس القياسية</span>
+                                        <span className="text-[10px] text-brand-muted font-normal">انقر للتضمين</span>
+                                      </div>
+
+                                      <div className="flex flex-wrap gap-2 max-h-52 overflow-y-auto py-1">
+                                        {CLOTHING_SIZE_PRESETS.map((sz) => {
+                                          const isSelected = opt.values.includes(sz);
+                                          return (
+                                            <button
+                                              key={sz}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  removeTagValue(optIdx, sz);
+                                                } else {
+                                                  addTagValue(optIdx, sz);
+                                                }
+                                              }}
+                                              className={`min-w-11 h-9 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
+                                              }`}
+                                            >
+                                              <span>{sz}</span>
+                                              {isSelected && (
+                                                <span className="text-brand-primary text-xs">✓</span>
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* 3. Shoe Size Grid */}
+                                  {isShoeSize && (
+                                    <>
+                                      <div className="flex items-center justify-between pb-2 border-b border-brand-border/40 text-xs font-black text-brand-dark">
+                                        <span>مقاسات الأحذية المعتمدة</span>
+                                        <span className="text-[10px] text-brand-muted font-normal">انقر للتضمين</span>
+                                      </div>
+
+                                      <div className="flex flex-wrap gap-2 max-h-52 overflow-y-auto py-1">
+                                        {SHOE_SIZE_PRESETS.map((sz) => {
+                                          const isSelected = opt.values.includes(sz);
+                                          return (
+                                            <button
+                                              key={sz}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  removeTagValue(optIdx, sz);
+                                                } else {
+                                                  addTagValue(optIdx, sz);
+                                                }
+                                              }}
+                                              className={`min-w-11 h-9 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
+                                              }`}
+                                            >
+                                              <span>{sz}</span>
+                                              {isSelected && (
+                                                <span className="text-brand-primary text-xs">✓</span>
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* 4. Kids Size Grid */}
+                                  {isKidsSize && (
+                                    <>
+                                      <div className="flex items-center justify-between pb-2 border-b border-brand-border/40 text-xs font-black text-brand-dark">
+                                        <span>مقاسات الأطفال والشهور</span>
+                                        <span className="text-[10px] text-brand-muted font-normal">انقر للتضمين</span>
+                                      </div>
+
+                                      <div className="flex flex-wrap gap-2 max-h-52 overflow-y-auto py-1">
+                                        {KIDS_SIZE_PRESETS.map((sz) => {
+                                          const isSelected = opt.values.includes(sz);
+                                          return (
+                                            <button
+                                              key={sz}
+                                              type="button"
+                                              onClick={() => {
+                                                if (isSelected) {
+                                                  removeTagValue(optIdx, sz);
+                                                } else {
+                                                  addTagValue(optIdx, sz);
+                                                }
+                                              }}
+                                              className={`min-w-11 h-9 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                                isSelected
+                                                  ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                                  : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
+                                              }`}
+                                            >
+                                              <span>{sz}</span>
+                                              {isSelected && (
+                                                <span className="text-brand-primary text-xs">✓</span>
+                                              )}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* Bottom: Custom Value Input */}
+                                  <div className="pt-2.5 border-t border-brand-border/50 flex items-center gap-1.5 mt-auto">
+                                    <input
+                                      type="text"
+                                      value={customValueInput}
+                                      onChange={(e) => setCustomValueInput(e.target.value)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                          e.preventDefault();
+                                          if (customValueInput.trim()) {
+                                            addTagValue(optIdx, customValueInput.trim());
+                                            setCustomValueInput('');
+                                          }
+                                        }
+                                      }}
+                                      placeholder={
+                                        isColorOption
+                                          ? 'أو اكتب لوناً مخصصاً (مثال: كشمير)...'
+                                          : 'أو اكتب قيمة مخصصة...'
+                                      }
+                                      className="flex-1 h-9 px-3 text-xs rounded-xl border border-brand-border bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        if (customValueInput.trim()) {
+                                          addTagValue(optIdx, customValueInput.trim());
+                                          setCustomValueInput('');
+                                        }
+                                      }}
+                                      disabled={!customValueInput.trim()}
+                                      className="h-9 px-3.5 text-xs font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer shrink-0"
+                                    >
+                                      إضافة
+                                    </button>
+                                  </div>
+
+                                  <div className="pt-2 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveValuePopoverIdx(null)}
+                                      className="w-full py-2 bg-zinc-100 sm:bg-transparent rounded-xl sm:rounded-none text-xs font-bold text-brand-muted hover:text-brand-dark cursor-pointer transition-colors"
+                                    >
+                                      إغلاق القائمة
+                                    </button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+
+                          {/* Delete Option Button */}
                           <button
                             type="button"
-                            onClick={() =>
-                              setActiveValuePopoverIdx(
-                                activeValuePopoverIdx === optIdx ? null : optIdx
-                              )
-                            }
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl border border-brand-primary/40 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all shadow-2xs active:scale-95 cursor-pointer"
+                            onClick={() => removeOption(optIdx)}
+                            className="w-8 h-8 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 flex items-center justify-center font-bold text-sm cursor-pointer transition-colors"
+                            title="حذف هذا الخيار"
                           >
-                            <span>
-                              + {isColorOption
-                                ? 'إضافة لون...'
-                                : isClothingSize
-                                ? 'إضافة مقاس ملابس...'
-                                : isShoeSize
-                                ? 'إضافة مقاس حذاء...'
-                                : isKidsSize
-                                ? 'إضافة مقاس أطفال...'
-                                : 'إضافة قيمة...'}
-                            </span>
-                            <span className="text-[9px]">
-                              {activeValuePopoverIdx === optIdx ? '▲' : '▼'}
-                            </span>
+                            ✕
                           </button>
+                        </div>
+                      </div>
 
-                          {/* Floating Popover Picker */}
-                          {activeValuePopoverIdx === optIdx && (
-                            <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl border border-brand-border shadow-2xl p-3 z-50 animate-fadeIn space-y-3">
-                              {/* 1. Color Palette Grid */}
-                              {isColorOption && (
-                                <>
-                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
-                                    <span>لوحة الألوان الجاهزة ({Object.keys(COMPREHENSIVE_COLOR_SWATCHES).length} لون)</span>
-                                    <span className="text-[10px] text-brand-muted">انقر للتضمين</span>
-                                  </div>
+                      {/* Selected Values Chips Section (Expands freely without moving the button!) */}
+                      <div className="min-h-8 flex flex-wrap items-center gap-2 pt-1">
+                        {opt.values.length === 0 ? (
+                          <span className="text-[11px] text-brand-muted/70 italic">
+                            لم يتم تحديد أي {isColorOption ? 'ألوان' : 'قيم'} بعد. اضغط على زر الإضافة أعلاه للاختيار.
+                          </span>
+                        ) : (
+                          opt.values.map((v) => {
+                            const swatch = COMPREHENSIVE_COLOR_SWATCHES[v];
+                            const boundImg = colorImageMap[v];
 
-                                  <div className="grid grid-cols-3 gap-1.5 max-h-52 overflow-y-auto no-scrollbar py-0.5">
-                                    {Object.entries(COMPREHENSIVE_COLOR_SWATCHES).map(
-                                      ([colName, swatch]) => {
-                                        const isSelected = opt.values.includes(colName);
-                                        return (
-                                          <button
-                                            key={colName}
-                                            type="button"
-                                            onClick={() => {
-                                              if (isSelected) {
-                                                removeTagValue(optIdx, colName);
-                                              } else {
-                                                addTagValue(optIdx, colName);
-                                              }
-                                            }}
-                                            className={`flex items-center gap-1.5 p-1.5 rounded-xl border text-right transition-all cursor-pointer active:scale-95 ${
-                                              isSelected
-                                                ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
-                                                : 'border-brand-border/60 hover:bg-brand-surface text-brand-muted hover:text-brand-dark'
-                                            }`}
-                                          >
-                                            <span
-                                              className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs"
-                                              style={{
-                                                backgroundColor: swatch.hex,
-                                                border: swatch.border ? '1px solid #D1D5DB' : 'none',
-                                              }}
-                                            />
-                                            <span className="text-[11px] truncate flex-1">
-                                              {colName}
-                                            </span>
-                                            {isSelected && (
-                                              <span className="text-brand-primary font-bold text-xs">
-                                                ✓
-                                              </span>
-                                            )}
-                                          </button>
-                                        );
+                            return (
+                              <span
+                                key={v}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-brand-border/80 text-xs font-bold text-brand-dark shadow-2xs"
+                              >
+                                {isColorOption && swatch && (
+                                  <span
+                                    className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs"
+                                    style={{
+                                      backgroundColor: swatch.hex,
+                                      border: swatch.border ? '1px solid #D1D5DB' : 'none',
+                                    }}
+                                  />
+                                )}
+
+                                <span>{v}</span>
+
+                                {/* Color-to-Image Binding Thumbnail Pill */}
+                                {isColorOption && images.length > 0 && (
+                                  <div className="relative inline-flex items-center" data-popover>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setActiveColorPhotoPopover(
+                                          activeColorPhotoPopover === v ? null : v
+                                        )
                                       }
+                                      className="w-5 h-5 rounded-md overflow-hidden border border-brand-border/80 shrink-0 hover:scale-110 transition-transform cursor-pointer shadow-2xs relative group/thumb"
+                                      title={`ربط صورة بهذا اللون: ${v}`}
+                                    >
+                                      <img
+                                        src={boundImg || images[0]}
+                                        alt={v}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </button>
+
+                                    {/* Color Photo Picker Popover */}
+                                    {activeColorPhotoPopover === v && (
+                                      <>
+                                        <div
+                                          onClick={() => setActiveColorPhotoPopover(null)}
+                                          className="sm:hidden fixed inset-0 bg-black/40 backdrop-blur-xs z-50 animate-fadeIn"
+                                        />
+                                        <div className="fixed inset-x-0 bottom-0 sm:bottom-auto sm:inset-x-auto sm:absolute sm:right-0 sm:top-full sm:mt-2 w-full sm:w-64 bg-white rounded-t-3xl sm:rounded-2xl border-t sm:border border-brand-border shadow-2xl p-3.5 z-50 flex flex-col space-y-2 animate-slideUp sm:animate-fadeIn">
+                                          <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                            <span>صورة لون «{v}»</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => setActiveColorPhotoPopover(null)}
+                                              className="text-brand-muted hover:text-brand-dark text-xs cursor-pointer"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+
+                                          <div className="grid grid-cols-3 gap-2 max-h-44 overflow-y-auto py-1">
+                                            {images.map((imgUrl, imgI) => {
+                                              const isAssigned =
+                                                colorImageMap[v] === imgUrl ||
+                                                (!colorImageMap[v] && imgI === 0);
+                                              return (
+                                                <button
+                                                  key={imgI}
+                                                  type="button"
+                                                  onClick={() => {
+                                                    handleBindColorImage(v, imgUrl);
+                                                    setActiveColorPhotoPopover(null);
+                                                  }}
+                                                  className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
+                                                    isAssigned
+                                                      ? 'border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
+                                                      : 'border-brand-border/70 hover:border-brand-primary/50'
+                                                  }`}
+                                                >
+                                                  <img
+                                                    src={imgUrl}
+                                                    alt={`صورة ${imgI + 1}`}
+                                                    className="w-full h-full object-cover"
+                                                  />
+                                                  {isAssigned && (
+                                                    <div className="absolute inset-0 bg-brand-primary/25 flex items-center justify-center">
+                                                      <span className="w-4 h-4 rounded-full bg-brand-primary text-white text-[9px] flex items-center justify-center">
+                                                        ✓
+                                                      </span>
+                                                    </div>
+                                                  )}
+                                                  <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white text-[8px] font-bold px-1 rounded">
+                                                    {imgI === 0 ? 'الغلاف' : `#${imgI + 1}`}
+                                                  </span>
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+
+                                          {colorImageMap[v] && (
+                                            <div className="pt-1 border-t border-brand-border/40">
+                                              <button
+                                                type="button"
+                                                onClick={() => {
+                                                  const nextMap = { ...colorImageMap };
+                                                  delete nextMap[v];
+                                                  setColorImageMap(nextMap);
+                                                  setActiveColorPhotoPopover(null);
+                                                }}
+                                                className="w-full py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-center"
+                                              >
+                                                إلغاء التخصيص (استخدام الغلاف)
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </>
                                     )}
                                   </div>
-                                </>
-                              )}
+                                )}
 
-                              {/* 2. Clothing Size Grid */}
-                              {isClothingSize && (
-                                <>
-                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
-                                    <span>مقاسات الملابس القياسية</span>
-                                    <span className="text-[10px] text-brand-muted">انقر للتضمين</span>
-                                  </div>
-
-                                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-1">
-                                    {CLOTHING_SIZE_PRESETS.map((sz) => {
-                                      const isSelected = opt.values.includes(sz);
-                                      return (
-                                        <button
-                                          key={sz}
-                                          type="button"
-                                          onClick={() => {
-                                            if (isSelected) {
-                                              removeTagValue(optIdx, sz);
-                                            } else {
-                                              addTagValue(optIdx, sz);
-                                            }
-                                          }}
-                                          className={`min-w-10 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                            isSelected
-                                              ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
-                                              : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
-                                          }`}
-                                        >
-                                          <span>{sz}</span>
-                                          {isSelected && (
-                                            <span className="text-brand-primary text-xs">✓</span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </>
-                              )}
-
-                              {/* 3. Shoe Size Grid */}
-                              {isShoeSize && (
-                                <>
-                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
-                                    <span>مقاسات الأحذية المعتمدة</span>
-                                    <span className="text-[10px] text-brand-muted">انقر للتضمين</span>
-                                  </div>
-
-                                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-1">
-                                    {SHOE_SIZE_PRESETS.map((sz) => {
-                                      const isSelected = opt.values.includes(sz);
-                                      return (
-                                        <button
-                                          key={sz}
-                                          type="button"
-                                          onClick={() => {
-                                            if (isSelected) {
-                                              removeTagValue(optIdx, sz);
-                                            } else {
-                                              addTagValue(optIdx, sz);
-                                            }
-                                          }}
-                                          className={`min-w-10 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                            isSelected
-                                              ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
-                                              : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
-                                          }`}
-                                        >
-                                          <span>{sz}</span>
-                                          {isSelected && (
-                                            <span className="text-brand-primary text-xs">✓</span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </>
-                              )}
-
-                              {/* 4. Kids Size Grid */}
-                              {isKidsSize && (
-                                <>
-                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
-                                    <span>مقاسات الأطفال والشهور</span>
-                                    <span className="text-[10px] text-brand-muted">انقر للتضمين</span>
-                                  </div>
-
-                                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-1">
-                                    {KIDS_SIZE_PRESETS.map((sz) => {
-                                      const isSelected = opt.values.includes(sz);
-                                      return (
-                                        <button
-                                          key={sz}
-                                          type="button"
-                                          onClick={() => {
-                                            if (isSelected) {
-                                              removeTagValue(optIdx, sz);
-                                            } else {
-                                              addTagValue(optIdx, sz);
-                                            }
-                                          }}
-                                          className={`min-w-10 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                            isSelected
-                                              ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
-                                              : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
-                                          }`}
-                                        >
-                                          <span>{sz}</span>
-                                          {isSelected && (
-                                            <span className="text-brand-primary text-xs">✓</span>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </>
-                              )}
-
-                              {/* Bottom: Custom Value Input for any Option */}
-                              <div className="pt-2 border-t border-brand-border/50 flex items-center gap-1.5">
-                                <input
-                                  type="text"
-                                  value={customValueInput}
-                                  onChange={(e) => setCustomValueInput(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      e.preventDefault();
-                                      if (customValueInput.trim()) {
-                                        addTagValue(optIdx, customValueInput.trim());
-                                        setCustomValueInput('');
-                                      }
-                                    }
-                                  }}
-                                  placeholder={
-                                    isColorOption
-                                      ? 'أو اكتب لوناً مخصصاً (مثال: كشمير)...'
-                                      : 'أو اكتب قيمة مخصصة...'
-                                  }
-                                  className="flex-1 h-8 px-2.5 text-xs rounded-xl border border-brand-border bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
-                                />
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    if (customValueInput.trim()) {
-                                      addTagValue(optIdx, customValueInput.trim());
-                                      setCustomValueInput('');
-                                    }
-                                  }}
-                                  disabled={!customValueInput.trim()}
-                                  className="h-8 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
+                                  onClick={() => removeTagValue(optIdx, v)}
+                                  className="text-zinc-400 hover:text-red-600 font-bold text-xs cursor-pointer p-0.5"
                                 >
-                                  إضافة
+                                  ×
                                 </button>
-                              </div>
-
-                              <div className="pt-1 text-center">
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveValuePopoverIdx(null)}
-                                  className="text-[10px] text-brand-muted hover:text-brand-dark underline cursor-pointer"
-                                >
-                                  إغلاق القائمة
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                              </span>
+                            );
+                          })
+                        )}
                       </div>
                     </div>
                   );
@@ -1461,7 +1639,7 @@ export default function AddProductModal({
             </div>
           )}
 
-          {/* Section 5: Visibility Toggle (Only active toggle, no isFeatured) */}
+          {/* Section 5: Visibility Toggle */}
           <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-xs">
             <label className="flex items-center gap-2 cursor-pointer font-bold text-brand-dark select-none">
               <input
@@ -1476,7 +1654,7 @@ export default function AddProductModal({
         </form>
 
         {/* Bottom Translucent Glass Action Bar */}
-        <div className="px-5 sm:px-7 py-4 border-t border-brand-border/60 flex items-center justify-end gap-3 shrink-0 bg-white/80 backdrop-blur-md sticky bottom-0 z-20">
+        <div className="px-4 sm:px-7 py-3 sm:py-4 border-t border-brand-border/60 flex items-center justify-end gap-3 shrink-0 bg-white/90 backdrop-blur-md sticky bottom-0 z-20">
           <button
             type="button"
             onClick={onClose}

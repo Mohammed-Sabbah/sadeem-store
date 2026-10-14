@@ -225,34 +225,70 @@ export function useProductStudio(productId: string) {
     return false;
   }, [product, name, description, isActive, isFeatured, isAnonymousVendor, images]);
 
-  // Gallery Handlers
-  const handleDeviceFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Gallery Handlers with Client-Side Canvas Compression
+  const compressImage = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const rawUrl = event.target?.result as string;
+        if (!rawUrl) return resolve('');
+
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            resolve(canvas.toDataURL('image/jpeg', 0.82));
+          } else {
+            resolve(rawUrl);
+          }
+        };
+        img.onerror = () => resolve(rawUrl);
+        img.src = rawUrl;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleDeviceFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setIsProcessingFiles(true);
     const fileArray = Array.from(files);
-    const newUrls: string[] = [];
-    let loadedCount = 0;
 
-    fileArray.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        if (loadEvent.target?.result) {
-          newUrls.push(loadEvent.target.result as string);
-        }
-        loadedCount++;
-        if (loadedCount === fileArray.length) {
-          setImages((prev) => [...prev, ...newUrls]);
-          setIsProcessingFiles(false);
-          setUploadFeedback(`تمت إضافة ${newUrls.length} صور من جهازك بنجاح`);
-          setTimeout(() => setUploadFeedback(null), 3500);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
-
-    e.target.value = '';
+    try {
+      const compressedUrls = await Promise.all(fileArray.map((f) => compressImage(f)));
+      const validUrls = compressedUrls.filter(Boolean);
+      if (validUrls.length > 0) {
+        setImages((prev) => [...prev, ...validUrls]);
+        setUploadFeedback(`تم ضغط وإضافة ${validUrls.length} صور بنجاح`);
+        setTimeout(() => setUploadFeedback(null), 3500);
+      }
+    } catch (err) {
+      console.error('Image compression error:', err);
+    } finally {
+      setIsProcessingFiles(false);
+      e.target.value = '';
+    }
   };
 
   const handleAddImageUrl = () => {

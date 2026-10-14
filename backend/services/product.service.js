@@ -123,6 +123,18 @@ async function createProductDocuments(productData, rawVariants, session = null) 
             payloadToCreate.image = payloadToCreate.images[0];
         }
 
+        if (payloadToCreate.slug) {
+            const existingSlug = await Product.findOne({
+                storeId: payloadToCreate.storeId,
+                slug: payloadToCreate.slug,
+                isDeleted: false,
+            }).session(session || null);
+
+            if (existingSlug) {
+                payloadToCreate.slug = `${payloadToCreate.slug}-${Math.floor(100 + Math.random() * 900)}`;
+            }
+        }
+
         [product] = await Product.create([payloadToCreate], options);
 
         const variantsToCreate = (rawVariants || []).map((raw, idx) => {

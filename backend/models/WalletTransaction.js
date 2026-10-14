@@ -1,4 +1,12 @@
 const mongoose = require('mongoose');
+const {
+    WALLET_TRANSACTION_TYPE,
+    WALLET_TRANSACTION_TYPE_VALUES,
+    BALANCE_TYPE,
+    BALANCE_TYPE_VALUES,
+    TRANSACTION_STATUS,
+    TRANSACTION_STATUS_VALUES,
+} = require('../constants/enums');
 
 const walletTransactionSchema = new mongoose.Schema(
     {
@@ -11,29 +19,34 @@ const walletTransactionSchema = new mongoose.Schema(
         userId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            required: true,
             index: true,
         },
         type: {
             type: String,
-            enum: ['deposit', 'purchase', 'refund', 'withdrawal', 'adjustment'],
+            enum: WALLET_TRANSACTION_TYPE_VALUES,
             required: true,
         },
         amount: {
             type: Number,
             required: true,
+            min: 0,
+        },
+        balanceType: {
+            type: String,
+            enum: BALANCE_TYPE_VALUES,
+            default: BALANCE_TYPE.WITHDRAWABLE,
         },
         balanceBefore: {
             type: Number,
-            required: true,
+            default: 0,
         },
         balanceAfter: {
             type: Number,
-            required: true,
+            default: 0,
         },
         referenceType: {
             type: String,
-            enum: ['order', 'jawwal_pay', 'admin_adjustment', 'initial_bonus'],
+            enum: ['order', 'jawwal_pay', 'admin_adjustment', 'initial_bonus', 'deposit', 'withdrawal'],
             default: 'order',
         },
         referenceId: {
@@ -42,8 +55,38 @@ const walletTransactionSchema = new mongoose.Schema(
         },
         status: {
             type: String,
-            enum: ['pending', 'completed', 'failed', 'cancelled'],
-            default: 'completed',
+            enum: TRANSACTION_STATUS_VALUES,
+            default: TRANSACTION_STATUS.COMPLETED,
+        },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+        verifiedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+        },
+        rejectReason: {
+            type: String,
+            default: '',
+        },
+        proofImage: {
+            type: String,
+            default: '',
+        },
+        payoutDetails: {
+            type: Object,
+            default: null,
+        },
+        reviewedAt: {
+            type: Date,
+            default: null,
+        },
+        idempotencyKey: {
+            type: String,
+            default: '',
         },
         description: {
             type: String,
@@ -55,5 +98,8 @@ const walletTransactionSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+walletTransactionSchema.index({ walletId: 1, createdAt: -1 });
+walletTransactionSchema.index({ status: 1, type: 1 });
 
 module.exports = mongoose.model('WalletTransaction', walletTransactionSchema);

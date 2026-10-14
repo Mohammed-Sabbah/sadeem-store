@@ -21,25 +21,83 @@ interface VariantRow {
   isActive: boolean;
 }
 
-const PRESET_OPTIONS = ['المقاس', 'اللون', 'الحجم', 'الوزن'];
+// ألوان شائعة ومطلوبة في سوق غزة مع درجات Hex دقيقة
+export const COMPREHENSIVE_COLOR_SWATCHES: Record<string, { hex: string; border?: boolean }> = {
+  'أسود': { hex: '#18181B' },
+  'أبيض': { hex: '#FFFFFF', border: true },
+  'أوف وايت': { hex: '#F8F6F0', border: true },
+  'كحلي': { hex: '#1E3A8A' },
+  'كحلي داكن': { hex: '#0F172A' },
+  'رمادي': { hex: '#71717A' },
+  'رمادي فاتح': { hex: '#D4D4D8' },
+  'بيج': { hex: '#E5D9C5' },
+  'رملي': { hex: '#D2B48C' },
+  'زيتي': { hex: '#4D5D43' },
+  'زيتوني': { hex: '#556B2F' },
+  'عسلي': { hex: '#B8621B' },
+  'جملي': { hex: '#C19A6B' },
+  'بني': { hex: '#78350F' },
+  'شوكولاتة': { hex: '#3E2723' },
+  'عنابي': { hex: '#831843' },
+  'أحمر': { hex: '#DC2626' },
+  'وردي': { hex: '#F472B6' },
+  'موف': { hex: '#A855F7' },
+  'أزرق': { hex: '#2563EB' },
+  'سماوي': { hex: '#38BDF8' },
+  'تيفاني': { hex: '#14B8A6' },
+  'أخضر': { hex: '#15803D' },
+  'خردلي': { hex: '#CA8A04' },
+  'برتقالي': { hex: '#EA580C' },
+};
 
-const COMMON_COLOR_PRESETS = [
-  { name: 'أسود', hex: '#18181B' },
-  { name: 'أبيض', hex: '#FFFFFF', border: true },
-  { name: 'كحلي', hex: '#1E3A8A' },
-  { name: 'بيج', hex: '#E5D3B3' },
-  { name: 'رمادي', hex: '#6B7280' },
-  { name: 'زيتي', hex: '#556B2F' },
-  { name: 'بني', hex: '#78350F' },
-  { name: 'عنابي', hex: '#831843' },
+// مقاسات الملابس العالمية
+export const CLOTHING_SIZE_PRESETS = [
+  'XXS',
+  'XS',
+  'S',
+  'M',
+  'L',
+  'XL',
+  '2XL',
+  '3XL',
+  '4XL',
+  '5XL',
+  'موحد (Free Size)',
 ];
 
-const COMMON_SIZE_PRESETS = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
-const COMMON_SHOE_PRESETS = ['39', '40', '41', '42', '43', '44', '45'];
+// مقاسات الأحذية المعتمدة
+export const SHOE_SIZE_PRESETS = [
+  '35',
+  '36',
+  '37',
+  '38',
+  '39',
+  '40',
+  '41',
+  '42',
+  '43',
+  '44',
+  '45',
+  '46',
+];
+
+// مقاسات الأطفال والرقمية
+export const KIDS_SIZE_PRESETS = [
+  '0-3m',
+  '3-6m',
+  '6-12m',
+  '1-2y',
+  '2-3y',
+  '4-5y',
+  '6-7y',
+  '8-9y',
+  '10-11y',
+  '12-13y',
+  '14-16y',
+];
 
 /**
  * ضغط الصورة على جهاز التاجر باستخدام HTML5 Canvas
- * يقلل الحجم من 5-8 ميجابايت إلى أقل من 150 كيلوبايت لتوفير بيانات شبكة غزة
  */
 const compressImage = (file: File): Promise<string> => {
   return new Promise((resolve) => {
@@ -102,7 +160,6 @@ export default function AddProductModal({
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newUrlInput, setNewUrlInput] = useState('');
-  const [isFeatured, setIsFeatured] = useState(false);
   const [isActive, setIsActive] = useState(true);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -118,13 +175,15 @@ export default function AddProductModal({
 
   // Variants Product Fields
   const [options, setOptions] = useState<ProductOption[]>([
-    { name: 'المقاس', values: [] },
+    { name: 'اللون', values: [] },
   ]);
-  const [optionTagInputs, setOptionTagInputs] = useState<Record<number, string>>({});
+  const [activeValuePopoverIdx, setActiveValuePopoverIdx] = useState<number | null>(null);
+  const [customValueInput, setCustomValueInput] = useState('');
   const [variantsRows, setVariantsRows] = useState<VariantRow[]>([]);
 
   // Bulk Apply for Variants
   const [bulkPrice, setBulkPrice] = useState<number | ''>('');
+  const [bulkCompareAtPrice, setBulkCompareAtPrice] = useState<number | ''>('');
   const [bulkStock, setBulkStock] = useState<number | ''>(10);
 
   // Load Categories on Open
@@ -213,6 +272,7 @@ export default function AddProductModal({
           attrKey,
           sku: `SDM-${cleanSkuPart}-${randomNum}`,
           price: typeof bulkPrice === 'number' && bulkPrice > 0 ? bulkPrice : 50,
+          compareAtPrice: typeof bulkCompareAtPrice === 'number' && bulkCompareAtPrice > 0 ? bulkCompareAtPrice : undefined,
           stock: typeof bulkStock === 'number' && bulkStock >= 0 ? bulkStock : 10,
           isActive: true,
         };
@@ -256,33 +316,54 @@ export default function AddProductModal({
     setImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const addOption = (optionName: string = '', def?: OptionDefinition) => {
+  const addOption = (
+    optionName: string = '',
+    presetType?: 'COLOR' | 'CLOTHING_SIZE' | 'SHOE_SIZE' | 'KIDS_SIZE' | 'CUSTOM',
+    def?: OptionDefinition
+  ) => {
     if (options.length >= 3) {
       alert('الحد الأقصى للخيارات هو 3 لضمان سرعة التصفح لزبائن غزة.');
       return;
     }
-    const targetName = def?.label || optionName;
-    if (options.some((o) => o.name === targetName)) return;
+
+    let defaultName = def?.label || optionName;
+    if (!defaultName) {
+      defaultName = `خيار ${options.length + 1}`;
+    }
+
+    if (options.some((o) => o.name === defaultName)) {
+      alert(`الخيار «${defaultName}» مضاف بالفعل.`);
+      return;
+    }
+
     setOptions((prev) => [
       ...prev,
       {
-        key: def?.key,
+        key: def?.key || `opt_${Date.now()}`,
         source: def ? 'DEFINED' : 'CUSTOM',
-        label: def?.label || targetName,
-        name: targetName,
-        type: def?.type || 'TEXT',
+        label: def?.label || defaultName,
+        name: defaultName,
+        type: def?.type || (presetType === 'COLOR' ? 'COLOR' : 'TEXT'),
         unit: def?.unit || null,
-        values: def?.values ? def.values.slice(0, 3).map((v) => v.label) : [],
+        values: [],
       },
     ]);
+
+    // Open popover for the newly created option
+    setTimeout(() => {
+      setActiveValuePopoverIdx(options.length);
+    }, 50);
   };
 
   const removeOption = (index: number) => {
     setOptions((prev) => prev.filter((_, i) => i !== index));
+    if (activeValuePopoverIdx === index) {
+      setActiveValuePopoverIdx(null);
+    }
   };
 
-  const addTagValue = (optionIndex: number, specificVal?: string) => {
-    const rawVal = (specificVal || optionTagInputs[optionIndex] || '').trim();
+  const addTagValue = (optionIndex: number, specificVal: string) => {
+    const rawVal = specificVal.trim();
     if (!rawVal) return;
 
     setOptions((prev) => {
@@ -293,10 +374,6 @@ export default function AddProductModal({
       }
       return copy;
     });
-
-    if (!specificVal) {
-      setOptionTagInputs((prev) => ({ ...prev, [optionIndex]: '' }));
-    }
   };
 
   const removeTagValue = (optionIndex: number, valToRemove: string) => {
@@ -311,8 +388,12 @@ export default function AddProductModal({
     setVariantsRows((prev) =>
       prev.map((r) => ({
         ...r,
-        price: typeof bulkPrice === 'number' ? bulkPrice : r.price,
-        stock: typeof bulkStock === 'number' ? bulkStock : r.stock,
+        price: typeof bulkPrice === 'number' && bulkPrice > 0 ? bulkPrice : r.price,
+        compareAtPrice:
+          typeof bulkCompareAtPrice === 'number' && bulkCompareAtPrice > 0
+            ? bulkCompareAtPrice
+            : r.compareAtPrice,
+        stock: typeof bulkStock === 'number' && bulkStock >= 0 ? bulkStock : r.stock,
       }))
     );
   };
@@ -385,7 +466,7 @@ export default function AddProductModal({
               isActive: r.isActive,
               images: images.length > 0 ? [images[0]] : [],
             })),
-        isFeatured,
+        isFeatured: false,
         isActive,
       };
 
@@ -395,6 +476,7 @@ export default function AddProductModal({
         setDescription('');
         setImages([]);
         setSimplePrice('');
+        setSimpleCompareAtPrice('');
         setSimpleStock(10);
         setIsSimple(true);
         onClose();
@@ -684,7 +766,7 @@ export default function AddProductModal({
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="text-xs font-bold text-brand-dark block mb-1">
-                    السعر (₪) <span className="text-red-500">*</span>
+                    سعر البيع (₪) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -757,69 +839,96 @@ export default function AddProductModal({
           {/* Section 4: Variants Dynamic Chips Builder */}
           {!isSimple && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2 border-b border-brand-border/40">
                 <h3 className="text-xs font-black text-brand-dark m-0">
-                  خيارات الصنف (اللون، المقاس، الحجم):
+                  خيارات ومقاسات الصنف:
                 </h3>
+
+                {/* Option Category Selectors */}
                 <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                  {categoryOptionDefinitions.length > 0
-                    ? categoryOptionDefinitions.map((def) => (
-                        <button
-                          key={def.key}
-                          type="button"
-                          onClick={() => addOption(def.label, def)}
-                          disabled={options.some((o) => o.name === def.label || o.key === def.key)}
-                          className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer"
-                        >
-                          + {def.label}
-                        </button>
-                      ))
-                    : PRESET_OPTIONS.map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => addOption(preset)}
-                          className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-muted hover:text-brand-dark hover:border-brand-primary transition-all duration-150 active:scale-95 cursor-pointer"
-                        >
-                          + {preset}
-                        </button>
-                      ))}
                   <button
                     type="button"
-                    onClick={() => addOption('')}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-150 active:scale-95 cursor-pointer"
+                    onClick={() => addOption('اللون', 'COLOR')}
+                    disabled={options.some((o) => o.name.includes('لون') || o.name.toLowerCase().includes('color'))}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full bg-gradient-to-tr from-amber-600 via-rose-500 to-blue-500" />
+                    <span>+ اللون</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => addOption('مقاس الملابس', 'CLOTHING_SIZE')}
+                    disabled={options.some((o) => o.name === 'مقاس الملابس')}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
+                  >
+                    + مقاس ملابس
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => addOption('مقاس الأحذية', 'SHOE_SIZE')}
+                    disabled={options.some((o) => o.name === 'مقاس الأحذية')}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
+                  >
+                    + مقاس أحذية
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => addOption('مقاس أطفال', 'KIDS_SIZE')}
+                    disabled={options.some((o) => o.name === 'مقاس أطفال')}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg border border-brand-border/80 bg-white text-brand-dark hover:border-brand-primary disabled:opacity-40 transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
+                  >
+                    + مقاس أطفال
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => addOption('', 'CUSTOM')}
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs"
                   >
                     + مخصص
                   </button>
                 </div>
               </div>
 
-              {/* Options Tag Rows */}
+              {/* Options Cards */}
               <div className="space-y-3">
                 {options.map((opt, optIdx) => {
                   const isColorOption = opt.name.includes('لون') || opt.name.toLowerCase().includes('color');
-                  const isSizeOption = opt.name.includes('مقاس') || opt.name.toLowerCase().includes('size');
+                  const isClothingSize =
+                    opt.name.includes('ملابس') ||
+                    (opt.name.includes('مقاس') && !opt.name.includes('حذاء') && !opt.name.includes('أطفال'));
+                  const isShoeSize = opt.name.includes('حذاء') || opt.name.includes('أحذية');
+                  const isKidsSize = opt.name.includes('أطفال') || opt.name.includes('رقمي');
 
                   return (
                     <div
                       key={optIdx}
-                      className="bg-brand-surface/70 p-3.5 rounded-2xl border border-brand-border/70 space-y-3"
+                      className="bg-brand-surface/70 p-3.5 rounded-2xl border border-brand-border/70 space-y-3 relative"
                     >
+                      {/* Option Header */}
                       <div className="flex items-center justify-between gap-2">
-                        <input
-                          type="text"
-                          value={opt.name}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setOptions((prev) => {
-                              const copy = [...prev];
-                              copy[optIdx].name = val;
-                              return copy;
-                            });
-                          }}
-                          placeholder="اسم الخيار (المقاس، اللون...)"
-                          className="h-8 px-2.5 text-xs font-black rounded-lg border border-brand-border bg-white text-brand-dark w-44 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                        />
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={opt.name}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setOptions((prev) => {
+                                const copy = [...prev];
+                                copy[optIdx].name = val;
+                                return copy;
+                              });
+                            }}
+                            placeholder="اسم الخيار (المقاس، اللون...)"
+                            className="h-8 px-2.5 text-xs font-black rounded-lg border border-brand-border bg-white text-brand-dark w-36 sm:w-44 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                          />
+                          <span className="text-[10px] font-bold text-brand-muted bg-white px-2 py-0.5 rounded-full border border-brand-border/60">
+                            {opt.values.length} {isColorOption ? 'ألوان' : 'قيم'}
+                          </span>
+                        </div>
 
                         <button
                           type="button"
@@ -830,145 +939,286 @@ export default function AddProductModal({
                         </button>
                       </div>
 
-                      {/* Selected Chips Display */}
-                      <div className="flex flex-wrap items-center gap-2">
-                        {opt.values.map((v) => (
-                          <span
-                            key={v}
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-brand-border/80 text-xs font-black text-brand-dark shadow-2xs"
-                          >
-                            <span>{v}</span>
-                            <button
-                              type="button"
-                              onClick={() => removeTagValue(optIdx, v)}
-                              className="text-zinc-400 hover:text-red-600 font-bold text-xs"
+                      {/* Values Pills + Compact Popover Launcher */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1">
+                        {/* Selected Chips */}
+                        {opt.values.map((v) => {
+                          const swatch = COMPREHENSIVE_COLOR_SWATCHES[v];
+                          return (
+                            <span
+                              key={v}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-brand-border/80 text-xs font-bold text-brand-dark shadow-2xs"
                             >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-
-                        {/* Tag Add Input */}
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="text"
-                            value={optionTagInputs[optIdx] || ''}
-                            onChange={(e) =>
-                              setOptionTagInputs((prev) => ({ ...prev, [optIdx]: e.target.value }))
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                addTagValue(optIdx);
-                              }
-                            }}
-                            placeholder="+ قيمة مخصصة"
-                            className="h-8 px-2.5 text-xs rounded-xl border border-dashed border-brand-border/90 bg-white text-brand-dark focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary w-32"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => addTagValue(optIdx)}
-                            className="h-8 px-3 rounded-xl bg-zinc-200 text-brand-dark text-xs font-bold hover:bg-zinc-300 active:scale-95 cursor-pointer"
-                          >
-                            إضافة
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Fast-Add Presets Bar */}
-                      {isColorOption && (
-                        <div className="pt-2 border-t border-brand-border/50 flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[10px] font-bold text-brand-muted">ألوان شائعة:</span>
-                          {COMMON_COLOR_PRESETS.map((col) => {
-                            const isSelected = opt.values.includes(col.name);
-                            return (
-                              <button
-                                key={col.name}
-                                type="button"
-                                onClick={() => {
-                                  if (isSelected) {
-                                    removeTagValue(optIdx, col.name);
-                                  } else {
-                                    addTagValue(optIdx, col.name);
-                                  }
-                                }}
-                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer active:scale-95 ${
-                                  isSelected
-                                    ? 'bg-brand-primary/10 border-brand-primary text-brand-dark shadow-2xs font-black'
-                                    : 'bg-white border-brand-border/80 text-brand-muted hover:border-brand-primary/50'
-                                }`}
-                              >
+                              {isColorOption && swatch && (
                                 <span
-                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                  className="w-3 h-3 rounded-full shrink-0"
                                   style={{
-                                    backgroundColor: col.hex,
-                                    border: col.border ? '1px solid #D1D5DB' : 'none',
+                                    backgroundColor: swatch.hex,
+                                    border: swatch.border ? '1px solid #D1D5DB' : 'none',
                                   }}
                                 />
-                                <span>{col.name}</span>
+                              )}
+                              <span>{v}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeTagValue(optIdx, v)}
+                                className="text-zinc-400 hover:text-red-600 font-bold text-xs cursor-pointer"
+                              >
+                                ×
                               </button>
-                            );
-                          })}
-                        </div>
-                      )}
+                            </span>
+                          );
+                        })}
 
-                      {isSizeOption && (
-                        <div className="pt-2 border-t border-brand-border/50 space-y-1.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-bold text-brand-muted">ملابس:</span>
-                            {COMMON_SIZE_PRESETS.map((sz) => {
-                              const isSelected = opt.values.includes(sz);
-                              return (
-                                <button
-                                  key={sz}
-                                  type="button"
-                                  onClick={() => {
-                                    if (isSelected) {
-                                      removeTagValue(optIdx, sz);
-                                    } else {
-                                      addTagValue(optIdx, sz);
+                        {/* Popover Launcher Button */}
+                        <div className="relative inline-flex items-center">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setActiveValuePopoverIdx(
+                                activeValuePopoverIdx === optIdx ? null : optIdx
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl border border-brand-primary/40 bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all shadow-2xs active:scale-95 cursor-pointer"
+                          >
+                            <span>
+                              + {isColorOption
+                                ? 'إضافة لون...'
+                                : isClothingSize
+                                ? 'إضافة مقاس ملابس...'
+                                : isShoeSize
+                                ? 'إضافة مقاس حذاء...'
+                                : isKidsSize
+                                ? 'إضافة مقاس أطفال...'
+                                : 'إضافة قيمة...'}
+                            </span>
+                            <span className="text-[9px]">
+                              {activeValuePopoverIdx === optIdx ? '▲' : '▼'}
+                            </span>
+                          </button>
+
+                          {/* Floating Popover Picker */}
+                          {activeValuePopoverIdx === optIdx && (
+                            <div className="absolute right-0 top-full mt-2 w-72 sm:w-84 max-w-[calc(100vw-2.5rem)] bg-white rounded-2xl border border-brand-border shadow-2xl p-3 z-50 animate-fadeIn space-y-3">
+                              {/* 1. Color Palette Grid */}
+                              {isColorOption && (
+                                <>
+                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                    <span>لوحة الألوان الجاهزة ({Object.keys(COMPREHENSIVE_COLOR_SWATCHES).length} لون)</span>
+                                    <span className="text-[10px] text-brand-muted">انقر للتضمين</span>
+                                  </div>
+
+                                  <div className="grid grid-cols-3 gap-1.5 max-h-52 overflow-y-auto no-scrollbar py-0.5">
+                                    {Object.entries(COMPREHENSIVE_COLOR_SWATCHES).map(
+                                      ([colName, swatch]) => {
+                                        const isSelected = opt.values.includes(colName);
+                                        return (
+                                          <button
+                                            key={colName}
+                                            type="button"
+                                            onClick={() => {
+                                              if (isSelected) {
+                                                removeTagValue(optIdx, colName);
+                                              } else {
+                                                addTagValue(optIdx, colName);
+                                              }
+                                            }}
+                                            className={`flex items-center gap-1.5 p-1.5 rounded-xl border text-right transition-all cursor-pointer active:scale-95 ${
+                                              isSelected
+                                                ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                                : 'border-brand-border/60 hover:bg-brand-surface text-brand-muted hover:text-brand-dark'
+                                            }`}
+                                          >
+                                            <span
+                                              className="w-3.5 h-3.5 rounded-full shrink-0 shadow-2xs"
+                                              style={{
+                                                backgroundColor: swatch.hex,
+                                                border: swatch.border ? '1px solid #D1D5DB' : 'none',
+                                              }}
+                                            />
+                                            <span className="text-[11px] truncate flex-1">
+                                              {colName}
+                                            </span>
+                                            {isSelected && (
+                                              <span className="text-brand-primary font-bold text-xs">
+                                                ✓
+                                              </span>
+                                            )}
+                                          </button>
+                                        );
+                                      }
+                                    )}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* 2. Clothing Size Grid */}
+                              {isClothingSize && (
+                                <>
+                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                    <span>مقاسات الملابس القياسية</span>
+                                    <span className="text-[10px] text-brand-muted">انقر للتضمين</span>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-1">
+                                    {CLOTHING_SIZE_PRESETS.map((sz) => {
+                                      const isSelected = opt.values.includes(sz);
+                                      return (
+                                        <button
+                                          key={sz}
+                                          type="button"
+                                          onClick={() => {
+                                            if (isSelected) {
+                                              removeTagValue(optIdx, sz);
+                                            } else {
+                                              addTagValue(optIdx, sz);
+                                            }
+                                          }}
+                                          className={`min-w-10 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                            isSelected
+                                              ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                              : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
+                                          }`}
+                                        >
+                                          <span>{sz}</span>
+                                          {isSelected && (
+                                            <span className="text-brand-primary text-xs">✓</span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* 3. Shoe Size Grid */}
+                              {isShoeSize && (
+                                <>
+                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                    <span>مقاسات الأحذية المعتمدة</span>
+                                    <span className="text-[10px] text-brand-muted">انقر للتضمين</span>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-1">
+                                    {SHOE_SIZE_PRESETS.map((sz) => {
+                                      const isSelected = opt.values.includes(sz);
+                                      return (
+                                        <button
+                                          key={sz}
+                                          type="button"
+                                          onClick={() => {
+                                            if (isSelected) {
+                                              removeTagValue(optIdx, sz);
+                                            } else {
+                                              addTagValue(optIdx, sz);
+                                            }
+                                          }}
+                                          className={`min-w-10 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                            isSelected
+                                              ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                              : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
+                                          }`}
+                                        >
+                                          <span>{sz}</span>
+                                          {isSelected && (
+                                            <span className="text-brand-primary text-xs">✓</span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* 4. Kids Size Grid */}
+                              {isKidsSize && (
+                                <>
+                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                    <span>مقاسات الأطفال والشهور</span>
+                                    <span className="text-[10px] text-brand-muted">انقر للتضمين</span>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-1">
+                                    {KIDS_SIZE_PRESETS.map((sz) => {
+                                      const isSelected = opt.values.includes(sz);
+                                      return (
+                                        <button
+                                          key={sz}
+                                          type="button"
+                                          onClick={() => {
+                                            if (isSelected) {
+                                              removeTagValue(optIdx, sz);
+                                            } else {
+                                              addTagValue(optIdx, sz);
+                                            }
+                                          }}
+                                          className={`min-w-10 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                            isSelected
+                                              ? 'border-brand-primary bg-brand-primary/10 text-brand-dark font-black shadow-xs'
+                                              : 'border-brand-border/80 hover:bg-brand-surface text-brand-dark'
+                                          }`}
+                                        >
+                                          <span>{sz}</span>
+                                          {isSelected && (
+                                            <span className="text-brand-primary text-xs">✓</span>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                </>
+                              )}
+
+                              {/* Bottom: Custom Value Input for any Option */}
+                              <div className="pt-2 border-t border-brand-border/50 flex items-center gap-1.5">
+                                <input
+                                  type="text"
+                                  value={customValueInput}
+                                  onChange={(e) => setCustomValueInput(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      e.preventDefault();
+                                      if (customValueInput.trim()) {
+                                        addTagValue(optIdx, customValueInput.trim());
+                                        setCustomValueInput('');
+                                      }
                                     }
                                   }}
-                                  className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer active:scale-95 ${
-                                    isSelected
-                                      ? 'bg-brand-primary/10 border-brand-primary text-brand-dark shadow-2xs font-black'
-                                      : 'bg-white border-brand-border/80 text-brand-muted hover:border-brand-primary/50'
-                                  }`}
-                                >
-                                  {sz}
-                                </button>
-                              );
-                            })}
-                          </div>
-
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-[10px] font-bold text-brand-muted">أحذية:</span>
-                            {COMMON_SHOE_PRESETS.map((sz) => {
-                              const isSelected = opt.values.includes(sz);
-                              return (
+                                  placeholder={
+                                    isColorOption
+                                      ? 'أو اكتب لوناً مخصصاً (مثال: كشمير)...'
+                                      : 'أو اكتب قيمة مخصصة...'
+                                  }
+                                  className="flex-1 h-8 px-2.5 text-xs rounded-xl border border-brand-border bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
+                                />
                                 <button
-                                  key={sz}
                                   type="button"
                                   onClick={() => {
-                                    if (isSelected) {
-                                      removeTagValue(optIdx, sz);
-                                    } else {
-                                      addTagValue(optIdx, sz);
+                                    if (customValueInput.trim()) {
+                                      addTagValue(optIdx, customValueInput.trim());
+                                      setCustomValueInput('');
                                     }
                                   }}
-                                  className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer active:scale-95 ${
-                                    isSelected
-                                      ? 'bg-brand-primary/10 border-brand-primary text-brand-dark shadow-2xs font-black'
-                                      : 'bg-white border-brand-border/80 text-brand-muted hover:border-brand-primary/50'
-                                  }`}
+                                  disabled={!customValueInput.trim()}
+                                  className="h-8 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
                                 >
-                                  {sz}
+                                  إضافة
                                 </button>
-                              );
-                            })}
-                          </div>
+                              </div>
+
+                              <div className="pt-1 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveValuePopoverIdx(null)}
+                                  className="text-[10px] text-brand-muted hover:text-brand-dark underline cursor-pointer"
+                                >
+                                  إغلاق القائمة
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      </div>
                     </div>
                   );
                 })}
@@ -977,6 +1227,7 @@ export default function AddProductModal({
               {/* Variants Matrix */}
               {variantsRows.length > 0 && (
                 <div className="space-y-3 pt-2">
+                  {/* Bulk Apply Bar with Sale Price */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200/80">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-amber-950">
@@ -987,27 +1238,38 @@ export default function AddProductModal({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
                       <input
                         type="number"
                         min="0"
                         step="0.5"
-                        placeholder="السعر ₪"
+                        placeholder="السعر ₪ *"
                         value={bulkPrice}
                         onChange={(e) =>
                           setBulkPrice(e.target.value === '' ? '' : Number(e.target.value))
                         }
-                        className="flex-1 sm:w-20 h-8 px-2 text-xs font-black rounded-lg border border-amber-300 bg-white"
+                        className="w-20 h-8 px-2 text-xs font-black rounded-lg border border-amber-300 bg-white"
                       />
                       <input
                         type="number"
                         min="0"
-                        placeholder="القطع"
+                        step="0.5"
+                        placeholder="قبل الخصم ₪"
+                        value={bulkCompareAtPrice}
+                        onChange={(e) =>
+                          setBulkCompareAtPrice(e.target.value === '' ? '' : Number(e.target.value))
+                        }
+                        className="w-24 h-8 px-2 text-xs font-medium rounded-lg border border-amber-300 bg-white"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="القطع *"
                         value={bulkStock}
                         onChange={(e) =>
                           setBulkStock(e.target.value === '' ? '' : Number(e.target.value))
                         }
-                        className="flex-1 sm:w-20 h-8 px-2 text-xs font-black rounded-lg border border-amber-300 bg-white"
+                        className="w-18 h-8 px-2 text-xs font-black rounded-lg border border-amber-300 bg-white"
                       />
                       <button
                         type="button"
@@ -1026,9 +1288,10 @@ export default function AddProductModal({
                         <tr className="font-bold text-brand-muted">
                           <th className="p-3">المتغير</th>
                           <th className="p-3">رمز SKU</th>
-                          <th className="p-3 w-24">السعر (₪) *</th>
-                          <th className="p-3 w-24">المخزون *</th>
-                          <th className="p-3 text-center w-16">نشط</th>
+                          <th className="p-3 w-22">السعر (₪) *</th>
+                          <th className="p-3 w-24">قبل الخصم (₪)</th>
+                          <th className="p-3 w-20">المخزون *</th>
+                          <th className="p-3 text-center w-14">نشط</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-brand-border-subtle bg-white">
@@ -1062,12 +1325,29 @@ export default function AddProductModal({
                                 <input
                                   type="number"
                                   min="0"
+                                  step="0.5"
+                                  placeholder="اختياري"
+                                  value={v.compareAtPrice ?? ''}
+                                  onChange={(e) =>
+                                    updateVariantRow(
+                                      vIdx,
+                                      'compareAtPrice',
+                                      e.target.value === '' ? undefined : Number(e.target.value)
+                                    )
+                                  }
+                                  className="h-7 px-2 text-xs font-medium rounded-lg border border-brand-border w-22 text-brand-muted"
+                                />
+                              </td>
+                              <td className="p-3">
+                                <input
+                                  type="number"
+                                  min="0"
                                   required
                                   value={v.stock ?? ''}
                                   onChange={(e) =>
                                     updateVariantRow(vIdx, 'stock', Number(e.target.value))
                                   }
-                                  className="h-7 px-2 text-xs font-black rounded-lg border border-brand-border w-20"
+                                  className="h-7 px-2 text-xs font-black rounded-lg border border-brand-border w-18"
                                 />
                               </td>
                               <td className="p-3 text-center">
@@ -1087,7 +1367,7 @@ export default function AddProductModal({
                     </table>
                   </div>
 
-                  {/* Mobile-Friendly Cards View (No horizontal scroll needed!) */}
+                  {/* Mobile-Friendly Cards View */}
                   <div className="sm:hidden space-y-2.5">
                     {variantsRows.map((v, vIdx) => {
                       const label = Object.entries(v.attributes)
@@ -1119,7 +1399,7 @@ export default function AddProductModal({
                             </label>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-brand-border/40">
+                          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-brand-border/40">
                             <div>
                               <label className="text-[10px] font-bold text-brand-muted block mb-1">
                                 السعر (₪) *
@@ -1135,9 +1415,31 @@ export default function AddProductModal({
                                 className="w-full h-8 px-2 text-xs font-black rounded-lg border border-brand-border"
                               />
                             </div>
+
                             <div>
                               <label className="text-[10px] font-bold text-brand-muted block mb-1">
-                                المخزون (قطع) *
+                                قبل الخصم
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                placeholder="اختياري"
+                                value={v.compareAtPrice ?? ''}
+                                onChange={(e) =>
+                                  updateVariantRow(
+                                    vIdx,
+                                    'compareAtPrice',
+                                    e.target.value === '' ? undefined : Number(e.target.value)
+                                  )
+                                }
+                                className="w-full h-8 px-2 text-xs font-medium rounded-lg border border-brand-border text-brand-muted"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="text-[10px] font-bold text-brand-muted block mb-1">
+                                المخزون *
                               </label>
                               <input
                                 type="number"
@@ -1159,26 +1461,16 @@ export default function AddProductModal({
             </div>
           )}
 
-          {/* Section 5: Visibility & Flags */}
-          <div className="pt-2 border-t border-brand-border/60 flex flex-wrap items-center gap-6 text-xs">
+          {/* Section 5: Visibility Toggle (Only active toggle, no isFeatured) */}
+          <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-xs">
             <label className="flex items-center gap-2 cursor-pointer font-bold text-brand-dark select-none">
               <input
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary"
+                className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary cursor-pointer"
               />
               <span>تفعيل ونشر الصنف فورياً في واجهة المتجر</span>
-            </label>
-
-            <label className="flex items-center gap-2 cursor-pointer font-bold text-brand-dark select-none">
-              <input
-                type="checkbox"
-                checked={isFeatured}
-                onChange={(e) => setIsFeatured(e.target.checked)}
-                className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary"
-              />
-              <span>تمييز الصنف في واجهة المحل (Featured)</span>
             </label>
           </div>
         </form>

@@ -1,6 +1,17 @@
 const { body, param, query } = require('express-validator');
 const validateRequest = require('./validateRequest');
 
+function isSafeImageReference(value) {
+    if (!value || typeof value !== 'string') return false;
+    if (value.startsWith('/') && !value.startsWith('//')) return true;
+    try {
+        const url = new URL(value);
+        return (url.protocol === 'http:' || url.protocol === 'https:') && Boolean(url.hostname);
+    } catch {
+        return false;
+    }
+}
+
 const productFields = [
     'title',
     'name',
@@ -88,12 +99,18 @@ const validateProduct = [
         .optional()
         .isString()
         .withMessage('Product title must be a string')
-        .trim(),
+        .bail()
+        .trim()
+        .isLength({ max: 160 })
+        .withMessage('Product title must be at most 160 characters'),
     body('name')
         .optional()
         .isString()
         .withMessage('Product name must be a string')
-        .trim(),
+        .bail()
+        .trim()
+        .isLength({ max: 160 })
+        .withMessage('Product name must be at most 160 characters'),
     body('categoryId')
         .isMongoId()
         .withMessage('Valid categoryId is required'),
@@ -101,7 +118,20 @@ const validateProduct = [
         .optional()
         .isString()
         .withMessage('Product description must be a string')
-        .trim(),
+        .bail()
+        .trim()
+        .isLength({ max: 3000 })
+        .withMessage('Product description must be at most 3000 characters'),
+    body('image')
+        .optional()
+        .isString()
+        .withMessage('Product image must be a string')
+        .bail()
+        .trim()
+        .custom(isSafeImageReference)
+        .withMessage('Product image must be an HTTP(S) URL or a local site path')
+        .isLength({ max: 2048 })
+        .withMessage('Product image URL must be at most 2048 characters'),
     body('images')
         .optional()
         .isArray()
@@ -109,7 +139,13 @@ const validateProduct = [
     body('images.*')
         .optional()
         .isString()
-        .withMessage('Each product image must be a string'),
+        .withMessage('Each product image must be a string')
+        .bail()
+        .trim()
+        .custom(isSafeImageReference)
+        .withMessage('Product images must be HTTP(S) URLs or local site paths')
+        .isLength({ max: 2048 })
+        .withMessage('Product image URL must be at most 2048 characters'),
     body('options')
         .optional()
         .isArray()
@@ -165,14 +201,20 @@ const validateProductUpdate = [
         .optional()
         .isString()
         .withMessage('Product title must be a string')
+        .bail()
         .trim()
         .notEmpty()
-        .withMessage('Product title cannot be empty'),
+        .withMessage('Product title cannot be empty')
+        .isLength({ max: 160 })
+        .withMessage('Product title must be at most 160 characters'),
     body('name')
         .optional()
         .isString()
         .withMessage('Product name must be a string')
-        .trim(),
+        .bail()
+        .trim()
+        .isLength({ max: 160 })
+        .withMessage('Product name must be at most 160 characters'),
     body('categoryId')
         .optional()
         .isMongoId()
@@ -181,7 +223,20 @@ const validateProductUpdate = [
         .optional()
         .isString()
         .withMessage('Product description must be a string')
-        .trim(),
+        .bail()
+        .trim()
+        .isLength({ max: 3000 })
+        .withMessage('Product description must be at most 3000 characters'),
+    body('image')
+        .optional()
+        .isString()
+        .withMessage('Product image must be a string')
+        .bail()
+        .trim()
+        .custom(isSafeImageReference)
+        .withMessage('Product image must be an HTTP(S) URL or a local site path')
+        .isLength({ max: 2048 })
+        .withMessage('Product image URL must be at most 2048 characters'),
     body('images')
         .optional()
         .isArray()
@@ -189,7 +244,13 @@ const validateProductUpdate = [
     body('images.*')
         .optional()
         .isString()
-        .withMessage('Each product image must be a string'),
+        .withMessage('Each product image must be a string')
+        .bail()
+        .trim()
+        .custom(isSafeImageReference)
+        .withMessage('Product images must be HTTP(S) URLs or local site paths')
+        .isLength({ max: 2048 })
+        .withMessage('Product image URL must be at most 2048 characters'),
     body('options')
         .optional()
         .isArray()

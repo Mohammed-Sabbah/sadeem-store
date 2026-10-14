@@ -54,7 +54,9 @@ const router = express.Router();
 router.get('/admin', ...adminOnly, validateProductFilters, getAdminProducts);
 router.get('/admin/:id', ...adminOnly, validateProductId, getAdminProductById);
 router.patch('/admin/:id/approval', ...adminOnly, validateProductId, validateProductApproval, updateProductApproval);
+router.patch('/:id/approval', ...adminOnly, validateProductId, validateProductApproval, updateProductApproval);
 router.patch('/admin/:id/variants/:variantId/approval', ...adminOnly, validateVariantIds, validateVariantApproval, updateVariantApproval);
+router.patch('/:id/variants/:variantId/approval', ...adminOnly, validateVariantIds, validateVariantApproval, updateVariantApproval);
 router.delete('/admin/:id', ...adminOnly, validateProductId, deleteProduct);
 
 // ==========================================

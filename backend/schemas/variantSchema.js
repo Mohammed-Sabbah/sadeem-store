@@ -104,6 +104,14 @@ function validateVariants(value, allowExisting) {
             if (typeof variant.attributes !== 'object' || Array.isArray(variant.attributes)) {
                 throw new Error('Variant attributes must be a key-value object');
             }
+            for (const [key, val] of Object.entries(variant.attributes)) {
+                if (typeof val !== 'string' || !val.trim()) {
+                    throw new Error('Variant attribute values must be non-empty strings');
+                }
+                if (val.trim().length > 80) {
+                    throw new Error('Variant attribute values must be at most 80 characters');
+                }
+            }
         }
     }
     return true;
@@ -142,23 +150,32 @@ const validateCreateVariant = [
     body('price')
         .exists()
         .withMessage('Variant price is required')
-        .isFloat({ min: 0 })
-        .withMessage('Variant price must be a non-negative number')
+        .isFloat({ min: 0.01 })
+        .withMessage('Price must be greater than zero')
         .custom((val) => isMoney(val))
-        .withMessage('Variant price must have at most 2 decimal places'),
+        .withMessage('Variant price must have at most 2 decimal places')
+        .toFloat(),
     body('stock')
         .exists()
         .withMessage('Variant stock is required')
         .isInt({ min: 0 })
-        .withMessage('Variant stock must be a non-negative integer'),
+        .withMessage('Stock must be a non-negative whole number')
+        .toInt(),
     body('attributes')
         .optional()
-        .custom((val) => {
-            if (val !== null && (typeof val !== 'object' || Array.isArray(val))) {
-                throw new Error('Attributes must be an object');
-            }
-            return true;
-        }),
+        .default({})
+        .isObject({ values: true })
+        .withMessage('Variant attributes must be an object'),
+    body('attributes.*')
+        .optional()
+        .isString()
+        .withMessage('Variant attribute values must be strings')
+        .bail()
+        .trim()
+        .notEmpty()
+        .withMessage('Variant attribute values cannot be empty')
+        .isLength({ max: 80 })
+        .withMessage('Variant attribute values must be at most 80 characters'),
     body('sku')
         .optional()
         .isString()
@@ -189,14 +206,16 @@ const validateVariantPatch = [
     }),
     body('price')
         .optional()
-        .isFloat({ min: 0 })
-        .withMessage('Variant price must be a non-negative number')
+        .isFloat({ min: 0.01 })
+        .withMessage('Price must be greater than zero')
         .custom((val) => isMoney(val))
-        .withMessage('Variant price must have at most 2 decimal places'),
+        .withMessage('Variant price must have at most 2 decimal places')
+        .toFloat(),
     body('stock')
         .optional()
         .isInt({ min: 0 })
-        .withMessage('Variant stock must be a non-negative integer'),
+        .withMessage('Stock must be a non-negative whole number')
+        .toInt(),
     body('compareAtPrice')
         .optional({ nullable: true })
         .isFloat({ min: 0 })
@@ -205,12 +224,18 @@ const validateVariantPatch = [
         .withMessage('Variant compareAtPrice must have at most 2 decimal places'),
     body('attributes')
         .optional()
-        .custom((val) => {
-            if (val !== null && (typeof val !== 'object' || Array.isArray(val))) {
-                throw new Error('Attributes must be an object');
-            }
-            return true;
-        }),
+        .isObject({ values: true })
+        .withMessage('Variant attributes must be an object'),
+    body('attributes.*')
+        .optional()
+        .isString()
+        .withMessage('Variant attribute values must be strings')
+        .bail()
+        .trim()
+        .notEmpty()
+        .withMessage('Variant attribute values cannot be empty')
+        .isLength({ max: 80 })
+        .withMessage('Variant attribute values must be at most 80 characters'),
     validateRequest,
 ];
 

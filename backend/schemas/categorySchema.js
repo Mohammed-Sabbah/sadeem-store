@@ -118,6 +118,14 @@ const validateCategory = (partial = false) => [
             return true;
         }),
 
+    body('variantAttributes.*.values.*')
+        .isString()
+        .withMessage('Variant attribute values must be strings')
+        .bail()
+        .trim()
+        .isLength({ max: 80 })
+        .withMessage('Variant attribute values must be at most 80 characters'),
+
     body('variantAttributes').customSanitizer((attributes = []) =>
         Array.isArray(attributes)
             ? attributes

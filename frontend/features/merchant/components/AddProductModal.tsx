@@ -526,13 +526,17 @@ export default function AddProductModal({
                   <label className="text-xs font-bold text-brand-muted block mb-1">
                     الباركود / SKU
                   </label>
-                  <input
-                    type="text"
-                    value={simpleSku}
-                    onChange={(e) => setSimpleSku(e.target.value)}
-                    placeholder="توليد آلي"
-                    className="w-full h-11 px-3 text-xs font-mono rounded-xl border border-brand-border bg-white text-brand-dark focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                  />
+                  <div
+                    className="w-full h-11 px-3 rounded-xl border border-brand-border bg-brand-surface/40 flex items-center justify-between select-none"
+                    title="رمز تتبع المستودع والباركود يولّد تلقائياً من النظام"
+                  >
+                    <span className="font-mono text-xs font-bold text-brand-dark truncate">
+                      {simpleSku || 'SDM-PROD-AUTO'}
+                    </span>
+                    <span className="text-[10px] font-bold text-brand-muted bg-white px-2 py-0.5 rounded-md border border-brand-border shrink-0">
+                      توليد آلي
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -725,14 +729,9 @@ export default function AddProductModal({
                             <tr key={v.attrKey || vIdx} className="hover:bg-brand-surface/40">
                               <td className="p-3 font-black text-brand-dark">{label}</td>
                               <td className="p-3 font-mono text-[11px] text-brand-muted">
-                                <input
-                                  type="text"
-                                  value={v.sku}
-                                  onChange={(e) =>
-                                    updateVariantRow(vIdx, 'sku', e.target.value)
-                                  }
-                                  className="h-7 px-2 text-[11px] font-mono rounded-lg border border-brand-border w-28"
-                                />
+                                <span className="inline-block px-2 py-0.5 rounded-md bg-brand-surface border border-brand-border text-brand-dark font-mono text-[11px]">
+                                  {v.sku || 'SDM-VAR-AUTO'}
+                                </span>
                               </td>
                               <td className="p-3">
                                 <input

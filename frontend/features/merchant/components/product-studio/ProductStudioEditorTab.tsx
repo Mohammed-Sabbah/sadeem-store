@@ -452,15 +452,19 @@ export function ProductStudioEditorTab({
 
             <div>
               <label className="block text-[10px] font-bold text-brand-muted mb-1">
-                رمز SKU
+                رمز SKU (معرف التتبع المخزني)
               </label>
-              <input
-                type="text"
-                value={simpleSku}
-                onChange={(e) => setSimpleSku(e.target.value.toUpperCase())}
-                placeholder="SDM-ITM-01"
-                className="w-full h-10 px-2.5 text-base sm:text-xs font-mono uppercase rounded-xl border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
-              />
+              <div
+                className="w-full h-10 px-2.5 rounded-xl border border-brand-border/60 bg-brand-surface/60 flex items-center justify-between select-none"
+                title="رمز تتبع المستودع والباركود يولّد تلقائياً من النظام لضمان دقة فرز الشحنة الموحدة"
+              >
+                <span className="font-mono text-xs font-bold text-brand-dark truncate">
+                  {simpleSku || 'SDM-PROD-AUTO'}
+                </span>
+                <span className="text-[9px] font-bold text-brand-muted bg-brand-card px-1.5 py-0.5 rounded border border-brand-border/60 shrink-0">
+                  توليد آلي
+                </span>
+              </div>
             </div>
           </div>
         )}

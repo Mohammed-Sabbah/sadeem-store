@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { taxonomyService, type CategoryItem } from '@/features/store/services/taxonomy.service';
 import { merchantService } from '../services/merchant.service';
 import type { ProductFormData, ProductOption, OptionDefinition } from '../types/merchant.types';
@@ -23,6 +23,66 @@ interface VariantRow {
 
 const PRESET_OPTIONS = ['المقاس', 'اللون', 'الحجم', 'الوزن'];
 
+const COMMON_COLOR_PRESETS = [
+  { name: 'أسود', hex: '#18181B' },
+  { name: 'أبيض', hex: '#FFFFFF', border: true },
+  { name: 'كحلي', hex: '#1E3A8A' },
+  { name: 'بيج', hex: '#E5D3B3' },
+  { name: 'رمادي', hex: '#6B7280' },
+  { name: 'زيتي', hex: '#556B2F' },
+  { name: 'بني', hex: '#78350F' },
+  { name: 'عنابي', hex: '#831843' },
+];
+
+const COMMON_SIZE_PRESETS = ['S', 'M', 'L', 'XL', '2XL', '3XL'];
+const COMMON_SHOE_PRESETS = ['39', '40', '41', '42', '43', '44', '45'];
+
+/**
+ * ضغط الصورة على جهاز التاجر باستخدام HTML5 Canvas
+ * يقلل الحجم من 5-8 ميجابايت إلى أقل من 150 كيلوبايت لتوفير بيانات شبكة غزة
+ */
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (readerEvent) => {
+      const rawUrl = readerEvent.target?.result as string;
+      if (!rawUrl) return resolve('');
+
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.82));
+        } else {
+          resolve(rawUrl);
+        }
+      };
+      img.onerror = () => resolve(rawUrl);
+      img.src = rawUrl;
+    };
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+};
+
 export default function AddProductModal({
   isOpen,
   onClose,
@@ -38,9 +98,14 @@ export default function AddProductModal({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [isProcessingFiles, setIsProcessingFiles] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [newUrlInput, setNewUrlInput] = useState('');
   const [isFeatured, setIsFeatured] = useState(false);
   const [isActive, setIsActive] = useState(true);
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Mode: Simple vs Variants
   const [isSimple, setIsSimple] = useState(true);
@@ -49,7 +114,7 @@ export default function AddProductModal({
   const [simplePrice, setSimplePrice] = useState<number | ''>('');
   const [simpleCompareAtPrice, setSimpleCompareAtPrice] = useState<number | ''>('');
   const [simpleStock, setSimpleStock] = useState<number | ''>(10);
-  const [simpleSku, setSimpleSku] = useState('');
+  const [simpleSku] = useState('');
 
   // Variants Product Fields
   const [options, setOptions] = useState<ProductOption[]>([
@@ -155,6 +220,42 @@ export default function AddProductModal({
     });
   }, [isSimple, options]);
 
+  // Image Upload Handlers
+  const handleDeviceFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsProcessingFiles(true);
+    const fileArray = Array.from(files);
+
+    try {
+      const compressedUrls = await Promise.all(fileArray.map((f) => compressImage(f)));
+      const validUrls = compressedUrls.filter(Boolean);
+      if (validUrls.length > 0) {
+        setImages((prev) => [...prev, ...validUrls]);
+      }
+    } catch (err) {
+      console.error('Image compression error:', err);
+    } finally {
+      setIsProcessingFiles(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleSetPrimaryImage = (idx: number) => {
+    if (idx === 0) return;
+    setImages((prev) => {
+      const next = [...prev];
+      const [target] = next.splice(idx, 1);
+      next.unshift(target);
+      return next;
+    });
+  };
+
+  const handleRemoveImage = (idx: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const addOption = (optionName: string = '', def?: OptionDefinition) => {
     if (options.length >= 3) {
       alert('الحد الأقصى للخيارات هو 3 لضمان سرعة التصفح لزبائن غزة.');
@@ -180,8 +281,8 @@ export default function AddProductModal({
     setOptions((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const addTagValue = (optionIndex: number) => {
-    const rawVal = (optionTagInputs[optionIndex] || '').trim();
+  const addTagValue = (optionIndex: number, specificVal?: string) => {
+    const rawVal = (specificVal || optionTagInputs[optionIndex] || '').trim();
     if (!rawVal) return;
 
     setOptions((prev) => {
@@ -193,7 +294,9 @@ export default function AddProductModal({
       return copy;
     });
 
-    setOptionTagInputs((prev) => ({ ...prev, [optionIndex]: '' }));
+    if (!specificVal) {
+      setOptionTagInputs((prev) => ({ ...prev, [optionIndex]: '' }));
+    }
   };
 
   const removeTagValue = (optionIndex: number, valToRemove: string) => {
@@ -205,7 +308,6 @@ export default function AddProductModal({
   };
 
   const applyBulkValues = () => {
-    if (typeof bulkPrice !== 'number' && typeof bulkStock !== 'number') return;
     setVariantsRows((prev) =>
       prev.map((r) => ({
         ...r,
@@ -264,7 +366,7 @@ export default function AddProductModal({
         name: name.trim(),
         description: description.trim(),
         categoryId,
-        images: imageUrl ? [imageUrl] : [],
+        images: images.length > 0 ? images : [],
         isSimple,
         simplePrice: Number(simplePrice) || 0,
         simpleCompareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : undefined,
@@ -281,6 +383,7 @@ export default function AddProductModal({
               compareAtPrice: r.compareAtPrice ? Number(r.compareAtPrice) : undefined,
               stock: Number(r.stock) || 0,
               isActive: r.isActive,
+              images: images.length > 0 ? [images[0]] : [],
             })),
         isFeatured,
         isActive,
@@ -290,7 +393,7 @@ export default function AddProductModal({
       if (ok) {
         setName('');
         setDescription('');
-        setImageUrl('');
+        setImages([]);
         setSimplePrice('');
         setSimpleStock(10);
         setIsSimple(true);
@@ -315,7 +418,7 @@ export default function AddProductModal({
 
       {/* Centered Dialog on Desktop, Bottom-Sheet on Mobile */}
       <div className="relative w-full sm:max-w-2xl md:max-w-3xl bg-brand-card max-h-[92vh] sm:max-h-[88vh] rounded-t-3xl sm:rounded-2xl shadow-2xl flex flex-col z-10 overflow-hidden border border-brand-border/80 transition-all">
-        {/* Mobile Grab Handle Bar (Physical Affordance) */}
+        {/* Mobile Grab Handle Bar */}
         <div className="sm:hidden w-full pt-3 pb-1 flex justify-center shrink-0">
           <div className="w-10 h-1 rounded-full bg-zinc-300" />
         </div>
@@ -428,41 +531,146 @@ export default function AddProductModal({
               />
             </div>
 
-            {/* Image Preview & URL */}
+            {/* Image Gallery & Fast Device Upload */}
             <div>
-              <label className="text-xs font-bold text-brand-dark block mb-1.5">
-                صورة الصنف
-              </label>
-              <div className="flex items-center gap-2">
-                {imageUrl && (
-                  <div className="w-10 h-10 rounded-xl overflow-hidden border border-brand-border/80 bg-zinc-100 shrink-0 shadow-2xs">
-                    <img
-                      src={imageUrl}
-                      alt="معاينة"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLElement).style.display = 'none';
-                      }}
-                    />
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <label className="text-xs font-bold text-brand-dark block">
+                  صور الصنف (معرض المنتج)
+                </label>
+                <span className="text-[10px] text-brand-muted">
+                  الصورة الأولى = الغلاف الرئيسي للمنتج
+                </span>
+              </div>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={handleDeviceFileUpload}
+                className="hidden"
+              />
+
+              {images.length === 0 ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="p-5 border-2 border-dashed border-brand-border/80 hover:border-brand-primary bg-brand-surface/40 hover:bg-brand-surface/70 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-150 text-center group active:scale-[0.99]"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-brand-primary/10 text-brand-primary flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
                   </div>
-                )}
-                <input
-                  type="url"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="رابط الصورة (URL)..."
-                  className="flex-1 h-10 px-3.5 text-xs font-medium rounded-xl border border-brand-border/80 bg-brand-surface/50 text-brand-dark focus:bg-white focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
-                />
+                  <div>
+                    <div className="text-xs font-bold text-brand-dark">
+                      {isProcessingFiles
+                        ? 'جارٍ ضغط وتجهيز الصور...'
+                        : 'اضغط لاختيار صور من كاميرا أو ذاكرة هاتفك'}
+                    </div>
+                    <div className="text-[10px] text-brand-muted mt-0.5">
+                      تُضغط الصور تلقائياً لتناسب سرعة الإنترنت في غزة وتوفر بياناتك
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5">
+                  {images.map((img, idx) => (
+                    <div
+                      key={idx}
+                      className={`relative aspect-square rounded-2xl overflow-hidden border group bg-zinc-100 shadow-2xs transition-all ${
+                        idx === 0
+                          ? 'border-brand-primary ring-2 ring-brand-primary/25'
+                          : 'border-brand-border/80'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`صورة ${idx + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+
+                      {/* Primary Cover Badge */}
+                      {idx === 0 ? (
+                        <span className="absolute bottom-1 right-1 bg-brand-primary text-white text-[8px] sm:text-[9px] font-black px-1.5 py-0.5 rounded shadow-xs select-none">
+                          ★ الغلاف
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSetPrimaryImage(idx)}
+                          className="absolute bottom-1 right-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 bg-black/75 hover:bg-black sm:bg-white/95 sm:hover:bg-white text-white sm:text-brand-dark text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded shadow-xs transition-all active:scale-95 cursor-pointer select-none"
+                          title="اجعل هذه الصورة الغلاف الرئيسي للمنتج"
+                        >
+                          ☆ غلاف
+                        </button>
+                      )}
+
+                      {/* Delete Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(idx)}
+                        className="absolute top-1 left-1 w-5 h-5 bg-black/75 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] transition-colors cursor-pointer active:scale-90"
+                        title="حذف الصورة"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isProcessingFiles}
+                    className="aspect-square rounded-2xl border-2 border-dashed border-brand-border/80 hover:border-brand-primary bg-brand-surface/40 hover:bg-brand-surface/80 flex flex-col items-center justify-center gap-1 text-brand-muted hover:text-brand-primary transition-all cursor-pointer active:scale-95"
+                  >
+                    <span className="text-base font-bold">+</span>
+                    <span className="text-[10px] font-bold">إضافة صورة</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Optional URL Input Toggle */}
+              <div className="mt-2 flex items-center justify-between text-[11px]">
                 <button
                   type="button"
-                  onClick={() =>
-                    setImageUrl('https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=700&q=80')
-                  }
-                  className="px-3 h-10 text-[11px] font-bold rounded-xl border border-brand-border/80 bg-brand-surface text-brand-muted hover:text-brand-dark hover:bg-zinc-100 transition-colors shrink-0 cursor-pointer active:scale-95"
+                  onClick={() => setShowUrlInput(!showUrlInput)}
+                  className="text-brand-muted hover:text-brand-primary underline transition-colors cursor-pointer"
                 >
-                  صورة تجريبية
+                  {showUrlInput ? 'إخفاء حقل الرابط' : 'أو إضافة صورة عبر رابط مباشر (URL)'}
                 </button>
               </div>
+
+              {showUrlInput && (
+                <div className="mt-2 flex items-center gap-2 animate-fadeIn">
+                  <input
+                    type="url"
+                    value={newUrlInput}
+                    onChange={(e) => setNewUrlInput(e.target.value)}
+                    placeholder="الصق رابط صورة مباشر (https://...)"
+                    className="flex-1 h-9 px-3 text-xs rounded-xl border border-brand-border/80 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newUrlInput.trim()) {
+                        setImages((prev) => [...prev, newUrlInput.trim()]);
+                        setNewUrlInput('');
+                        setShowUrlInput(false);
+                      }
+                    }}
+                    disabled={!newUrlInput.trim()}
+                    className="h-9 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
+                  >
+                    إضافة
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -484,7 +692,9 @@ export default function AddProductModal({
                     step="0.5"
                     required
                     value={simplePrice}
-                    onChange={(e) => setSimplePrice(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) =>
+                      setSimplePrice(e.target.value === '' ? '' : Number(e.target.value))
+                    }
                     placeholder="50"
                     className="w-full h-11 px-3 text-sm font-black rounded-xl border border-brand-border bg-white text-brand-dark focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   />
@@ -516,7 +726,9 @@ export default function AddProductModal({
                     min="0"
                     required
                     value={simpleStock}
-                    onChange={(e) => setSimpleStock(e.target.value === '' ? '' : Number(e.target.value))}
+                    onChange={(e) =>
+                      setSimpleStock(e.target.value === '' ? '' : Number(e.target.value))
+                    }
                     placeholder="15"
                     className="w-full h-11 px-3 text-sm font-black rounded-xl border border-brand-border bg-white text-brand-dark focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   />
@@ -575,7 +787,7 @@ export default function AddProductModal({
                   <button
                     type="button"
                     onClick={() => addOption('')}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-brand-primary-soft text-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-150 active:scale-95 cursor-pointer"
+                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-150 active:scale-95 cursor-pointer"
                   >
                     + مخصص
                   </button>
@@ -584,82 +796,182 @@ export default function AddProductModal({
 
               {/* Options Tag Rows */}
               <div className="space-y-3">
-                {options.map((opt, optIdx) => (
-                  <div
-                    key={optIdx}
-                    className="bg-brand-surface/70 p-3.5 rounded-2xl border border-brand-border/70 space-y-2.5"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <input
-                        type="text"
-                        value={opt.name}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setOptions((prev) => {
-                            const copy = [...prev];
-                            copy[optIdx].name = val;
-                            return copy;
-                          });
-                        }}
-                        placeholder="اسم الخيار (المقاس، اللون...)"
-                        className="h-8 px-2.5 text-xs font-black rounded-lg border border-brand-border bg-white text-brand-dark w-44 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
-                      />
+                {options.map((opt, optIdx) => {
+                  const isColorOption = opt.name.includes('لون') || opt.name.toLowerCase().includes('color');
+                  const isSizeOption = opt.name.includes('مقاس') || opt.name.toLowerCase().includes('size');
 
-                      <button
-                        type="button"
-                        onClick={() => removeOption(optIdx)}
-                        className="text-[11px] text-red-500 hover:text-red-700 font-bold p-1 cursor-pointer"
-                      >
-                        حذف الخيار ✕
-                      </button>
-                    </div>
-
-                    {/* Chips Display */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {opt.values.map((v) => (
-                        <span
-                          key={v}
-                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-brand-border/80 text-xs font-black text-brand-dark shadow-2xs"
-                        >
-                          <span>{v}</span>
-                          <button
-                            type="button"
-                            onClick={() => removeTagValue(optIdx, v)}
-                            className="text-zinc-400 hover:text-red-600 font-bold text-xs"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-
-                      {/* Tag Add Input */}
-                      <div className="flex items-center gap-1.5">
+                  return (
+                    <div
+                      key={optIdx}
+                      className="bg-brand-surface/70 p-3.5 rounded-2xl border border-brand-border/70 space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-2">
                         <input
                           type="text"
-                          value={optionTagInputs[optIdx] || ''}
-                          onChange={(e) =>
-                            setOptionTagInputs((prev) => ({ ...prev, [optIdx]: e.target.value }))
-                          }
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              addTagValue(optIdx);
-                            }
+                          value={opt.name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setOptions((prev) => {
+                              const copy = [...prev];
+                              copy[optIdx].name = val;
+                              return copy;
+                            });
                           }}
-                          placeholder="+ قيمة (اضغط Enter)"
-                          className="h-8 px-2.5 text-xs rounded-xl border border-dashed border-brand-border/90 bg-white text-brand-dark focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary w-36"
+                          placeholder="اسم الخيار (المقاس، اللون...)"
+                          className="h-8 px-2.5 text-xs font-black rounded-lg border border-brand-border bg-white text-brand-dark w-44 focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                         />
+
                         <button
                           type="button"
-                          onClick={() => addTagValue(optIdx)}
-                          className="h-8 px-3 rounded-xl bg-zinc-200 text-brand-dark text-xs font-bold hover:bg-zinc-300 active:scale-95 cursor-pointer"
+                          onClick={() => removeOption(optIdx)}
+                          className="text-[11px] text-red-500 hover:text-red-700 font-bold p-1 cursor-pointer"
                         >
-                          إضافة
+                          حذف الخيار ✕
                         </button>
                       </div>
+
+                      {/* Selected Chips Display */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {opt.values.map((v) => (
+                          <span
+                            key={v}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white border border-brand-border/80 text-xs font-black text-brand-dark shadow-2xs"
+                          >
+                            <span>{v}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeTagValue(optIdx, v)}
+                              className="text-zinc-400 hover:text-red-600 font-bold text-xs"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+
+                        {/* Tag Add Input */}
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={optionTagInputs[optIdx] || ''}
+                            onChange={(e) =>
+                              setOptionTagInputs((prev) => ({ ...prev, [optIdx]: e.target.value }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addTagValue(optIdx);
+                              }
+                            }}
+                            placeholder="+ قيمة مخصصة"
+                            className="h-8 px-2.5 text-xs rounded-xl border border-dashed border-brand-border/90 bg-white text-brand-dark focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary w-32"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => addTagValue(optIdx)}
+                            className="h-8 px-3 rounded-xl bg-zinc-200 text-brand-dark text-xs font-bold hover:bg-zinc-300 active:scale-95 cursor-pointer"
+                          >
+                            إضافة
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Fast-Add Presets Bar */}
+                      {isColorOption && (
+                        <div className="pt-2 border-t border-brand-border/50 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold text-brand-muted">ألوان شائعة:</span>
+                          {COMMON_COLOR_PRESETS.map((col) => {
+                            const isSelected = opt.values.includes(col.name);
+                            return (
+                              <button
+                                key={col.name}
+                                type="button"
+                                onClick={() => {
+                                  if (isSelected) {
+                                    removeTagValue(optIdx, col.name);
+                                  } else {
+                                    addTagValue(optIdx, col.name);
+                                  }
+                                }}
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer active:scale-95 ${
+                                  isSelected
+                                    ? 'bg-brand-primary/10 border-brand-primary text-brand-dark shadow-2xs font-black'
+                                    : 'bg-white border-brand-border/80 text-brand-muted hover:border-brand-primary/50'
+                                }`}
+                              >
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{
+                                    backgroundColor: col.hex,
+                                    border: col.border ? '1px solid #D1D5DB' : 'none',
+                                  }}
+                                />
+                                <span>{col.name}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {isSizeOption && (
+                        <div className="pt-2 border-t border-brand-border/50 space-y-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-brand-muted">ملابس:</span>
+                            {COMMON_SIZE_PRESETS.map((sz) => {
+                              const isSelected = opt.values.includes(sz);
+                              return (
+                                <button
+                                  key={sz}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      removeTagValue(optIdx, sz);
+                                    } else {
+                                      addTagValue(optIdx, sz);
+                                    }
+                                  }}
+                                  className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer active:scale-95 ${
+                                    isSelected
+                                      ? 'bg-brand-primary/10 border-brand-primary text-brand-dark shadow-2xs font-black'
+                                      : 'bg-white border-brand-border/80 text-brand-muted hover:border-brand-primary/50'
+                                  }`}
+                                >
+                                  {sz}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[10px] font-bold text-brand-muted">أحذية:</span>
+                            {COMMON_SHOE_PRESETS.map((sz) => {
+                              const isSelected = opt.values.includes(sz);
+                              return (
+                                <button
+                                  key={sz}
+                                  type="button"
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      removeTagValue(optIdx, sz);
+                                    } else {
+                                      addTagValue(optIdx, sz);
+                                    }
+                                  }}
+                                  className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border transition-all cursor-pointer active:scale-95 ${
+                                    isSelected
+                                      ? 'bg-brand-primary/10 border-brand-primary text-brand-dark shadow-2xs font-black'
+                                      : 'bg-white border-brand-border/80 text-brand-muted hover:border-brand-primary/50'
+                                  }`}
+                                >
+                                  {sz}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Variants Matrix */}
@@ -675,7 +987,7 @@ export default function AddProductModal({
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                       <input
                         type="number"
                         min="0"
@@ -685,7 +997,7 @@ export default function AddProductModal({
                         onChange={(e) =>
                           setBulkPrice(e.target.value === '' ? '' : Number(e.target.value))
                         }
-                        className="w-20 h-8 px-2 text-xs font-black rounded-lg border border-amber-300 bg-white"
+                        className="flex-1 sm:w-20 h-8 px-2 text-xs font-black rounded-lg border border-amber-300 bg-white"
                       />
                       <input
                         type="number"
@@ -695,7 +1007,7 @@ export default function AddProductModal({
                         onChange={(e) =>
                           setBulkStock(e.target.value === '' ? '' : Number(e.target.value))
                         }
-                        className="w-20 h-8 px-2 text-xs font-black rounded-lg border border-amber-300 bg-white"
+                        className="flex-1 sm:w-20 h-8 px-2 text-xs font-black rounded-lg border border-amber-300 bg-white"
                       />
                       <button
                         type="button"
@@ -707,8 +1019,8 @@ export default function AddProductModal({
                     </div>
                   </div>
 
-                  {/* Matrix Rows */}
-                  <div className="overflow-x-auto border border-brand-border/80 rounded-2xl">
+                  {/* Desktop Table View */}
+                  <div className="hidden sm:block overflow-x-auto border border-brand-border/80 rounded-2xl">
                     <table className="w-full text-right text-xs">
                       <thead className="bg-brand-surface/70 border-b border-brand-border/60">
                         <tr className="font-bold text-brand-muted">
@@ -722,7 +1034,7 @@ export default function AddProductModal({
                       <tbody className="divide-y divide-brand-border-subtle bg-white">
                         {variantsRows.map((v, vIdx) => {
                           const label = Object.entries(v.attributes)
-                            .map(([k, val]) => `${val}`)
+                            .map(([_, val]) => `${val}`)
                             .join(' / ');
 
                           return (
@@ -765,7 +1077,7 @@ export default function AddProductModal({
                                   onChange={(e) =>
                                     updateVariantRow(vIdx, 'isActive', e.target.checked)
                                   }
-                                  className="rounded text-brand-primary focus:ring-brand-primary"
+                                  className="rounded text-brand-primary focus:ring-brand-primary cursor-pointer"
                                 />
                               </td>
                             </tr>
@@ -773,6 +1085,74 @@ export default function AddProductModal({
                         })}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* Mobile-Friendly Cards View (No horizontal scroll needed!) */}
+                  <div className="sm:hidden space-y-2.5">
+                    {variantsRows.map((v, vIdx) => {
+                      const label = Object.entries(v.attributes)
+                        .map(([_, val]) => `${val}`)
+                        .join(' / ');
+
+                      return (
+                        <div
+                          key={v.attrKey || vIdx}
+                          className="p-3 bg-white rounded-xl border border-brand-border/70 shadow-2xs space-y-2.5"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <span className="text-xs font-black text-brand-dark block">{label}</span>
+                              <span className="font-mono text-[10px] text-brand-muted">{v.sku}</span>
+                            </div>
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                              <span className="text-[11px] font-bold text-brand-muted">
+                                {v.isActive ? 'متاح' : 'معطل'}
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={v.isActive}
+                                onChange={(e) =>
+                                  updateVariantRow(vIdx, 'isActive', e.target.checked)
+                                }
+                                className="w-4 h-4 rounded text-brand-primary focus:ring-brand-primary"
+                              />
+                            </label>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-brand-border/40">
+                            <div>
+                              <label className="text-[10px] font-bold text-brand-muted block mb-1">
+                                السعر (₪) *
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                value={v.price || ''}
+                                onChange={(e) =>
+                                  updateVariantRow(vIdx, 'price', Number(e.target.value))
+                                }
+                                className="w-full h-8 px-2 text-xs font-black rounded-lg border border-brand-border"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[10px] font-bold text-brand-muted block mb-1">
+                                المخزون (قطع) *
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={v.stock ?? ''}
+                                onChange={(e) =>
+                                  updateVariantRow(vIdx, 'stock', Number(e.target.value))
+                                }
+                                className="w-full h-8 px-2 text-xs font-black rounded-lg border border-brand-border"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -803,7 +1183,7 @@ export default function AddProductModal({
           </div>
         </form>
 
-        {/* Bottom Translucent Glass Action Bar (Apple-style) */}
+        {/* Bottom Translucent Glass Action Bar */}
         <div className="px-5 sm:px-7 py-4 border-t border-brand-border/60 flex items-center justify-end gap-3 shrink-0 bg-white/80 backdrop-blur-md sticky bottom-0 z-20">
           <button
             type="button"

@@ -262,22 +262,29 @@ export function ProductStudioEditorTab({
               {images.map((img, idx) => (
                 <div
                   key={idx}
-                  className="relative aspect-square rounded-2xl overflow-hidden border border-brand-border/80 group bg-brand-surface shadow-2xs"
+                  className={`relative aspect-square rounded-2xl overflow-hidden border group bg-brand-surface shadow-2xs transition-all ${
+                    idx === 0
+                      ? 'border-brand-primary ring-2 ring-brand-primary/25'
+                      : 'border-brand-border/80'
+                  }`}
                 >
                   <img src={img} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
 
                   {/* Primary Cover Badge */}
                   {idx === 0 ? (
-                    <span className="absolute bottom-1.5 right-1.5 bg-black/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md shadow-xs">
-                      الغلاف الرئيسي
+                    <span className="absolute bottom-1.5 right-1.5 bg-brand-primary text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1 select-none">
+                      <span className="text-[9px]">★</span>
+                      <span>الغلاف الرئيسي</span>
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => handleSetPrimaryImage(idx)}
-                      className="absolute bottom-1.5 right-1.5 opacity-0 group-hover:opacity-100 bg-brand-card/95 hover:bg-white text-brand-dark text-[9px] font-bold px-2 py-0.5 rounded-md shadow-xs transition-opacity cursor-pointer"
+                      className="absolute bottom-1.5 right-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 bg-black/75 hover:bg-black sm:bg-white/95 sm:hover:bg-white text-white sm:text-brand-dark text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 backdrop-blur-xs select-none"
+                      title="تعيين كغلاف رئيسي للمنتج"
                     >
-                      تعيين كغلاف
+                      <span className="text-[9px] text-amber-300 sm:text-amber-600">☆</span>
+                      <span>تعيين كغلاف</span>
                     </button>
                   )}
 
@@ -285,7 +292,7 @@ export function ProductStudioEditorTab({
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(idx)}
-                    className="absolute top-1.5 left-1.5 w-6 h-6 bg-black/75 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs transition-colors cursor-pointer shadow-xs"
+                    className="absolute top-1.5 left-1.5 w-6 h-6 bg-black/75 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs transition-colors cursor-pointer shadow-xs active:scale-90"
                     title="حذف الصورة من المعرض"
                   >
                     ×

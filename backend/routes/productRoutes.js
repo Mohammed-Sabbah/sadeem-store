@@ -53,9 +53,7 @@ const router = express.Router();
 // ==========================================
 router.get('/admin', ...adminOnly, validateProductFilters, getAdminProducts);
 router.get('/admin/:id', ...adminOnly, validateProductId, getAdminProductById);
-router.patch('/admin/:id/approval', ...adminOnly, validateProductId, validateProductApproval, updateProductApproval);
 router.patch('/:id/approval', ...adminOnly, validateProductId, validateProductApproval, updateProductApproval);
-router.patch('/admin/:id/variants/:variantId/approval', ...adminOnly, validateVariantIds, validateVariantApproval, updateVariantApproval);
 router.patch('/:id/variants/:variantId/approval', ...adminOnly, validateVariantIds, validateVariantApproval, updateVariantApproval);
 router.delete('/admin/:id', ...adminOnly, validateProductId, deleteProduct);
 
@@ -63,18 +61,15 @@ router.delete('/admin/:id', ...adminOnly, validateProductId, deleteProduct);
 // Seller Routes (Dashboard & Management)
 // ==========================================
 router.get('/seller', ...sellerOnly, validateProductFilters, getSellerProducts);
-router.get('/mine', ...sellerOnly, validateProductFilters, getSellerProducts);
-router.get('/merchant/my-products', ...sellerOnly, validateProductFilters, getSellerProducts);
 
-// Create Product (Batch Matrix or Simple Product)
+// Create Product (Composite Product + Variants)
 router.post('/', ...sellerOnly, validateProduct, validateVariant, createProduct);
 
-// Update Product (Batch Matrix or Fields)
+// Update Product (Composite Product or Metadata)
 router.patch('/:id', ...sellerOnly, validateProductId, validateProductUpdate, validateVariantUpdate, updateProduct);
 
-// Toggle Product Status (Active / InActive)
+// Change Product Status (Active / InActive)
 router.patch('/:id/status', ...sellerOnly, validateProductId, validateProductStatus, updateProductStatus);
-router.patch('/:id/toggle', ...sellerOnly, validateProductId, validateProductStatus, updateProductStatus);
 
 // Delete Product (Soft Delete)
 router.delete('/:id', ...sellerOnly, validateProductId, deleteProduct);

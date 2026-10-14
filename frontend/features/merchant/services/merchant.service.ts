@@ -206,7 +206,7 @@ export const merchantService = {
     let prods: ProductItem[] = [];
     let fetchedFromApi = false;
     try {
-      const res = await getRequest<{ products: any[] }>('/api/products/merchant/my-products');
+      const res = await getRequest<{ products: any[] }>('/api/products/seller');
       if (res.success && Array.isArray(res.data?.products)) {
         fetchedFromApi = true;
         prods = res.data.products.map((p) => ({

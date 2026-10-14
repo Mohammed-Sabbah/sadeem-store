@@ -215,14 +215,14 @@ async function runFrontendIntegrationTest() {
         throw new Error(`فشل احتساب البيانات بعد التحديث: ${JSON.stringify(dbUpdatedProduct)}`);
     }
 
-    // 7. Test GET /api/products/merchant/my-products (Used by Merchant Dashboard Product List)
-    const listRes = await mockRequest('GET', '/api/products/merchant/my-products', null, authCookie);
+    // 7. Test GET /api/products/seller (Used by Merchant Dashboard Product List)
+    const listRes = await mockRequest('GET', '/api/products/seller', null, authCookie);
     if (
         listRes.status === 200 &&
         Array.isArray(listRes.data?.products) &&
         listRes.data.products.some((p) => String(p._id) === String(createdProd._id))
     ) {
-        console.log('✔ [8] [PASS] جلب قائمة منتجات التاجر في الداشبورد عبر GET /api/products/merchant/my-products بنجاح');
+        console.log('✔ [8] [PASS] جلب قائمة منتجات التاجر في الداشبورد عبر GET /api/products/seller بنجاح');
     } else {
         throw new Error(`فشل جلب قائمة منتجات التاجر: ${JSON.stringify(listRes)}`);
     }

@@ -79,6 +79,9 @@ export default function MerchantProductStudioPage() {
           setDescription={studio.setDescription}
           categoryId={studio.categoryId}
           setCategoryId={studio.setCategoryId}
+          handleCategoryChange={studio.handleCategoryChange}
+          errorMessage={studio.errorMessage}
+          setErrorMessage={studio.setErrorMessage}
           categories={studio.categories}
           images={studio.images}
           fileInputRef={studio.fileInputRef}

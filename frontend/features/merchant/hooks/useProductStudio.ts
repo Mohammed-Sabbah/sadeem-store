@@ -183,6 +183,20 @@ export function useProductStudio(productId: string) {
     };
   }, [productId]);
 
+  // Category Change with Guard against active variants
+  const handleCategoryChange = (newCatId: string) => {
+    const hasActiveVariants =
+      !isSimple && (options.some((o) => o.values && o.values.length > 0) || variants.length > 0);
+    if (hasActiveVariants && newCatId !== categoryId) {
+      setErrorMessage(
+        'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
+      );
+      return;
+    }
+    setErrorMessage(null);
+    setCategoryId(newCatId);
+  };
+
   // Load category options on category switch
   useEffect(() => {
     if (!categoryId) return;
@@ -370,7 +384,14 @@ export function useProductStudio(productId: string) {
   };
 
   const handleRemoveOption = (indexToRemove: number) => {
-    setOptions((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+    const remaining = options.filter((_, idx) => idx !== indexToRemove);
+    setOptions(remaining);
+    if (
+      !remaining.some((o) => o.values && o.values.length > 0) &&
+      errorMessage?.includes('لا يمكن تغيير قسم الصنف')
+    ) {
+      setErrorMessage(null);
+    }
   };
 
   const handleAddOptionValue = (optIndex: number, specificVal?: string) => {
@@ -399,6 +420,10 @@ export function useProductStudio(productId: string) {
         ...opt,
         values: opt.values.filter((v) => v !== valToRemove),
       };
+      const hasAnyValues = copy.some((o) => o.values && o.values.length > 0);
+      if (!hasAnyValues && errorMessage?.includes('لا يمكن تغيير قسم الصنف')) {
+        setErrorMessage(null);
+      }
       return copy;
     });
 
@@ -657,6 +682,7 @@ export function useProductStudio(productId: string) {
     setDescription,
     categoryId,
     setCategoryId,
+    handleCategoryChange,
     isActive,
     setIsActive,
     isFeatured,

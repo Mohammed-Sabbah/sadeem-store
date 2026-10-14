@@ -21,6 +21,7 @@ import {
   IconX,
   IconTrash,
   IconSpark,
+  IconAlertTriangle,
 } from './ProductStudioIcons';
 
 interface ProductStudioEditorTabProps {
@@ -30,6 +31,9 @@ interface ProductStudioEditorTabProps {
   setDescription: (val: string) => void;
   categoryId: string;
   setCategoryId: (val: string) => void;
+  handleCategoryChange?: (val: string) => void;
+  errorMessage?: string | null;
+  setErrorMessage?: (val: string | null) => void;
   categories: CategoryItem[];
   images: string[];
   fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -90,6 +94,9 @@ export function ProductStudioEditorTab({
   setDescription,
   categoryId,
   setCategoryId,
+  handleCategoryChange,
+  errorMessage,
+  setErrorMessage,
   categories,
   images,
   fileInputRef,
@@ -142,6 +149,24 @@ export function ProductStudioEditorTab({
   handleApplyBulkStock,
   primaryImage,
 }: ProductStudioEditorTabProps) {
+  const hasActiveVariants =
+    !isSimple && (options.some((o) => o.values && o.values.length > 0) || variants.length > 0);
+
+  const onCategoryChange = (newCatId: string) => {
+    if (handleCategoryChange) {
+      handleCategoryChange(newCatId);
+      return;
+    }
+    if (hasActiveVariants && newCatId !== categoryId) {
+      setErrorMessage?.(
+        'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
+      );
+      return;
+    }
+    setErrorMessage?.(null);
+    setCategoryId(newCatId);
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn font-almarai text-right">
       {/* Step 1: Basic Identity & Classification */}
@@ -169,14 +194,21 @@ export function ProductStudioEditorTab({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-brand-dark mb-1.5">
-                التصنيف المعتمد <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-brand-dark">
+                  التصنيف المعتمد <span className="text-red-500">*</span>
+                </label>
+                {hasActiveVariants && (
+                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
+                    محمي لوجود خيارات
+                  </span>
+                )}
+              </div>
               <div className="relative flex items-center">
                 <IconPackage className="w-4 h-4 text-brand-muted absolute right-3.5 pointer-events-none" />
                 <select
                   value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
+                  onChange={(e) => onCategoryChange(e.target.value)}
                   className="w-full h-11 pr-10 pl-9 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all appearance-none cursor-pointer"
                 >
                   {categories.map((c) => (
@@ -187,6 +219,24 @@ export function ProductStudioEditorTab({
                 </select>
                 <IconChevronDown className="w-3.5 h-3.5 text-brand-muted absolute left-3.5 pointer-events-none" />
               </div>
+              {errorMessage && errorMessage.includes('لا يمكن تغيير قسم الصنف') && (
+                <div className="mt-2.5 p-3 rounded-xl bg-red-50 text-red-800 text-xs font-bold border border-red-200/80 animate-fadeIn flex items-start justify-between gap-2 shadow-xs">
+                  <div className="flex items-start gap-2">
+                    <IconAlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed">{errorMessage}</span>
+                  </div>
+                  {setErrorMessage && (
+                    <button
+                      type="button"
+                      onClick={() => setErrorMessage(null)}
+                      className="text-red-500 hover:text-red-800 text-xs font-black cursor-pointer shrink-0 p-0.5"
+                      title="إغلاق التنبيه"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -374,7 +424,12 @@ export function ProductStudioEditorTab({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div
-            onClick={() => setIsSimple(true)}
+            onClick={() => {
+              setIsSimple(true);
+              if (errorMessage?.includes('لا يمكن تغيير قسم الصنف')) {
+                setErrorMessage?.(null);
+              }
+            }}
             className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 flex items-start gap-3 select-none ${
               isSimple
                 ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs ring-2 ring-brand-primary/20'

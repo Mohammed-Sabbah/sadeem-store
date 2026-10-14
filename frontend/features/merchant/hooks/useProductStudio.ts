@@ -408,7 +408,10 @@ export function useProductStudio(productId: string) {
 
     const arrays = validOptions.map((o) => o.values);
     const combos = cartesian(arrays);
-    if (combos.length > 100) return;
+    if (combos.length > 100) {
+      setErrorMessage('تجاوزت التركيبات المسموحة (100 صنف كحد أقصى). يرجى تقليل قيم الخيارات لحفظ المنتج بسلاسة.');
+      return;
+    }
 
     const categoryPrefix = (categories.find((c) => c._id === categoryId)?.slug || 'ITM')
       .slice(0, 3)

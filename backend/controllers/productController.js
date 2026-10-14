@@ -2,7 +2,7 @@ const Product = require('../models/Product');
 const Variant = require('../models/Variant');
 const { success, error } = require('../utils/responses');
 const { withMongoTransaction } = require('../config/db');
-const { STATUS, APPROVE_STATUS } = require('../constants/enums');
+const { STATUS, APPROVE_STATUS, ROLE } = require('../constants/enums');
 const { recomputeProductSummary } = require('../utils/product');
 const {
     createProductDocuments,
@@ -186,14 +186,19 @@ async function updateProduct(req, res, next) {
 
 async function deleteProduct(req, res, next) {
     try {
+        const isAdmin = req.user && req.user.role === ROLE.ADMIN;
+        const filter = { _id: req.params.id, isDeleted: false };
+        if (!isAdmin) {
+            if (!req.store?._id) {
+                return error(res, 403, 'Store context required for merchant deletion');
+            }
+            filter.storeId = req.store._id;
+        }
+
         const product = await withMongoTransaction(async (session) => {
             const options = session ? { session } : {};
             const product = await Product.findOneAndUpdate(
-                {
-                    _id: req.params.id,
-                    storeId: req.store._id,
-                    isDeleted: false,
-                },
+                filter,
                 { $set: { isDeleted: true } },
                 { new: true, ...options }
             );

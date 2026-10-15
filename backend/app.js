@@ -21,6 +21,7 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require("./routes/user.route")
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
+const variantRoutes = require('./routes/variantRoutes');
 const storeRoutes = require('./routes/storeRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const regionRoutes = require('./routes/regionRoutes');
@@ -29,6 +30,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/products/:id/variants', variantRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/regions', regionRoutes);

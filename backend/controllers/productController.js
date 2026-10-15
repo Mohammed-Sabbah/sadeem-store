@@ -1,30 +1,31 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
+const Variant = require('../models/Variant');
 const { APPROVE_STATUS, STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 const {
-    findDuplicateVariant,
-    hasVariantAttributes,
-    normalizeAttributes,
-    toProductResponse,
+    getProductResponse,
+    getProductsWithVariants,
 } = require('../utils/product');
+const { hasActiveVariants, hasVariantAttributes } = require('../utils/variant');
 
+// Public Filters
 const publicProductFilter = {
     isDeleted: false,
     status: STATUS.ACTIVE,
     approveStatus: APPROVE_STATUS.APPROVED,
-    variants: {
-        $elemMatch: {
-            isDeleted: false,
-            status: STATUS.ACTIVE,
-            approveStatus: APPROVE_STATUS.APPROVED,
-        },
-    },
+};
+
+const publicVariantFilter = {
+    isDeleted: false,
+    status: STATUS.ACTIVE,
+    approveStatus: APPROVE_STATUS.APPROVED,
 };
 
 async function getPublicProducts(req, res, next) {
     try {
-        const filter = { ...publicProductFilter };
+        const activeProductIds = await Variant.distinct('productId', publicVariantFilter);
+        const filter = { ...publicProductFilter, _id: { $in: activeProductIds } };
         if (req.query.categoryId) {
             filter.categoryId = req.query.categoryId;
         }
@@ -45,7 +46,7 @@ async function getPublicProducts(req, res, next) {
             })
             .sort({ createdAt: -1 });
         return success(res, 200, {
-            products: products.map((product) => toProductResponse(product)),
+            products: await getProductsWithVariants(products),
             count: products.length,
         });
     } catch (err) {
@@ -55,7 +56,11 @@ async function getPublicProducts(req, res, next) {
 
 async function getPublicProduct(req, res, next) {
     try {
-        const product = await Product.findOne({
+        const hasPublicVariant = await Variant.exists({
+            productId: req.params.id,
+            ...publicVariantFilter,
+        });
+        const product = hasPublicVariant && await Product.findOne({
             _id: req.params.id,
             ...publicProductFilter,
         })
@@ -74,7 +79,7 @@ async function getPublicProduct(req, res, next) {
             return error(res, 404, 'Product not found');
         }
 
-        const publicProduct = toProductResponse(product);
+        const publicProduct = await getProductResponse(product);
 
         return success(res, 200, { product: publicProduct });
     } catch (err) {
@@ -89,7 +94,7 @@ async function getSellerProducts(req, res, next) {
             .sort({ createdAt: -1 });
 
         return success(res, 200, {
-            products: products.map(product => toProductResponse(product)),
+            products: await getProductsWithVariants(products),
             count: products.length,
         });
     } catch (err) {
@@ -105,7 +110,7 @@ async function getAdminProducts(req, res, next) {
             .sort({ createdAt: -1 });
 
         return success(res, 200, {
-            products: products.map((product) => toProductResponse(product)),
+            products: await getProductsWithVariants(products),
             count: products.length,
         });
     } catch (err) {
@@ -126,16 +131,22 @@ async function createProduct(req, res, next) {
             description: req.body.description || '',
             categoryId: category._id,
             image: req.body.image,
-            variants: [{
+        });
+        try {
+            await Variant.create({
+                productId: product._id,
                 attributes: {},
                 price: req.body.price,
                 stock: req.body.stock,
-            }],
-        });
+            });
+        } catch (err) {
+            await Product.deleteOne({ _id: product._id });
+            throw err;
+        }
 
         return success(res, 201, {
-            message: 'Product created and submitted for approval',
-            product: toProductResponse(product),
+            message: 'Product created.',
+            product: await getProductResponse(product),
         });
     } catch (err) {
         return next(err);
@@ -153,9 +164,11 @@ async function updateProduct(req, res, next) {
             return error(res, 404, 'Product not found');
         }
 
+        // if Category has Changed.
         if (req.body.categoryId && String(req.body.categoryId) !== String(product.categoryId)) {
-            const hasConfiguredVariants = product.variants.some(
-                (variant) => variant.isDeleted !== true && hasVariantAttributes(variant.attributes)
+            const variants = await Variant.find({ productId: product._id, isDeleted: false });
+            const hasConfiguredVariants = variants.some((variant) =>
+                hasVariantAttributes(variant.attributes)
             );
             if (hasConfiguredVariants) {
                 return error(
@@ -178,101 +191,7 @@ async function updateProduct(req, res, next) {
 
         return success(res, 200, {
             message: 'Product updated successfully',
-            product: toProductResponse(product),
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function addVariant(req, res, next) {
-    try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            storeId: req.store._id,
-            isDeleted: false,
-        })
-            .populate('categoryId', 'variantAttributes');
-        if (!product) {
-            return error(res, 404, 'Product not found');
-        }
-        if (!product.categoryId) {
-            return error(res, 409, 'This product no longer has a valid category');
-        }
-
-        const attributes = normalizeAttributes(
-            req.body.attributes,
-            product.categoryId.variantAttributes
-        );
-        if (attributes.error) {
-            return error(res, 400, attributes.error);
-        }
-        if (findDuplicateVariant(product.variants, attributes.attributes)) {
-            return error(res, 409, 'A variant with these attributes already exists');
-        }
-
-        product.variants.push({
-            attributes: new Map(Object.entries(attributes.attributes)),
-            price: req.body.price,
-            stock: req.body.stock,
-        });
-        await product.save();
-
-        return success(res, 201, {
-            message: 'Variant added and submitted for approval',
-            product: toProductResponse(product),
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function updateVariant(req, res, next) {
-    try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            storeId: req.store._id,
-            isDeleted: false,
-        })
-            .populate('categoryId', 'variantAttributes');
-        if (!product) {
-            return error(res, 404, 'Product not found');
-        }
-        if (!product.categoryId) {
-            return error(res, 409, 'This product no longer has a valid category');
-        }
-
-        const variant = product.variants.id(req.params.variantId);
-        if (!variant || variant.isDeleted) {
-            return error(res, 404, 'Variant not found');
-        }
-        let updatedAttributes = variant.attributes;
-        if (req.body.attributes !== undefined) {
-            const result = normalizeAttributes(req.body.attributes, product.categoryId.variantAttributes);
-            if (result.error) {
-                return error(res, 400, result.error);
-            }
-            updatedAttributes = result.attributes;
-        }
-        const activeVariants = product.variants.filter((item) => item.isDeleted == false);
-        if (!hasVariantAttributes(updatedAttributes) && activeVariants.length > 1) {
-            return error(res, 400, 'Every variant must have category attributes once a product has multiple variants');
-        }
-        if (findDuplicateVariant(product.variants, updatedAttributes, variant._id)) {
-            return error(res, 409, 'A variant with these attributes already exists');
-        }
-
-        if (req.body.price !== undefined) variant.price = req.body.price;
-        if (req.body.stock !== undefined) variant.stock = req.body.stock;
-        if (req.body.attributes !== undefined) {
-            variant.attributes = new Map(Object.entries(updatedAttributes));
-        }
-
-        await product.save();
-
-        return success(res, 200, {
-            message: 'Variant updated successfully',
-            product: toProductResponse(product),
+            product: await getProductResponse(product),
         });
     } catch (err) {
         return next(err);
@@ -292,70 +211,49 @@ async function updateProductStatus(req, res, next) {
 
         if (
             req.body.status === STATUS.ACTIVE &&
-            !product.variants.some((variant) => variant.isDeleted == false)
+            !(await hasActiveVariants(product._id))
         ) {
             return error(res, 409, 'Add at least one variant before activating this product');
         }
 
         product.status = req.body.status;
         await product.save();
-        return success(res, 200, { product: toProductResponse(product) });
+        return success(res, 200,
+            {
+                product: await getProductResponse(product)
+            });
     } catch (err) {
         return next(err);
     }
 }
 
-async function updateVariantStatus(req, res, next) {
+async function updateProductApproval(req, res, next) {
     try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            storeId: req.store._id,
-            isDeleted: false,
-        });
+        if (
+            req.body.approveStatus === APPROVE_STATUS.REJECTED &&
+            (typeof req.body.reason !== 'string' || !req.body.reason.trim())
+        ) {
+            return error(res, 400, 'Rejection reason is required');
+        }
+
+        const product = await Product.findOneAndUpdate(
+            { _id: req.params.id, isDeleted: false },
+            {
+                $set: {
+                    approveStatus: req.body.approveStatus,
+                    rejectionReason: req.body.approveStatus === APPROVE_STATUS.REJECTED
+                        ? req.body.reason.trim()
+                        : '',
+                },
+            },
+            { new: true, runValidators: true }
+        )
+            .populate('categoryId', 'title slug variantAttributes')
+            .populate({ path: 'storeId', select: 'name' });
         if (!product) {
             return error(res, 404, 'Product not found');
         }
-        const variant = product.variants.id(req.params.variantId);
-        if (!variant || variant.isDeleted) {
-            return error(res, 404, 'Variant not found');
-        }
-
-        variant.status = req.body.status;
-        await product.save();
-        return success(res, 200, { product: toProductResponse(product) });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function deleteVariant(req, res, next) {
-    try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            storeId: req.store._id,
-            isDeleted: false,
-        });
-        if (!product) {
-            return error(res, 404, 'Product not found');
-        }
-
-        const variant = product.variants.id(req.params.variantId);
-        if (!variant || variant.isDeleted) {
-            return error(res, 404, 'Variant not found');
-        }
-
-        variant.isDeleted = true;
-        const hasRemainingVariants = product.variants.some((item) => item.isDeleted !== true);
-        if (!hasRemainingVariants) {
-            product.status = STATUS.IN_ACTIVE;
-        }
-
-        await product.save();
-
-        return success(res, 200, {
-            message: 'Variant deleted successfully',
-            product: toProductResponse(product),
-        });
+        return success(res, 200, { product: await getProductResponse(product) });
     } catch (err) {
         return next(err);
     }
@@ -373,48 +271,11 @@ async function deleteProduct(req, res, next) {
             return error(res, 404, 'Product not found');
         }
 
+        await Variant.updateMany({ productId: product._id }, { isDeleted: true })
+
         return success(res, 200, {
             message: 'Product deleted successfully',
         });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function updateProductApproval(req, res, next) {
-    try {
-        const product = await Product.findOneAndUpdate(
-            { _id: req.params.id, isDeleted: false },
-            { $set: { approveStatus: req.body.approveStatus } },
-            { new: true, runValidators: true }
-        )
-            .populate('categoryId', 'title slug variantAttributes')
-            .populate({ path: 'storeId', select: 'name' });
-        if (!product) {
-            return error(res, 404, 'Product not found');
-        }
-        return success(res, 200, { product: toProductResponse(product) });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function updateVariantApproval(req, res, next) {
-    try {
-        const product = await Product.findOne({ _id: req.params.id, isDeleted: false });
-        if (!product) {
-            return error(res, 404, 'Product not found');
-        }
-        const variant = product.variants.id(req.params.variantId);
-        if (!variant || variant.isDeleted) {
-            return error(res, 404, 'Variant not found');
-        }
-
-        variant.approveStatus = req.body.approveStatus;
-        await product.save();
-        await product.populate('categoryId', 'title slug variantAttributes');
-        await product.populate({ path: 'storeId', select: 'name' });
-        return success(res, 200, { product: toProductResponse(product) });
     } catch (err) {
         return next(err);
     }
@@ -427,12 +288,7 @@ module.exports = {
     getAdminProducts,
     createProduct,
     updateProduct,
-    addVariant,
-    updateVariant,
-    deleteVariant,
     updateProductStatus,
-    updateVariantStatus,
     deleteProduct,
     updateProductApproval,
-    updateVariantApproval,
 };

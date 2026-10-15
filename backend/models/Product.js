@@ -1,42 +1,6 @@
 const mongoose = require('mongoose');
 const { STATUS, STATUS_VALUES, APPROVE_STATUS, APPROVE_STATUS_VALUES } = require('../constants/enums');
 
-const variantSchema = new mongoose.Schema(
-    {
-        attributes: {
-            type: Map,
-            of: String,
-            default: {},
-        },
-        price: {
-            type: Number,
-            required: true,
-            min: 0.01,
-        },
-        stock: {
-            type: Number,
-            required: true,
-            min: 0,
-            validate: Number.isInteger,
-        },
-        status: {
-            type: String,
-            enum: STATUS_VALUES,
-            default: STATUS.ACTIVE,
-        },
-        approveStatus: {
-            type: String,
-            enum: APPROVE_STATUS_VALUES,
-            default: APPROVE_STATUS.APPROVED,
-        },
-        isDeleted: {
-            type: Boolean,
-            default: false,
-        },
-    },
-    { timestamps: true }
-);
-
 const productSchema = new mongoose.Schema(
     {
         storeId: {
@@ -68,13 +32,6 @@ const productSchema = new mongoose.Schema(
             trim: true,
             maxlength: 2048,
         },
-        variants: {
-            type: [variantSchema],
-            validate: {
-                validator: (variants) => variants.length > 0,
-                message: 'A product must have at least one variant',
-            },
-        },
         status: {
             type: String,
             enum: STATUS_VALUES,
@@ -84,6 +41,12 @@ const productSchema = new mongoose.Schema(
             type: String,
             enum: APPROVE_STATUS_VALUES,
             default: APPROVE_STATUS.APPROVED,
+        },
+        rejectionReason: {
+            type: String,
+            default: '',
+            trim: true,
+            maxlength: 1000,
         },
         isDeleted: {
             type: Boolean,

@@ -1,7 +1,7 @@
 const { body, param, query } = require('express-validator');
-const { APPROVE_STATUS_VALUES, STATUS_VALUES } = require('../constants/enums');
+const { APPROVE_STATUS, APPROVE_STATUS_VALUES, STATUS_VALUES } = require('../constants/enums');
 const validateRequest = require('./validateRequest');
-const { validateVariantFields, validateVariantIds, validateCreateVariant, validateVariantApproval } = require("./variantSchema")
+const { validateVariantFields } = require('./variantSchema');
 
 function isSafeImageReference(value) {
     if (value.startsWith('/') && !value.startsWith('//')) return true;
@@ -142,18 +142,24 @@ const validateProductApproval = [
     body('approveStatus')
         .isIn(APPROVE_STATUS_VALUES)
         .withMessage('Product approval status is invalid'),
+    body('reason')
+        .if((_, { req }) => req.body && req.body.approveStatus === APPROVE_STATUS.REJECTED)
+        .isString()
+        .withMessage('Rejection reason must be a string')
+        .bail()
+        .trim()
+        .notEmpty()
+        .withMessage('Rejection reason is required')
+        .isLength({ max: 1000 })
+        .withMessage('Rejection reason must be at most 1000 characters'),
     validateRequest,
 ];
 
 module.exports = {
     validateProductId,
     validatePublicProductQuery,
-    validateVariantIds,
     validateCreateProduct,
     validateUpdateProduct,
-    validateCreateVariant,
-    validateVariantFields,
     validateProductStatus,
-    validateVariantApproval,
     validateProductApproval,
 };

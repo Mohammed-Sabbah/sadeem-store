@@ -41,6 +41,8 @@ Replace `:id`, `:variantId`, and `:slug` with actual values. Example IDs below a
 
 `description` is optional. `image` can be an HTTP(S) URL or a local site path.
 
+Products and variants are stored in separate MongoDB collections. Creating a product still creates its initial variant from `price` and `stock`.
+
 ### Update product
 
 `PATCH /api/products/:id` — include one or more editable fields:
@@ -84,7 +86,7 @@ When provided, all variant attributes must be defined by the product's category.
 
 `DELETE /api/products/:id/variants/:variantId`
 
-This soft-deletes the variant. Deleted variants are omitted from product responses. If this was the product's last non-deleted variant, the product status is set to `inActive`.
+This soft-deletes the variant. Deleted variants are omitted from product responses. If this was the product's last active variant, the product status is set to `inActive`. Setting a product's last active variant to `inActive` also sets the product to `inActive`.
 
 ### Update a variant
 
@@ -103,6 +105,16 @@ This soft-deletes the variant. Deleted variants are omitted from product respons
 
 Product and variant `status` values: `active`, `inActive`.  
 Product and variant `approveStatus` values: `pending`, `approved`, `rejected`.
+
+### Migrating existing products
+
+Before deploying the separate variant collection, back up the database and stop product writes. Run the migration from the `backend` directory:
+
+```sh
+node scripts/migrate-embedded-variants.js
+```
+
+The migration preserves variant IDs and is safe to rerun. It removes each product's embedded `variants` field only after those variants have been copied to the `variants` collection.
 
 ## Categories
 

@@ -1,7 +1,8 @@
 const Category = require('../models/Category');
 const Product = require('../models/Product');
+const Variant = require('../models/Variant');
 const { success, error } = require('../utils/responses');
-const { hasVariantAttributes, normalizeAttributes } = require('../utils/product');
+const { hasVariantAttributes, normalizeAttributes } = require('../utils/variant');
 const {
     slugify,
     hasBreakingVariantAttributeChanges,
@@ -10,26 +11,25 @@ const {
 } = require('../utils/category');
 
 async function getVariantAttributeCompatibilityError(categoryId, definitions) {
-    const products = await Product.find({ categoryId })
-        .select('variants.attributes variants.isDeleted')
-        .lean();
-    for (const product of products) {
-        for (const variant of product.variants) {
-            if (variant.isDeleted === true) continue;
-            if (!hasVariantAttributes(variant.attributes)) continue;
+    const productIds = await Product.distinct('_id', { categoryId });
+    const variants = await Variant.find({
+        productId: { $in: productIds },
+        isDeleted: { $ne: true },
+    }).lean();
+    for (const variant of variants) {
+        if (!hasVariantAttributes(variant.attributes)) continue;
 
-            const attributeNames = new Set(
-                (variant.attributes instanceof Map
-                    ? Array.from(variant.attributes.keys())
-                    : Object.keys(variant.attributes || {})
-                ).map((name) => name.trim().toLowerCase())
-            );
-            const applicableDefinitions = definitions.filter((definition) =>
-                attributeNames.has(definition.name.trim().toLowerCase())
-            );
-            const result = normalizeAttributes(variant.attributes, applicableDefinitions);
-            if (result.error) return result.error;
-        }
+        const attributeNames = new Set(
+            (variant.attributes instanceof Map
+                ? Array.from(variant.attributes.keys())
+                : Object.keys(variant.attributes || {})
+            ).map((name) => name.trim().toLowerCase())
+        );
+        const applicableDefinitions = definitions.filter((definition) =>
+            attributeNames.has(definition.name.trim().toLowerCase())
+        );
+        const result = normalizeAttributes(variant.attributes, applicableDefinitions);
+        if (result.error) return result.error;
     }
 
     return null;

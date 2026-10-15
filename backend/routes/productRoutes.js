@@ -15,13 +15,8 @@ const {
     createProduct,
     updateProduct,
     deleteProduct,
-    addVariant,
-    updateVariant,
-    deleteVariant,
     updateProductStatus,
-    updateVariantStatus,
     updateProductApproval,
-    updateVariantApproval,
 } = require('../controllers/productController');
 
 // Validators
@@ -33,13 +28,6 @@ const {
     validateProductStatus,
     validateProductApproval,
 } = require('../schemas/productSchema');
-
-const {
-    validateVariantIds,
-    validateCreateVariant,
-    validateVariantApproval,
-    validateVariantPatch
-} = require('../schemas/variantSchema');
 
 const router = express.Router();
 
@@ -76,46 +64,6 @@ router.patch(
 
 // Change Product Status - Seller
 router.patch('/:id/status', ...sellerOnly, validateProductId, validateProductStatus, updateProductStatus);
-
-// Variant Routes
-
-// Create Product Variant
-router.post('/:id/variants', ...sellerOnly, validateProductId, validateCreateVariant, addVariant);
-
-// Update Variant
-router.patch(
-    '/:id/variants/:variantId',
-    ...sellerOnly,
-    validateVariantIds,
-    validateVariantPatch,
-    updateVariant
-);
-
-// Delete Variant - Seller
-router.delete(
-    '/:id/variants/:variantId',
-    ...sellerOnly,
-    validateVariantIds,
-    deleteVariant
-);
-
-// Change Variant Status - Seller
-router.patch(
-    '/:id/variants/:variantId/status',
-    ...sellerOnly,
-    validateVariantIds,
-    validateProductStatus,
-    updateVariantStatus
-);
-
-// Change Variant Approve Status - Admin
-router.patch(
-    '/:id/variants/:variantId/approval',
-    ...adminOnly,
-    validateVariantIds,
-    validateVariantApproval,
-    updateVariantApproval
-);
 
 // Delete Product - Seller
 router.delete('/:id', ...sellerOnly, validateProductId, deleteProduct);

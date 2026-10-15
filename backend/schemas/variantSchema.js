@@ -1,6 +1,6 @@
-const { body, param } = require("express-validator")
-const validateRequest = require("./validateRequest")
-const { APPROVE_STATUS_VALUES } = require("../constants/enums")
+const { body, param } = require('express-validator');
+const validateRequest = require('./validateRequest');
+const { APPROVE_STATUS, APPROVE_STATUS_VALUES, STATUS_VALUES } = require('../constants/enums');
 function validateVariantFields(partial = false) {
     return [
         body('price')
@@ -58,6 +58,23 @@ const validateVariantApproval = [
     body('approveStatus')
         .isIn(APPROVE_STATUS_VALUES)
         .withMessage('Variant approval status is invalid'),
+    body('reason')
+        .if((_, { req }) => req.body && req.body.approveStatus === APPROVE_STATUS.REJECTED)
+        .isString()
+        .withMessage('Rejection reason must be a string')
+        .bail()
+        .trim()
+        .notEmpty()
+        .withMessage('Rejection reason is required')
+        .isLength({ max: 1000 })
+        .withMessage('Rejection reason must be at most 1000 characters'),
+    validateRequest,
+];
+
+const validateVariantStatus = [
+    body('status')
+        .isIn(STATUS_VALUES)
+        .withMessage('Variant status is invalid'),
     validateRequest,
 ];
 
@@ -80,4 +97,5 @@ module.exports = {
     validateCreateVariant,
     validateVariantIds,
     validateVariantFields,
-}
+    validateVariantStatus,
+};

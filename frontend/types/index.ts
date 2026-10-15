@@ -13,13 +13,15 @@ export interface Product {
     id: string;
   };
   category: string;
-  rating: number;
+  rating?: number;
   reviewsCount?: number;
   inStock: boolean;
   description?: string;
   gallery?: string[];
   specs?: Record<string, string>;
   isAnonymousVendor?: boolean;
+  variantId?: string;
+  variantAttributes?: Record<string, string>;
 }
 
 export interface Store {
@@ -30,9 +32,9 @@ export interface Store {
   verified: boolean;
   image: string;
   description: string;
-  rating: number;
-  ordersCount: number;
-  deliveryBadge: string;
+  rating?: number;
+  ordersCount?: number;
+  deliveryBadge?: string;
 }
 
 export interface CartItem {
@@ -40,4 +42,5 @@ export interface CartItem {
   quantity: number;
   selectedColor?: string;
   selectedSize?: string;
+  selectedVariantId?: string;
 }

@@ -98,7 +98,7 @@ export async function sendRequest<T>(path: string, options: RequestOptions = {})
       return {
         success: false,
         statusCode: res.status,
-        message: body?.message || fallbackMessage(res.status),
+        message: body?.message || body?.msg || fallbackMessage(res.status),
         errors: body?.errors || null,
       };
     }

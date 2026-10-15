@@ -3,6 +3,27 @@ const User = require('../models/User');
 const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 
+async function getPublicStore(req, res, next) {
+    try {
+        const store = await Store.findOne({
+            _id: req.params.id,
+            status: STATUS.ACTIVE,
+            approveStatus: APPROVE_STATUS.APPROVED,
+            isDeleted: false,
+        })
+            .select('name logo description address status approveStatus')
+            .lean();
+
+        if (!store) {
+            return error(res, 404, 'Store not found');
+        }
+
+        return success(res, 200, { store });
+    } catch (err) {
+        return next(err);
+    }
+}
+
 async function approveStore(req, res, next) {
     const { id } = req.params;
     if (!id) return error(res, 400, 'Store ID is required');
@@ -48,5 +69,6 @@ async function approveStore(req, res, next) {
 }
 
 module.exports = {
+    getPublicStore,
     approveStore,
 };

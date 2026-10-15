@@ -56,7 +56,13 @@ export const DEFAULT_CART_ITEMS: CartItem[] = [
 
 interface CartContextType {
   items: CartItem[];
-  addToCart: (product: Product, quantity?: number, selectedColor?: string, selectedSize?: string) => void;
+  addToCart: (
+    product: Product,
+    quantity?: number,
+    selectedColor?: string,
+    selectedSize?: string,
+    selectedVariantId?: string
+  ) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -92,17 +98,25 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [items]);
 
-  const addToCart = (product: Product, quantity = 1, selectedColor?: string, selectedSize?: string) => {
+  const addToCart = (
+    product: Product,
+    quantity = 1,
+    selectedColor?: string,
+    selectedSize?: string,
+    selectedVariantId?: string
+  ) => {
     setItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      const existing = prev.find(
+        (item) => item.product.id === product.id && item.selectedVariantId === selectedVariantId
+      );
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id
+          item.product.id === product.id && item.selectedVariantId === selectedVariantId
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
-      return [...prev, { product, quantity, selectedColor, selectedSize }];
+      return [...prev, { product, quantity, selectedColor, selectedSize, selectedVariantId }];
     });
   };
 

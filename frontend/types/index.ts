@@ -19,6 +19,7 @@ export interface Product {
   description?: string;
   gallery?: string[];
   specs?: Record<string, string>;
+  isAnonymousVendor?: boolean;
 }
 
 export interface Store {

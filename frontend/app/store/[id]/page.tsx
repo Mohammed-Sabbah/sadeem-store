@@ -13,13 +13,38 @@ export default function StoreDetailPage() {
   const id = params?.id as string;
   const store = stores.find((s) => s.id === id) || stores[0];
 
-  // Find products associated with this store or vendor
+  // Sync any local overrides (e.g. from merchant product studio)
+  const [localAnonymousMap, setLocalAnonymousMap] = useState<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem('sadeem_merchant_products');
+      if (raw) {
+        const list = JSON.parse(raw);
+        const map: Record<string, boolean> = {};
+        list.forEach((item: any) => {
+          if (item._id) {
+            map[item._id] = !!item.isAnonymousVendor;
+          }
+        });
+        setLocalAnonymousMap(map);
+      }
+    } catch {}
+  }, []);
+
+  const isAnonymous = (p: any) => {
+    if (localAnonymousMap[p.id] !== undefined) return localAnonymousMap[p.id];
+    return !!p.isAnonymousVendor;
+  };
+
+  // Find products associated with this store or vendor, strictly excluding anonymous supply
   const storeProducts = products.filter(
-    (p) => p.vendor.id === store.id || p.vendor.name === store.name || p.vendor.city.includes(store.city)
+    (p) => (p.vendor.id === store.id || p.vendor.name === store.name || p.vendor.city.includes(store.city)) && !isAnonymous(p)
   );
 
-  // Fallback to top products if store has fewer than 2
-  const displayProducts = storeProducts.length > 0 ? storeProducts : products.slice(0, 4);
+  // Fallback to non-anonymous products if store has fewer than 2
+  const fallbackList = products.filter((p) => !isAnonymous(p)).slice(0, 4);
+  const displayProducts = storeProducts.length > 0 ? storeProducts : fallbackList;
 
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [storeDrawerOpen, setStoreDrawerOpen] = useState(false);

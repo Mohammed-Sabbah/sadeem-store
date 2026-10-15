@@ -19,6 +19,20 @@ export default function ProductDetailPage() {
   const [selectedSize, setSelectedSize] = useState('L');
   const [quantity, setQuantity] = useState(1);
   const [isWished, setIsWished] = useState(false);
+  const [isAnonymousVendor, setIsAnonymousVendor] = useState(!!product.isAnonymousVendor);
+
+  React.useEffect(() => {
+    try {
+      const raw = localStorage.getItem('sadeem_merchant_products');
+      if (raw) {
+        const list = JSON.parse(raw);
+        const match = list.find((item: any) => item._id === id || item._id === product.id);
+        if (match && match.isAnonymousVendor !== undefined) {
+          setIsAnonymousVendor(!!match.isAnonymousVendor);
+        }
+      }
+    } catch {}
+  }, [id, product.id]);
 
   // Mobile Bottom Sheet States
   const [sizeDrawerOpen, setSizeDrawerOpen] = useState(false);
@@ -135,24 +149,38 @@ export default function ProductDetailPage() {
               =================================================================== */}
           <div className="lg:col-span-5 flex flex-col gap-4 bg-brand-surface p-5 sm:p-6 rounded-2xl border border-brand-border shadow-xs">
 
-            {/* 1. ORIGIN OVERLINE (VENDOR BADGE & CITY) */}
-            <div className="flex items-center justify-between pb-3 border-b border-brand-border/60">
-              <div className="flex items-center gap-2 text-xs font-bold text-brand-dark">
-                <span className="w-2 h-2 rounded-full bg-brand-trust" title="متجر معتمد" />
-                <Link href={`/store/${product.vendor.id}`} className="hover:text-brand-primary transition-colors">
-                  {product.vendor.name}
-                </Link>
-                <span className="text-brand-muted font-normal text-[11px]">({product.vendor.city} · موثق)</span>
-              </div>
+            {/* 1. ORIGIN OVERLINE (VENDOR BADGE & CITY OR ANONYMOUS SADEEM DIRECT SUPPLY) */}
+            {isAnonymousVendor ? (
+              <div className="flex items-center justify-between pb-3 border-b border-brand-border/60">
+                <div className="flex items-center gap-2 text-xs font-bold text-brand-dark">
+                  <span className="w-2 h-2 rounded-full bg-brand-trust" title="توريد سَدِيم المباشر" />
+                  <span className="text-brand-dark font-extrabold">توريد مباشر وموثق عبر سَدِيم</span>
+                  <span className="text-brand-muted font-normal text-[11px]">(المحافظة الوسطى · فحص عند الباب)</span>
+                </div>
 
-              <Link
-                href={`/store/${product.vendor.id}`}
-                className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-primary bg-[var(--brand-primary-soft)] px-2.5 py-1 rounded-full border border-[var(--brand-primary-border)] hover:bg-brand-primary hover:text-white transition-all"
-              >
-                <span>زيارة المتجر</span>
-                <span className="text-xs">←</span>
-              </Link>
-            </div>
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-trust bg-brand-trust-soft px-2.5 py-1 rounded-full border border-brand-trust/30">
+                  ضمان سَدِيم المباشر
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between pb-3 border-b border-brand-border/60">
+                <div className="flex items-center gap-2 text-xs font-bold text-brand-dark">
+                  <span className="w-2 h-2 rounded-full bg-brand-trust" title="متجر معتمد" />
+                  <Link href={`/store/${product.vendor.id}`} className="hover:text-brand-primary transition-colors">
+                    {product.vendor.name}
+                  </Link>
+                  <span className="text-brand-muted font-normal text-[11px]">({product.vendor.city} · موثق)</span>
+                </div>
+
+                <Link
+                  href={`/store/${product.vendor.id}`}
+                  className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-primary bg-[var(--brand-primary-soft)] px-2.5 py-1 rounded-full border border-[var(--brand-primary-border)] hover:bg-brand-primary hover:text-white transition-all"
+                >
+                  <span>زيارة المتجر</span>
+                  <span className="text-xs">←</span>
+                </Link>
+              </div>
+            )}
 
             {/* 2. PRODUCT TITLE ROW WITH INTEGRATED SHARE BUTTON */}
             <div className="flex items-start justify-between gap-3">

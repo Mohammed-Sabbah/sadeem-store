@@ -183,7 +183,7 @@ export function useProductStudio(productId: string) {
     };
   }, [productId]);
 
-  // Category Change with friendly reset for active variants
+  // Category Change with strict intentional guard
   const handleCategoryChange = (newCatId: string) => {
     if (newCatId === categoryId) return;
 
@@ -191,16 +191,10 @@ export function useProductStudio(productId: string) {
       !isSimple && (options.some((o) => o.values && o.values.length > 0) || variants.length > 0);
 
     if (hasActiveVariants) {
-      const confirmChange = window.confirm(
-        'تغيير قسم الصنف سيقوم بإعادة ضبط خيارات ومقاسات المنتج لتتوافق مع خيارات القسم الجديد. هل تود المتابعة؟'
+      setErrorMessage(
+        'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
       );
-      if (!confirmChange) return;
-
-      // Reset options and variants cleanly
-      setOptions([]);
-      setVariants([]);
-      setColorImageMap({});
-      setDeletedVariantKeys([]);
+      return;
     }
 
     setErrorMessage(null);

@@ -155,15 +155,15 @@ export function ProductStudioEditorTab({
     !isSimple && (options.some((o) => o.values && o.values.length > 0) || variants.length > 0);
 
   const onCategoryChange = (newCatId: string) => {
+    if (hasActiveVariants && newCatId !== categoryId) {
+      setErrorMessage?.(
+        'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
+      );
+      return;
+    }
     if (handleCategoryChange) {
       handleCategoryChange(newCatId);
       return;
-    }
-    if (hasActiveVariants && newCatId !== categoryId) {
-      const confirmChange = window.confirm(
-        'تغيير قسم الصنف سيقوم بإعادة ضبط خيارات ومقاسات المنتج لتتوافق مع خيارات القسم الجديد. هل تود المتابعة؟'
-      );
-      if (!confirmChange) return;
     }
     setErrorMessage?.(null);
     setCategoryId(newCatId);
@@ -201,8 +201,9 @@ export function ProductStudioEditorTab({
                   التصنيف المعتمد <span className="text-red-500">*</span>
                 </label>
                 {hasActiveVariants && (
-                  <span className="text-[10px] font-bold text-brand-muted bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border/60">
-                    تغيير القسم يعيد ضبط الخيارات
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80 flex items-center gap-1 shadow-2xs">
+                    <span>🔒</span>
+                    <span>مقفل لوجود خيارات ومخزون</span>
                   </span>
                 )}
               </div>
@@ -210,8 +211,13 @@ export function ProductStudioEditorTab({
                 <IconPackage className="w-4 h-4 text-brand-muted absolute right-3.5 pointer-events-none" />
                 <select
                   value={categoryId}
+                  disabled={hasActiveVariants}
                   onChange={(e) => onCategoryChange(e.target.value)}
-                  className="w-full h-11 pr-10 pl-9 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all appearance-none cursor-pointer"
+                  className={`w-full h-11 pr-10 pl-9 text-base sm:text-xs font-bold rounded-xl border transition-all appearance-none ${
+                    hasActiveVariants
+                      ? 'border-dashed border-amber-300 bg-amber-50/40 text-brand-muted cursor-not-allowed select-none'
+                      : 'border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 cursor-pointer'
+                  }`}
                 >
                   {categories.map((c) => (
                     <option key={c._id} value={c._id}>
@@ -221,6 +227,13 @@ export function ProductStudioEditorTab({
                 </select>
                 <IconChevronDown className="w-3.5 h-3.5 text-brand-muted absolute left-3.5 pointer-events-none" />
               </div>
+
+              {hasActiveVariants && (
+                <p className="mt-1.5 text-[11px] text-amber-900 bg-amber-50/80 p-2.5 rounded-xl border border-amber-200/70 leading-relaxed font-normal">
+                  لحماية مصفوفة المقاسات ورموز التتبع (SKU) من الحذف غير المقصود، يجب حذف خيارات الصنف الحالية بالأسفل أولاً (أو تحويل الصنف إلى مفرد) لتتمكن من تغيير القسم.
+                </p>
+              )}
+
               {errorMessage && errorMessage.includes('لا يمكن تغيير قسم الصنف') && (
                 <div className="mt-2.5 p-3 rounded-xl bg-red-50 text-red-800 text-xs font-bold border border-red-200/80 animate-fadeIn flex items-start justify-between gap-2 shadow-xs">
                   <div className="flex items-start gap-2">

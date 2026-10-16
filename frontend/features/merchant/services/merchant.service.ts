@@ -136,7 +136,17 @@ export const merchantService = {
       description: formData.description?.trim() || '',
       images: formData.images,
       image: formData.images?.[0] || '',
-      options: formData.isSimple ? [] : (formData.options || []),
+      options: formData.isSimple
+        ? []
+        : (formData.options || []).map((opt) => ({
+            key: opt.key || (opt.name ? opt.name.toLowerCase().trim() : 'opt'),
+            source: opt.source || 'DEFINED',
+            label: opt.label || opt.name,
+            name: opt.name || opt.label || opt.key,
+            type: opt.type || 'TEXT',
+            unit: opt.unit && String(opt.unit).trim() ? String(opt.unit).trim() : null,
+            values: Array.isArray(opt.values) ? opt.values : [],
+          })),
       isFeatured: Boolean(formData.isFeatured),
       isActive: formData.isActive !== undefined ? formData.isActive : true,
       isAnonymousVendor: Boolean(formData.isAnonymousVendor),

@@ -155,27 +155,27 @@ const validateProduct = [
         .isArray()
         .withMessage('Product options must be an array'),
     body('options.*.key')
-        .optional()
+        .optional({ values: 'falsy', nullable: true })
         .isString()
         .withMessage('Option key must be a string'),
     body('options.*.label')
-        .optional()
+        .optional({ values: 'falsy', nullable: true })
         .isString()
         .withMessage('Option label must be a string'),
     body('options.*.name')
-        .optional()
+        .optional({ values: 'falsy', nullable: true })
         .isString()
         .withMessage('Option name must be a string'),
     body('options.*.source')
-        .optional()
+        .optional({ values: 'falsy', nullable: true })
         .isIn(['DEFINED', 'CUSTOM'])
         .withMessage('Option source must be DEFINED or CUSTOM'),
     body('options.*.type')
-        .optional()
+        .optional({ values: 'falsy', nullable: true })
         .isIn(['COLOR', 'SIZE', 'TEXT', 'NUMERIC'])
         .withMessage('Option type must be COLOR, SIZE, TEXT, or NUMERIC'),
     body('options.*.unit')
-        .optional()
+        .optional({ values: 'falsy', nullable: true, checkFalsy: true })
         .isString()
         .withMessage('Option unit must be a string'),
     body('options.*.values')

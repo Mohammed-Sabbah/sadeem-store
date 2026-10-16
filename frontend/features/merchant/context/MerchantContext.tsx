@@ -90,10 +90,11 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await merchantService.createProduct(formData);
       if (res.success && res.data) {
-        setProducts((prev) => [res.data, ...prev]);
+        const createdProduct: ProductItem = res.data;
+        setProducts((prev) => [createdProduct, ...prev]);
         setFeedbackMessage({
           type: 'success',
-          text: `تم حفظ وإضافة «${res.data.name}» بنجاح في الكتالوج`,
+          text: `تم حفظ وإضافة «${createdProduct.name}» بنجاح في الكتالوج`,
         });
         return true;
       }

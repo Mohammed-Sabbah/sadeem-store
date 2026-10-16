@@ -1,388 +1,198 @@
-import { getRequest, postRequest, putRequest, patchRequest, deleteRequest } from '@/shared/lib/coreApi';
-import type { StoreProfile, ProductItem, ProductFormData, MerchantMetrics } from '../types/merchant.types';
+import { getRequest, postRequest, patchRequest, deleteRequest } from '@/shared/lib/coreApi';
+import type {
+  StoreProfile,
+  ProductItem,
+  ProductVariant,
+  ProductOption,
+  ProductFormData,
+  MerchantMetrics,
+} from '../types/merchant.types';
 
-const LOCAL_PRODUCTS_KEY = 'sadeem_merchant_mock_products_v1';
-const LOCAL_STORE_KEY = 'sadeem_merchant_mock_store_v1';
-
-// Sample fallback store in Central Gaza
-const DEFAULT_FALLBACK_STORE: StoreProfile = {
-  _id: 'store_central_01',
-  name: 'خياطة وأقمشة الأصالة',
-  categoryId: 'cat_clothing',
-  categoryName: 'أزياء وملبوسات',
-  address: {
-    governorate: 'central',
-    city: 'deir_albalah',
-    detailedAddress: 'شارع الشهداء، قرب مسجد النور، دير البلح',
-    coordinates: { lat: 31.4185, lng: 34.3514 },
-  },
-  phoneNumber: '0599123456',
-  approveStatus: 'approved',
-  status: 'active',
-  balance: 380,
-};
-
-// Initial realistic products with variants for Central Gaza merchant
-const INITIAL_DEMO_PRODUCTS: ProductItem[] = [
-  {
-    _id: 'prod_001',
-    storeId: 'store_central_01',
-    categoryId: 'cat_clothing',
-    categoryTitle: 'أزياء وملبوسات',
-    name: 'قميص كتان بيج طبيعي مقلم',
-    slug: 'natural-linen-striped-shirt',
-    description: 'قميص رجالي مصمم من قماش الكتان الطبيعي الفاخر، مريح في درجات الحرارة المرتفعة مع تفصيل خياطة يدوي متين.',
-    images: ['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=700&q=80'],
-    options: [
-      { name: 'اللون', values: ['بيج طبيعي', 'أبيض سحابي', 'كحلي ناعم'] },
-      { name: 'المقاس', values: ['M', 'L', 'XL'] },
-    ],
-    minPrice: 55,
-    maxPrice: 65,
-    inStock: true,
-    isFeatured: true,
-    isActive: true,
-    variantsCount: 9,
-    totalStock: 34,
-    createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-    variants: [
-      { sku: 'SHIRT-BEG-M', attributes: { 'اللون': 'بيج طبيعي', 'المقاس': 'M' }, attrKey: 'اللون:بيج طبيعي|المقاس:M', price: 55, stock: 6, isActive: true },
-      { sku: 'SHIRT-BEG-L', attributes: { 'اللون': 'بيج طبيعي', 'المقاس': 'L' }, attrKey: 'اللون:بيج طبيعي|المقاس:L', price: 55, stock: 8, isActive: true },
-      { sku: 'SHIRT-BEG-XL', attributes: { 'اللون': 'بيج طبيعي', 'المقاس': 'XL' }, attrKey: 'اللون:بيج طبيعي|المقاس:XL', price: 60, stock: 4, isActive: true },
-      { sku: 'SHIRT-WHT-M', attributes: { 'اللون': 'أبيض سحابي', 'المقاس': 'M' }, attrKey: 'اللون:أبيض سحابي|المقاس:M', price: 55, stock: 5, isActive: true },
-      { sku: 'SHIRT-WHT-L', attributes: { 'اللون': 'أبيض سحابي', 'المقاس': 'L' }, attrKey: 'اللون:أبيض سحابي|المقاس:L', price: 55, stock: 7, isActive: true },
-      { sku: 'SHIRT-WHT-XL', attributes: { 'اللون': 'أبيض سحابي', 'المقاس': 'XL' }, attrKey: 'اللون:أبيض سحابي|المقاس:XL', price: 60, stock: 0, isActive: true },
-      { sku: 'SHIRT-NAV-M', attributes: { 'اللون': 'كحلي ناعم', 'المقاس': 'M' }, attrKey: 'اللون:كحلي ناعم|المقاس:M', price: 60, stock: 2, isActive: true },
-      { sku: 'SHIRT-NAV-L', attributes: { 'اللون': 'كحلي ناعم', 'المقاس': 'L' }, attrKey: 'اللون:كحلي ناعم|المقاس:L', price: 60, stock: 2, isActive: true },
-      { sku: 'SHIRT-NAV-XL', attributes: { 'اللون': 'كحلي ناعم', 'المقاس': 'XL' }, attrKey: 'اللون:كحلي ناعم|المقاس:XL', price: 65, stock: 0, isActive: true },
-    ],
-  },
-  {
-    _id: 'prod_002',
-    storeId: 'store_central_01',
-    categoryId: 'cat_clothing',
-    categoryTitle: 'أزياء وملبوسات',
-    name: 'سروال قطني واسع بقصة مريحة',
-    slug: 'wide-cotton-comfort-pants',
-    description: 'سروال قطني خفيف بخصر مطاطي وجيوب عميقة، خامة قطنية نقية 100% تدوم وتتحمل الاستخدام اليومي.',
-    images: ['https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=700&q=80'],
-    options: [
-      { name: 'المقاس', values: ['30', '32', '34'] },
-    ],
-    minPrice: 40,
-    maxPrice: 40,
-    inStock: true,
-    isFeatured: false,
-    isActive: true,
-    variantsCount: 3,
-    totalStock: 18,
-    createdAt: new Date(Date.now() - 86400000 * 5).toISOString(),
-    variants: [
-      { sku: 'PNT-30', attributes: { 'المقاس': '30' }, attrKey: 'المقاس:30', price: 40, stock: 5, isActive: true },
-      { sku: 'PNT-32', attributes: { 'المقاس': '32' }, attrKey: 'المقاس:32', price: 40, stock: 8, isActive: true },
-      { sku: 'PNT-34', attributes: { 'المقاس': '34' }, attrKey: 'المقاس:34', price: 40, stock: 5, isActive: true },
-    ],
-  },
-  {
-    _id: 'prod_003',
-    storeId: 'store_central_01',
-    categoryId: 'cat_clothing',
-    categoryTitle: 'أزياء وملبوسات',
-    name: 'شال حريري معتق بنقوش سديمية',
-    slug: 'nebula-silk-vintage-scarf',
-    description: 'منتج بسيط مفرد: شال حرير ناعم ومطرز يدوياً بحواف منتهية بدقة عالية، مناسب للهدايا والمناسبات.',
-    images: ['https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=700&q=80'],
-    options: [],
-    minPrice: 35,
-    maxPrice: 35,
-    inStock: false,
-    isFeatured: false,
-    isActive: true,
-    variantsCount: 1,
-    totalStock: 0,
-    createdAt: new Date(Date.now() - 86400000 * 8).toISOString(),
-    variants: [
-      { sku: 'SCARF-SLK-01', attributes: {}, attrKey: 'default', price: 35, stock: 0, isActive: true },
-    ],
-  },
-];
-
-function getLocalProducts(): ProductItem[] {
-  if (typeof window === 'undefined') return INITIAL_DEMO_PRODUCTS;
-  try {
-    const raw = localStorage.getItem(LOCAL_PRODUCTS_KEY);
-    if (!raw) {
-      localStorage.setItem(LOCAL_PRODUCTS_KEY, JSON.stringify(INITIAL_DEMO_PRODUCTS));
-      return INITIAL_DEMO_PRODUCTS;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return INITIAL_DEMO_PRODUCTS;
-  }
-}
-
-function saveLocalProducts(list: ProductItem[]): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(LOCAL_PRODUCTS_KEY, JSON.stringify(list));
-  } catch (err) {
-    console.warn('Failed saving products to localStorage', err);
-  }
-}
-
-function getLocalStore(): StoreProfile {
-  if (typeof window === 'undefined') return DEFAULT_FALLBACK_STORE;
-  try {
-    const raw = localStorage.getItem(LOCAL_STORE_KEY);
-    if (!raw) {
-      localStorage.setItem(LOCAL_STORE_KEY, JSON.stringify(DEFAULT_FALLBACK_STORE));
-      return DEFAULT_FALLBACK_STORE;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return DEFAULT_FALLBACK_STORE;
-  }
-}
-
-function saveLocalStore(store: StoreProfile): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(LOCAL_STORE_KEY, JSON.stringify(store));
-  } catch (err) {
-    console.warn('Failed saving store to localStorage', err);
-  }
-}
-
+/**
+ * خدمة التاجر المركزية - سَدِيم (Sadeem Merchant Service)
+ * متصلة حصراً ومباشرة بقاعدة البيانات عبر Backend REST APIs
+ * دون أي بيانات وهمية (Mock Data) أو تخزين مؤقت محلي (localStorage)
+ */
 export const merchantService = {
   /**
-   * جلب بيانات المتجر وحالة القبول / الاعتماد
+   * جلب بيانات المتجر وحالة القبول / الاعتماد للتاجر المسجل حالياً
    */
-  async getStoreProfile(): Promise<{ success: boolean; data: StoreProfile }> {
+  async getStoreProfile(): Promise<{ success: boolean; data: StoreProfile | null; message?: string }> {
     try {
       const res = await getRequest<{ store: StoreProfile }>('/api/stores/me');
       if (res.success && res.data?.store) {
         return { success: true, data: res.data.store };
       }
-    } catch {
-      // Backend route pending or offline fallback
+      return { success: false, data: null, message: res.message || 'لم يتم العثور على متجر مسجل' };
+    } catch (err: any) {
+      return { success: false, data: null, message: err?.message || 'تعذر الاتصال ببيانات المتجر' };
     }
-    return { success: true, data: getLocalStore() };
   },
 
   /**
-   * تحديث حالة المتجر المحلية (للمحاكاة والفحص المباشر)
+   * تبديل جاهزية المتجر (نشط يستقبل الطلبيات / مغلق مؤقتاً)
    */
-  updateLocalStoreApproval(status: 'pending' | 'approved' | 'rejected'): StoreProfile {
-    const store = getLocalStore();
-    store.approveStatus = status;
-    saveLocalStore(store);
-    return store;
-  },
-
-  /**
-   * تبديل جاهزية المتجر (يستقبل الطلبيات / مغلق مؤقتاً)
-   */
-  async toggleStoreStatus(status: 'active' | 'inActive'): Promise<{ success: boolean; data?: StoreProfile }> {
+  async toggleStoreStatus(status: 'active' | 'inActive'): Promise<{ success: boolean; data?: StoreProfile; message?: string }> {
     try {
       const res = await patchRequest<{ store: StoreProfile }>('/api/stores/me/status', { status });
       if (res.success && res.data?.store) {
-        saveLocalStore(res.data.store);
         return { success: true, data: res.data.store };
       }
-    } catch {
-      // Offline fallback handling below
+      return { success: false, message: res.message || 'تعذر تغيير حالة المتجر' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطأ أثناء الاتصال بالخادم' };
     }
-
-    const current = getLocalStore();
-    current.status = status;
-    saveLocalStore(current);
-    return { success: true, data: current };
   },
 
   /**
-   * جلب كافة منتجات متجر التاجر الحالي
+   * دالة مساعدة لتحديث حالة الاعتماد محلياً (مخصصة لاختبارات واجهة التطوير)
    */
-  async getMyProducts(): Promise<{ success: boolean; data: ProductItem[] }> {
-    let prods: ProductItem[] = [];
-    let fetchedFromApi = false;
+  updateLocalStoreApproval(status: 'pending' | 'approved' | 'rejected'): StoreProfile | null {
+    return null;
+  },
+
+  /**
+   * جلب كافة منتجات متجر التاجر المسجل من قاعدة البيانات
+   */
+  async getMyProducts(): Promise<{ success: boolean; data: ProductItem[]; message?: string }> {
     try {
       const res = await getRequest<{ products: any[] }>('/api/products/seller');
       if (res.success && Array.isArray(res.data?.products)) {
-        fetchedFromApi = true;
-        prods = res.data.products.map((p) => ({
-          ...p,
-          name: p.title || p.name || 'بدون عنوان',
-          title: p.title || p.name || 'بدون عنوان',
-        }));
-        saveLocalProducts(prods);
-      }
-    } catch {
-      // Fallback during offline / network error
-    }
+        const prods: ProductItem[] = res.data.products.map((p) => {
+          const variants: ProductVariant[] = (p.variants || []).map((v: any) => ({
+            _id: v._id,
+            productId: v.productId,
+            storeId: v.storeId,
+            sku: v.sku,
+            attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
+            attrKey: v.attrKey || 'default',
+            price: Number(v.price) || 0,
+            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+            stock: Number(v.stock) || 0,
+            isActive: v.isActive !== undefined ? v.isActive : true,
+            images: v.images || (v.image ? [v.image] : []),
+          }));
 
-    if (!fetchedFromApi) {
-      prods = getLocalProducts();
-    }
+          const activeV = variants.filter((v) => v.isActive !== false);
+          const pool = activeV.length > 0 ? activeV : variants;
+          const prices = pool.map((v) => v.price).filter((pr) => pr > 0);
 
-    // Ensure minPrice and maxPrice dynamically respect variants
-    const synced = prods.map((p) => {
-      if (p.variants && p.variants.length > 0) {
-        const activeV = p.variants.filter((v) => v.isActive !== false);
-        const pool = activeV.length > 0 ? activeV : p.variants;
-        const prices = pool.map((v) => Number(v.price) || 0).filter((pr) => pr > 0);
-        if (prices.length > 0) {
           return {
             ...p,
-            minPrice: Math.min(...prices),
-            maxPrice: Math.max(...prices),
+            name: p.title || p.name || 'بدون عنوان',
+            title: p.title || p.name || 'بدون عنوان',
+            images: p.images || (p.image ? [p.image] : []),
+            variants,
+            variantsCount: variants.length,
+            minPrice: prices.length > 0 ? Math.min(...prices) : (p.minPrice || 0),
+            maxPrice: prices.length > 0 ? Math.max(...prices) : (p.maxPrice || 0),
+            totalStock: p.totalStock ?? variants.reduce((sum, v) => sum + (v.stock || 0), 0),
+            inStock: (p.totalStock ?? variants.reduce((sum, v) => sum + (v.stock || 0), 0)) > 0,
           };
-        }
+        });
+        return { success: true, data: prods };
       }
-      return p;
-    });
-
-    return { success: true, data: synced };
+      return { success: false, data: [], message: res.message || 'تعذر جلب المنتجات' };
+    } catch (err: any) {
+      return { success: false, data: [], message: err?.message || 'خطأ في جلب منتجات المتجر' };
+    }
   },
 
   /**
-   * إنشاء منتج جديد مع متغيراته واحتساب الملخص
+   * إنشاء منتج جديد مع متغيراته وحفظه مباشرة في قاعدة البيانات
    */
-  async createProduct(formData: ProductFormData): Promise<{ success: boolean; data: ProductItem; message?: string }> {
+  async createProduct(formData: ProductFormData): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
+    const rawVariants = formData.isSimple
+      ? [
+          {
+            sku: formData.simpleSku?.trim() || `SKU-${Date.now().toString().slice(-6)}`,
+            attributes: {},
+            price: Number(formData.simplePrice) || 0,
+            stock: Math.max(0, Math.floor(Number(formData.simpleStock) || 0)),
+            compareAtPrice: formData.simpleCompareAtPrice ? Number(formData.simpleCompareAtPrice) : null,
+            images: formData.images || [],
+            image: formData.images?.[0] || '',
+            isActive: true,
+          },
+        ]
+      : formData.variants.map((v, idx) => {
+          const item: any = {
+            sku: v.sku?.trim() || `SKU-${Date.now().toString().slice(-4)}-${idx + 1}`,
+            attributes: v.attributes || {},
+            price: Number(v.price) || 0,
+            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+            isActive: v.isActive !== undefined ? v.isActive : true,
+          };
+          if (v.images && v.images.length > 0) item.images = v.images;
+          if (v.image) item.image = v.image;
+          return item;
+        });
+
     const payload = {
-      title: formData.name,
-      name: formData.name,
+      title: formData.name.trim(),
+      name: formData.name.trim(),
       categoryId: formData.categoryId,
-      description: formData.description,
+      description: formData.description?.trim() || '',
       images: formData.images,
-      options: formData.isSimple ? [] : formData.options,
-      isFeatured: formData.isFeatured,
-      isActive: formData.isActive,
+      image: formData.images?.[0] || '',
+      options: formData.isSimple ? [] : (formData.options || []),
+      isFeatured: Boolean(formData.isFeatured),
+      isActive: formData.isActive !== undefined ? formData.isActive : true,
       isAnonymousVendor: Boolean(formData.isAnonymousVendor),
-      variants: formData.isSimple
-        ? [
-            {
-              price: Number(formData.simplePrice) || 0,
-              stock: Number(formData.simpleStock) || 0,
-              sku: formData.simpleSku || '',
-              compareAtPrice: formData.simpleCompareAtPrice ? Number(formData.simpleCompareAtPrice) : null,
-              attributes: {},
-            },
-          ]
-        : formData.variants.map((v) => {
-            const item: any = {
-              sku: v.sku,
-              attributes: v.attributes || {},
-              price: Number(v.price) || 0,
-              stock: Number(v.stock) || 0,
-              compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-              isActive: v.isActive !== undefined ? v.isActive : true,
-            };
-            if (v.images) item.images = v.images;
-            if (v.image) item.image = v.image;
-            return item;
-          }),
+      variants: rawVariants,
     };
 
     try {
-      const res = await postRequest<{ product: any }>('/api/products', payload);
+      const res = await postRequest<{ product: any; message?: string }>('/api/products', payload);
       if (res.success && res.data?.product) {
-        const prod = {
-          ...res.data.product,
-          name: res.data.product.title || res.data.product.name,
-          title: res.data.product.title || res.data.product.name,
+        const p = res.data.product;
+        const variants: ProductVariant[] = (p.variants || []).map((v: any) => ({
+          _id: v._id,
+          productId: v.productId,
+          storeId: v.storeId,
+          sku: v.sku,
+          attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
+          attrKey: v.attrKey || 'default',
+          price: Number(v.price) || 0,
+          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+          stock: Number(v.stock) || 0,
+          isActive: v.isActive !== undefined ? v.isActive : true,
+          images: v.images || (v.image ? [v.image] : []),
+        }));
+
+        const prod: ProductItem = {
+          ...p,
+          name: p.title || p.name,
+          title: p.title || p.name,
+          images: p.images || (p.image ? [p.image] : []),
+          variants,
+          variantsCount: variants.length,
+          totalStock: p.totalStock ?? variants.reduce((s, v) => s + (v.stock || 0), 0),
+          inStock: (p.totalStock ?? variants.reduce((s, v) => s + (v.stock || 0), 0)) > 0,
         };
-        const current = getLocalProducts();
-        saveLocalProducts([prod, ...current.filter((p) => p._id !== prod._id)]);
-        return { success: true, data: prod, message: res.message || 'تم حفظ ونشر المنتج بنجاح' };
+        return { success: true, data: prod, message: res.data.message || res.message || 'تم حفظ ونشر المنتج بنجاح' };
       }
-    } catch {
-      // Offline fallback handling below
+      return { success: false, message: res.message || 'فشلت عملية إنشاء المنتج' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطأ أثناء الاتصال بالخادم لإنشاء المنتج' };
     }
-
-    // Build ProductItem locally
-    const current = getLocalProducts();
-    const isSimple = formData.isSimple;
-
-    let variants: any[] = [];
-    let minPrice = 0;
-    let maxPrice = 0;
-    let totalStock = 0;
-
-    if (isSimple) {
-      const price = Number(formData.simplePrice) || 0;
-      const stock = Number(formData.simpleStock) || 0;
-      minPrice = price;
-      maxPrice = price;
-      totalStock = stock;
-      variants = [
-        {
-          sku: formData.simpleSku || `SKU-${Date.now().toString().slice(-5)}`,
-          attributes: {},
-          attrKey: 'default',
-          price,
-          compareAtPrice: formData.simpleCompareAtPrice,
-          stock,
-          isActive: true,
-        },
-      ];
-    } else {
-      variants = formData.variants.map((v, idx) => ({
-        ...v,
-        sku: v.sku || `SKU-${Date.now().toString().slice(-4)}-${idx + 1}`,
-      }));
-      const activePrices = variants.filter((v) => v.isActive).map((v) => v.price);
-      minPrice = activePrices.length ? Math.min(...activePrices) : 0;
-      maxPrice = activePrices.length ? Math.max(...activePrices) : 0;
-      totalStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
-    }
-
-    const newProduct: ProductItem = {
-      _id: `prod_${Date.now()}`,
-      storeId: 'store_central_01',
-      categoryId: formData.categoryId || 'cat_general',
-      name: formData.name,
-      slug: encodeURIComponent(formData.name.trim().replace(/\s+/g, '-')),
-      description: formData.description,
-      images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=700&q=80'],
-      options: isSimple ? [] : formData.options,
-      minPrice,
-      maxPrice,
-      inStock: totalStock > 0,
-      isFeatured: formData.isFeatured,
-      isActive: formData.isActive,
-      variantsCount: variants.length,
-      totalStock,
-      variants,
-      createdAt: new Date().toISOString(),
-    };
-
-    saveLocalProducts([newProduct, ...current]);
-    return { success: true, data: newProduct, message: 'تم حفظ ونشر المنتج بنجاح' };
   },
 
   /**
-   * تبديل تفعيل المنتج
+   * تبديل تفعيل ظهور المنتج للزبائن
    */
-  async toggleProduct(productId: string, currentActive: boolean): Promise<{ success: boolean; data?: any }> {
+  async toggleProduct(productId: string, currentActive: boolean): Promise<{ success: boolean; message?: string }> {
     const nextState = !currentActive;
     try {
       const res = await patchRequest(`/api/products/${productId}/status`, {
         isActive: nextState,
         status: nextState ? 'active' : 'inActive',
       });
-      if (res.success) {
-        // sync local
-        const current = getLocalProducts().map((p) => (p._id === productId ? { ...p, isActive: nextState } : p));
-        saveLocalProducts(current);
-        return { success: true };
-      }
-    } catch {
-      // offline fallback
+      return { success: res.success, message: res.message };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر تغيير حالة المنتج' };
     }
-
-    const current = getLocalProducts().map((p) => (p._id === productId ? { ...p, isActive: nextState } : p));
-    saveLocalProducts(current);
-    return { success: true };
   },
 
   /**
@@ -392,434 +202,220 @@ export const merchantService = {
     productId: string,
     newStock: number,
     variantId?: string
-  ): Promise<{ success: boolean; data?: ProductItem }> {
-    const currentProducts = getLocalProducts();
+  ): Promise<{ success: boolean; data?: any; message?: string }> {
     const cleanStock = Math.max(0, Math.floor(Number(newStock) || 0));
-
-    const updatedProducts = currentProducts.map((p) => {
-      if (p._id !== productId) return p;
-
-      if (variantId && p.variants && p.variants.length > 0) {
-        const updatedVariants = p.variants.map((v) =>
-          v._id === variantId || v.sku === variantId ? { ...v, stock: cleanStock } : v
-        );
-        const newTotal = updatedVariants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
-        return {
-          ...p,
-          variants: updatedVariants,
-          totalStock: newTotal,
-          inStock: newTotal > 0,
-        };
-      }
-
-      // Simple product
-      const updatedVariants = (p.variants || []).map((v) => ({ ...v, stock: cleanStock }));
-      return {
-        ...p,
-        totalStock: cleanStock,
-        inStock: cleanStock > 0,
-        variants: updatedVariants.length > 0 ? updatedVariants : p.variants,
-      };
-    });
-
-    saveLocalProducts(updatedProducts);
-    const updatedProd = updatedProducts.find((p) => p._id === productId);
-
     try {
-      let resolvedVariantId: string | undefined = undefined;
-      if (variantId) {
-        const match = updatedProd?.variants?.find((v) => v._id === variantId || v.sku === variantId);
-        if (match?._id && /^[0-9a-fA-F]{24}$/.test(match._id)) {
-          resolvedVariantId = match._id;
-        }
-      }
-      if (!resolvedVariantId && updatedProd?.variants?.[0]?._id) {
-        const firstId = updatedProd.variants[0]._id;
-        if (/^[0-9a-fA-F]{24}$/.test(firstId)) {
-          resolvedVariantId = firstId;
-        }
-      }
-
-      if (resolvedVariantId) {
-        await patchRequest(`/api/products/${productId}/variants/${resolvedVariantId}`, { stock: cleanStock });
+      if (variantId && /^[0-9a-fA-F]{24}$/.test(variantId)) {
+        const res = await patchRequest(`/api/products/${productId}/variants/${variantId}`, { stock: cleanStock });
+        return { success: res.success, data: res.data, message: res.message };
       } else {
-        await patchRequest(`/api/products/${productId}`, { stock: cleanStock });
+        const res = await patchRequest(`/api/products/${productId}`, { stock: cleanStock });
+        return { success: res.success, data: res.data, message: res.message };
       }
-    } catch {
-      // offline fallback is already saved
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر تحديث المخزون' };
     }
-
-    return { success: true, data: updatedProd };
   },
 
   /**
-   * حذف منتج
+   * حذف منتج من قاعدة البيانات (Soft Delete)
    */
-  async deleteProduct(productId: string): Promise<{ success: boolean }> {
+  async deleteProduct(productId: string): Promise<{ success: boolean; message?: string }> {
     try {
       const res = await deleteRequest(`/api/products/${productId}`);
-      if (res.success) {
-        const current = getLocalProducts().filter((p) => p._id !== productId);
-        saveLocalProducts(current);
-        return { success: true };
-      }
-    } catch {
-      // offline fallback
+      return { success: res.success, message: res.message };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر حذف المنتج' };
     }
-
-    const current = getLocalProducts().filter((p) => p._id !== productId);
-    saveLocalProducts(current);
-    return { success: true };
   },
 
   /**
-   * جلب تفاصيل منتج محدد مع أصنافه
+   * جلب تفاصيل منتج محدد مع أصنافه ومتغيراته
    */
   async getProductById(productId: string): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
     try {
       let res = await getRequest<{ product: any }>(`/api/products/seller/${productId}`);
-      if (!res.success) {
+      if (!res.success || !res.data?.product) {
         res = await getRequest<{ product: any }>(`/api/products/${productId}`);
       }
+
       if (res.success && res.data?.product) {
         const prod = res.data.product;
-        const vPrices = (prod.variants || []).filter((v: any) => v.isActive !== false).map((v: any) => Number(v.price) || 0).filter((pr: number) => pr > 0);
-        const computedMin = vPrices.length > 0 ? Math.min(...vPrices) : (prod.minPrice || 0);
-        const computedMax = vPrices.length > 0 ? Math.max(...vPrices) : (prod.maxPrice || 0);
-        const mapped: ProductItem = {
-            _id: prod._id,
-            storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
-            categoryId: prod.categoryId,
-            categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
-            name: prod.title || prod.name,
-            title: prod.title || prod.name,
-            slug: prod.slug,
-            description: prod.description || '',
-            images: prod.images || [],
-            options: (prod.options || []).map((o: any) => ({
-              key: o.key,
-              source: o.source,
-              label: o.label || o.name,
-              name: o.name || o.label || o.key,
-              type: o.type,
-              unit: o.unit,
-              values: o.values || [],
-            })),
-            minPrice: computedMin,
-            maxPrice: computedMax,
-            inStock: prod.inStock || false,
-            isFeatured: prod.isFeatured || false,
-            isActive: prod.isActive !== undefined ? prod.isActive : true,
-            isAnonymousVendor: prod.isAnonymousVendor || false,
-            variants: (prod.variants || []).map((v: any) => ({
-              _id: v._id,
-              productId: v.productId,
-              storeId: v.storeId,
-              sku: v.sku,
-              attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
-              attrKey: v.attrKey,
-              price: v.price,
-              compareAtPrice: v.compareAtPrice,
-              stock: v.stock,
-              isActive: v.isActive !== undefined ? v.isActive : true,
-              images: v.images || (v.image ? [v.image] : []),
-            })),
-            variantsCount: (prod.variants || []).length,
-            totalStock: prod.totalStock || (prod.variants || []).reduce((s: number, v: any) => s + (v.stock || 0), 0),
-            createdAt: prod.createdAt || new Date().toISOString(),
-            updatedAt: prod.updatedAt,
-          };
-          return { success: true, data: mapped };
-        }
-      } catch {
-        // Offline / mock fallback
-      }
-
-      const local = getLocalProducts().find((p) => p._id === productId);
-      if (local) {
-        if (local.variants && local.variants.length > 0) {
-          const activeV = local.variants.filter((v) => v.isActive !== false);
-          const pool = activeV.length > 0 ? activeV : local.variants;
-          const prices = pool.map((v) => Number(v.price) || 0).filter((pr) => pr > 0);
-          if (prices.length > 0) {
-            local.minPrice = Math.min(...prices);
-            local.maxPrice = Math.max(...prices);
-          }
-        }
-        return { success: true, data: local };
-      }
-      return { success: false, message: 'المنتج غير موجود' };
-    },
-
-    /**
-     * تحديث تفاصيل منتج وأصنافه
-     */
-    async updateProduct(
-      productId: string,
-      formData: Partial<ProductFormData>
-    ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
-      try {
-        let calcMinPrice = 0;
-        let calcMaxPrice = 0;
-        let calcTotalStock = 0;
-        if (formData.variants && formData.variants.length > 0) {
-          const activeV = formData.variants.filter((v) => v.isActive !== false);
-          const pool = activeV.length > 0 ? activeV : formData.variants;
-          const prs = pool.map((v) => Number(v.price) || 0).filter((p) => p > 0);
-          calcMinPrice = prs.length > 0 ? Math.min(...prs) : 0;
-          calcMaxPrice = prs.length > 0 ? Math.max(...prs) : 0;
-          calcTotalStock = formData.variants.reduce((s, v) => s + (Number(v.stock) || 0), 0);
-        }
-
-        const payload: any = {
-          title: formData.name || formData.title,
-          description: formData.description,
-          categoryId: formData.categoryId,
-          images: formData.images,
-          isFeatured: formData.isFeatured,
-          isActive: formData.isActive,
-          isAnonymousVendor: formData.isAnonymousVendor,
-          minPrice: calcMinPrice,
-          maxPrice: calcMaxPrice,
-          totalStock: calcTotalStock,
-        };
-
-        if (formData.options) {
-          payload.options = formData.options.map((opt) => ({
-            key: opt.key || opt.name.toLowerCase().trim(),
-            source: opt.source || 'DEFINED',
-            label: opt.label || opt.name,
-            type: opt.type || 'TEXT',
-            unit: opt.unit || null,
-            values: opt.values,
-          }));
-        }
-
-        if (formData.variants) {
-          payload.variants = formData.variants.map((v) => ({
-            _id: v._id,
-            sku: v.sku,
-            attributes: v.attributes,
-            price: Number(v.price) || 0,
-            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
-            isActive: v.isActive !== undefined ? v.isActive : true,
-            images: v.images || [],
-          }));
-        }
-
-        const res = await patchRequest<{ product: any }>(`/api/products/${productId}`, payload);
-        if (res.success && res.data?.product) {
-          const prod = res.data.product;
-          const mapped: ProductItem = {
-            _id: prod._id,
-            storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
-            categoryId: prod.categoryId,
-            categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
-            name: prod.title || prod.name,
-            title: prod.title || prod.name,
-            slug: prod.slug,
-            description: prod.description || '',
-            images: prod.images || [],
-            options: prod.options || [],
-            minPrice: calcMinPrice || prod.minPrice || 0,
-            maxPrice: calcMaxPrice || prod.maxPrice || 0,
-            inStock: prod.inStock || false,
-            isFeatured: prod.isFeatured || false,
-            isActive: prod.isActive !== undefined ? prod.isActive : true,
-            isAnonymousVendor: formData.isAnonymousVendor !== undefined ? formData.isAnonymousVendor : (prod.isAnonymousVendor || false),
-            variants: prod.variants || [],
-            variantsCount: (prod.variants || []).length,
-            totalStock: calcTotalStock || prod.totalStock || 0,
-            createdAt: prod.createdAt || new Date().toISOString(),
-            updatedAt: prod.updatedAt,
-          };
-
-          // Update local storage
-          const current = getLocalProducts();
-          const updated = current.map((p) => (p._id === productId ? mapped : p));
-          saveLocalProducts(updated);
-
-          return { success: true, data: mapped, message: 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
-        }
-      } catch {
-        // offline fallback
-      }
-
-      // Local update fallback
-      const current = getLocalProducts();
-      const existing = current.find((p) => p._id === productId);
-      if (!existing) {
-        return { success: false, message: 'المنتج غير موجود' };
-      }
-
-      const updatedItem: ProductItem = {
-        ...existing,
-        name: formData.name || existing.name,
-        description: formData.description !== undefined ? formData.description : existing.description,
-        categoryId: formData.categoryId || existing.categoryId,
-        images: formData.images || existing.images,
-        options: formData.options || existing.options,
-        isFeatured: formData.isFeatured !== undefined ? formData.isFeatured : existing.isFeatured,
-        isActive: formData.isActive !== undefined ? formData.isActive : existing.isActive,
-        isAnonymousVendor: formData.isAnonymousVendor !== undefined ? formData.isAnonymousVendor : existing.isAnonymousVendor,
-        updatedAt: new Date().toISOString(),
-      };
-
-      if (formData.variants) {
-        const vList = formData.variants.map((v, i) => ({
-          _id: v._id || `var_${i}`,
+        const variants: ProductVariant[] = (prod.variants || []).map((v: any) => ({
+          _id: v._id,
+          productId: v.productId,
+          storeId: v.storeId,
           sku: v.sku,
-          attributes: v.attributes,
+          attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
           attrKey: v.attrKey || 'default',
           price: Number(v.price) || 0,
           compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
           stock: Number(v.stock) || 0,
           isActive: v.isActive !== undefined ? v.isActive : true,
+          images: v.images || (v.image ? [v.image] : []),
         }));
-        const activeV = vList.filter((v) => v.isActive !== false);
-        const pool = activeV.length > 0 ? activeV : vList;
-        const prs = pool.map((v) => v.price).filter((p) => p > 0);
-        updatedItem.variants = vList;
-        updatedItem.variantsCount = vList.length;
-        updatedItem.totalStock = vList.reduce((s, v) => s + v.stock, 0);
-        updatedItem.minPrice = prs.length > 0 ? Math.min(...prs) : 0;
-        updatedItem.maxPrice = prs.length > 0 ? Math.max(...prs) : 0;
-        updatedItem.inStock = updatedItem.totalStock > 0;
-      }
 
-      saveLocalProducts(current.map((p) => (p._id === productId ? updatedItem : p)));
-      return { success: true, data: updatedItem, message: 'تم حفظ التعديلات محلياً بنجاح' };
-    },
+        const activeV = variants.filter((v) => v.isActive !== false);
+        const pool = activeV.length > 0 ? activeV : variants;
+        const prices = pool.map((v) => v.price).filter((pr) => pr > 0);
+
+        const mapped: ProductItem = {
+          _id: prod._id,
+          storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
+          categoryId: prod.categoryId,
+          categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
+          name: prod.title || prod.name || '',
+          title: prod.title || prod.name || '',
+          slug: prod.slug,
+          description: prod.description || '',
+          images: prod.images || (prod.image ? [prod.image] : []),
+          options: (prod.options || []).map((o: any) => ({
+            key: o.key,
+            source: o.source,
+            label: o.label || o.name,
+            name: o.name || o.label || o.key,
+            type: o.type,
+            unit: o.unit,
+            values: o.values || [],
+          })),
+          minPrice: prices.length > 0 ? Math.min(...prices) : (prod.minPrice || 0),
+          maxPrice: prices.length > 0 ? Math.max(...prices) : (prod.maxPrice || 0),
+          inStock: prod.inStock || false,
+          isFeatured: prod.isFeatured || false,
+          isActive: prod.isActive !== undefined ? prod.isActive : true,
+          isAnonymousVendor: prod.isAnonymousVendor || false,
+          variants,
+          variantsCount: variants.length,
+          totalStock: prod.totalStock ?? variants.reduce((s: number, v: any) => s + (v.stock || 0), 0),
+          createdAt: prod.createdAt || new Date().toISOString(),
+          updatedAt: prod.updatedAt,
+        };
+        return { success: true, data: mapped };
+      }
+      return { success: false, message: res.message || 'المنتج غير موجود' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطأ في جلب بيانات المنتج' };
+    }
+  },
 
   /**
-   * جلب تعريفات الخيارات العامة والوحدات المتاحة
+   * تحديث تفاصيل منتج وأصنافه في قاعدة البيانات
+   */
+  async updateProduct(
+    productId: string,
+    formData: Partial<ProductFormData>
+  ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
+    try {
+      const cleanVariants = formData.variants?.map((v) => {
+        const item: any = {
+          sku: v.sku,
+          attributes: v.attributes || {},
+          price: Number(v.price) || 0,
+          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+          stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+          isActive: v.isActive !== undefined ? v.isActive : true,
+          images: v.images || [],
+        };
+        if (v._id && /^[0-9a-fA-F]{24}$/.test(v._id)) {
+          item._id = v._id;
+        }
+        return item;
+      });
+
+      const payload: any = {};
+      if (formData.name || formData.title) payload.title = formData.name || formData.title;
+      if (formData.description !== undefined) payload.description = formData.description;
+      if (formData.categoryId !== undefined) payload.categoryId = formData.categoryId;
+      if (formData.images !== undefined) payload.images = formData.images;
+      if (formData.isFeatured !== undefined) payload.isFeatured = formData.isFeatured;
+      if (formData.isActive !== undefined) payload.isActive = formData.isActive;
+      if (formData.isAnonymousVendor !== undefined) payload.isAnonymousVendor = formData.isAnonymousVendor;
+
+      if (formData.options !== undefined) {
+        payload.options = formData.options.map((opt) => ({
+          key: opt.key || opt.name.toLowerCase().trim(),
+          source: opt.source || 'DEFINED',
+          label: opt.label || opt.name,
+          type: opt.type || 'TEXT',
+          unit: opt.unit || null,
+          values: opt.values,
+        }));
+      }
+
+      if (cleanVariants !== undefined) {
+        payload.variants = cleanVariants;
+      }
+
+      const res = await patchRequest<{ product: any; message?: string }>(`/api/products/${productId}`, payload);
+      if (res.success && res.data?.product) {
+        const prod = res.data.product;
+        const variants: ProductVariant[] = (prod.variants || []).map((v: any) => ({
+          _id: v._id,
+          productId: v.productId,
+          storeId: v.storeId,
+          sku: v.sku,
+          attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
+          attrKey: v.attrKey || 'default',
+          price: Number(v.price) || 0,
+          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+          stock: Number(v.stock) || 0,
+          isActive: v.isActive !== undefined ? v.isActive : true,
+          images: v.images || (v.image ? [v.image] : []),
+        }));
+
+        const activeV = variants.filter((v) => v.isActive !== false);
+        const pool = activeV.length > 0 ? activeV : variants;
+        const prices = pool.map((v) => v.price).filter((p) => p > 0);
+
+        const mapped: ProductItem = {
+          _id: prod._id,
+          storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
+          categoryId: prod.categoryId,
+          categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
+          name: prod.title || prod.name,
+          title: prod.title || prod.name,
+          slug: prod.slug,
+          description: prod.description || '',
+          images: prod.images || (prod.image ? [prod.image] : []),
+          options: prod.options || [],
+          minPrice: prices.length > 0 ? Math.min(...prices) : (prod.minPrice || 0),
+          maxPrice: prices.length > 0 ? Math.max(...prices) : (prod.maxPrice || 0),
+          inStock: prod.inStock || false,
+          isFeatured: prod.isFeatured || false,
+          isActive: prod.isActive !== undefined ? prod.isActive : true,
+          isAnonymousVendor: formData.isAnonymousVendor !== undefined ? formData.isAnonymousVendor : (prod.isAnonymousVendor || false),
+          variants,
+          variantsCount: variants.length,
+          totalStock: prod.totalStock ?? variants.reduce((s: number, v: any) => s + (v.stock || 0), 0),
+          createdAt: prod.createdAt || new Date().toISOString(),
+          updatedAt: prod.updatedAt,
+        };
+
+        return { success: true, data: mapped, message: res.data?.message || res.message || 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
+      }
+      return { success: false, message: res.message || 'تعذر تحديث المنتج' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطأ أثناء الاتصال بالخادم لتحديث المنتج' };
+    }
+  },
+
+  /**
+   * جلب تعريفات الخيارات العامة والوحدات المتاحة من الباك إند
    */
   async fetchOptionDefinitions(): Promise<{
     success: boolean;
     data?: { definitions: any[]; availableUnits: any[] };
+    message?: string;
   }> {
     try {
       const res = await getRequest<any>('/api/options');
       if (res.success && res.data) {
         return { success: true, data: res.data };
       }
-    } catch {
-      // offline fallback
+      return { success: false, message: res.message || 'تعذر جلب خيارات الفئات' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطأ في جلب خيارات الفئات' };
     }
-
-    return {
-      success: true,
-      data: {
-        definitions: [
-          {
-            key: 'color',
-            label: 'اللون',
-            type: 'COLOR',
-            values: [
-              { key: 'black', label: 'أسود', hex: '#000000' },
-              { key: 'white', label: 'أبيض', hex: '#FFFFFF' },
-              { key: 'navy', label: 'كحلي', hex: '#1E3A8A' },
-              { key: 'beige', label: 'بيج', hex: '#D4B996' },
-              { key: 'amber', label: 'كهرماني', hex: '#B8621B' },
-              { key: 'grey', label: 'رمادي', hex: '#6B7280' },
-              { key: 'green', label: 'أخضر', hex: '#15803D' },
-              { key: 'red', label: 'أحمر', hex: '#DC2626' },
-            ],
-            isActive: true,
-          },
-          {
-            key: 'size_clothing',
-            label: 'مقاس الملابس',
-            type: 'SIZE',
-            values: [
-              { key: 's', label: 'S' },
-              { key: 'm', label: 'M' },
-              { key: 'l', label: 'L' },
-              { key: 'xl', label: 'XL' },
-              { key: '2xl', label: '2XL' },
-              { key: '3xl', label: '3XL' },
-            ],
-            isActive: true,
-          },
-          {
-            key: 'size_shoes',
-            label: 'مقاس الأحذية',
-            type: 'SIZE',
-            values: [
-              { key: '37', label: '37' },
-              { key: '38', label: '38' },
-              { key: '39', label: '39' },
-              { key: '40', label: '40' },
-              { key: '41', label: '41' },
-              { key: '42', label: '42' },
-              { key: '43', label: '43' },
-              { key: '44', label: '44' },
-              { key: '45', label: '45' },
-            ],
-            isActive: true,
-          },
-          {
-            key: 'size_kids',
-            label: 'مقاس الأطفال',
-            type: 'SIZE',
-            values: [
-              { key: '0-3m', label: '0-3 شهور' },
-              { key: '3-6m', label: '3-6 شهور' },
-              { key: '6-12m', label: '6-12 شهر' },
-              { key: '1-2y', label: '1-2 سنة' },
-              { key: '2-4y', label: '2-4 سنوات' },
-              { key: '4-6y', label: '4-6 سنوات' },
-              { key: '6-8y', label: '6-8 سنوات' },
-            ],
-            isActive: true,
-          },
-          {
-            key: 'storage',
-            label: 'سعة التخزين',
-            type: 'NUMERIC',
-            unit: 'gb',
-            values: [
-              { key: '64gb', label: '64 جيجابايت' },
-              { key: '128gb', label: '128 جيجابايت' },
-              { key: '256gb', label: '256 جيجابايت' },
-              { key: '512gb', label: '512 جيجابايت' },
-              { key: '1tb', label: '1 تيرابايت' },
-            ],
-            isActive: true,
-          },
-          {
-            key: 'weight',
-            label: 'الوزن',
-            type: 'NUMERIC',
-            unit: 'kg',
-            values: [
-              { key: '250g', label: '250 جرام' },
-              { key: '500g', label: '500 جرام' },
-              { key: '1kg', label: '1 كجم' },
-              { key: '2kg', label: '2 كجم' },
-              { key: '5kg', label: '5 كجم' },
-            ],
-            isActive: true,
-          },
-          {
-            key: 'volume',
-            label: 'الحجم / السعة',
-            type: 'NUMERIC',
-            unit: 'ml',
-            values: [
-              { key: '50ml', label: '50 مل' },
-              { key: '100ml', label: '100 مل' },
-              { key: '250ml', label: '250 مل' },
-              { key: '500ml', label: '500 مل' },
-              { key: '1l', label: '1 لتر' },
-            ],
-            isActive: true,
-          },
-        ],
-        availableUnits: [],
-      },
-    };
   },
 
   /**
@@ -828,34 +424,26 @@ export const merchantService = {
   async fetchOptionsByCategory(categoryId: string): Promise<{
     success: boolean;
     data?: { allowedKeys?: string[]; definitions: any[]; availableUnits: any[] };
+    message?: string;
   }> {
     try {
       const res = await getRequest<any>(`/api/options/category/${categoryId}`);
       if (res.success && res.data) {
         return { success: true, data: res.data };
       }
-    } catch {
-      // offline fallback
+      return { success: false, message: res.message || 'تعذر جلب خيارات القسم' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطأ في جلب خيارات القسم' };
     }
-
-    const fallback = await this.fetchOptionDefinitions();
-    return {
-      success: true,
-      data: {
-        allowedKeys: [],
-        definitions: fallback.data?.definitions || [],
-        availableUnits: fallback.data?.availableUnits || [],
-      },
-    };
   },
 
   /**
-   * حساب ملخص الإحصائيات الحية للمتجر
+   * حساب ملخص الإحصائيات الحية لمتجر التاجر
    */
   calculateMetrics(products: ProductItem[]): MerchantMetrics {
     const total = products.length;
-    const inStock = products.filter((p) => p.inStock && p.totalStock! > 0).length;
-    const outOfStock = products.filter((p) => !p.inStock || p.totalStock === 0).length;
+    const inStock = products.filter((p) => p.inStock && (p.totalStock ?? 0) > 0).length;
+    const outOfStock = products.filter((p) => !p.inStock || (p.totalStock ?? 0) === 0).length;
     const active = products.filter((p) => p.isActive).length;
     const totalUnits = products.reduce((acc, p) => acc + (p.totalStock || 0), 0);
 

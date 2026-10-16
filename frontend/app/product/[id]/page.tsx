@@ -1,38 +1,53 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { products } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import { ProductCard } from '@/components/ui/ProductCard';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { catalogService, type CatalogProduct } from '@/features/catalog/catalog.service';
+import type { Product } from '@/types';
+
+// Palette color mapper to give realistic swatch colors for known shade names
+const COLOR_HEX_MAP: Record<string, string> = {
+  'عسلي': '#B8621B',
+  'عسلي سديمي': '#B8621B',
+  'أسود': '#1C1917',
+  'أسود فاحم': '#1C1917',
+  'أسود منجنيزي فاخر': '#2B2420',
+  'أبيض': '#FAF7F2',
+  'أبيض عاجي': '#FAF7F2',
+  'أخضر': '#2D5A42',
+  'أخضر زيتي ملكي': '#5E6B4A',
+  'أخضر صنوبري': '#2D5A42',
+  'صلصال': '#A85A3C',
+  'تراب الصلصال الدافئ': '#A85A3C',
+  'بيج': '#D9CEBC',
+  'بيج الفخار العاجي': '#D9CEBC',
+  'ياقوتي': '#7C1E2D',
+  'كحلي': '#0B1120',
+  'رمادي': '#57534E',
+  'ذهبي': '#B08D57',
+};
 
 export default function ProductDetailPage() {
   const params = useParams();
   const id = params?.id as string;
-  const product = products.find((p) => p.id === id) || products[4]; // Default to hoodie
 
   const { addToCart } = useCart();
-  const [selectedImage, setSelectedImage] = useState(product.image);
+  const [product, setProduct] = useState<CatalogProduct | Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [relatedProducts, setRelatedProducts] = useState<(CatalogProduct | Product)[]>([]);
+
+  const [selectedImage, setSelectedImage] = useState<string>('');
+  const [selectedAttributes, setSelectedAttributes] = useState<Record<string, string>>({});
   const [selectedColor, setSelectedColor] = useState('أخضر زيتي ملكي');
   const [selectedSize, setSelectedSize] = useState('L');
   const [quantity, setQuantity] = useState(1);
   const [isWished, setIsWished] = useState(false);
-  const [isAnonymousVendor, setIsAnonymousVendor] = useState(!!product.isAnonymousVendor);
-
-  React.useEffect(() => {
-    try {
-      const raw = localStorage.getItem('sadeem_merchant_products');
-      if (raw) {
-        const list = JSON.parse(raw);
-        const match = list.find((item: any) => item._id === id || item._id === product.id);
-        if (match && match.isAnonymousVendor !== undefined) {
-          setIsAnonymousVendor(!!match.isAnonymousVendor);
-        }
-      }
-    } catch {}
-  }, [id, product.id]);
+  const [isAnonymousVendor, setIsAnonymousVendor] = useState(false);
 
   // Mobile Bottom Sheet States
   const [sizeDrawerOpen, setSizeDrawerOpen] = useState(false);
@@ -48,25 +63,136 @@ export default function ProductDetailPage() {
     setTimeout(() => setToastVisible(false), 2600);
   };
 
-  const gallery = product.gallery || [
-    '/canaan_product_hoodie_olive.jpg',
-    '/canaan_product_hoodie_clay.jpg',
-    '/canaan_product_hoodie_detail.jpg',
-  ];
+  // Fetch product from backend or fallback to local mock
+  useEffect(() => {
+    let active = true;
+    setIsLoading(true);
+
+    catalogService.getProduct(id)
+      .then((item) => {
+        if (!active) return;
+        setProduct(item);
+        setSelectedImage(item.image);
+        if (item.variants && item.variants.length > 0) {
+          const firstVariant = item.variants[0];
+          if (firstVariant.attributes) {
+            setSelectedAttributes(firstVariant.attributes);
+          }
+        }
+      })
+      .catch(() => {
+        if (!active) return;
+        // Fallback gracefully to demo mock data
+        const fallback = products.find((p) => p.id === id) || products[4];
+        setProduct(fallback);
+        setSelectedImage(fallback.image);
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  // Sync anonymous vendor settings from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('sadeem_merchant_products');
+      if (raw && product) {
+        const list = JSON.parse(raw);
+        const match = list.find((item: any) => item._id === id || item._id === product.id);
+        if (match && match.isAnonymousVendor !== undefined) {
+          setIsAnonymousVendor(!!match.isAnonymousVendor);
+        }
+      }
+    } catch {}
+  }, [id, product]);
+
+  // Fetch related products
+  useEffect(() => {
+    if (!product) return;
+    let active = true;
+    const catId = 'categoryId' in product ? product.categoryId : undefined;
+
+    if (catId) {
+      catalogService.getProducts({ categoryId: catId, excludeId: product.id })
+        .then((items) => {
+          if (!active) return;
+          if (items.length > 0) {
+            setRelatedProducts(items.slice(0, 4));
+          } else {
+            setRelatedProducts(products.filter((p) => p.id !== product.id).slice(0, 4));
+          }
+        })
+        .catch(() => {
+          if (active) {
+            setRelatedProducts(products.filter((p) => p.id !== product.id).slice(0, 4));
+          }
+        });
+    } else {
+      setRelatedProducts(products.filter((p) => p.id !== product.id).slice(0, 4));
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [product]);
+
+  // Derive active variant based on user selection
+  const selectedVariant = useMemo(() => {
+    if (!product || !('variants' in product) || !product.variants?.length) return null;
+    const match = product.variants.find((v) =>
+      Object.entries(selectedAttributes).every(([name, val]) => v.attributes[name] === val)
+    );
+    return match || product.variants[0];
+  }, [product, selectedAttributes]);
+
+  const currentPrice = selectedVariant?.price ?? product?.price ?? 0;
+  const currentStock = selectedVariant?.stock ?? (product?.inStock ? 10 : 0);
+
+  const gallery = useMemo(() => {
+    if (!product) return [];
+    if (product.gallery && product.gallery.length > 0) return product.gallery;
+    return [
+      product.image,
+      '/canaan_product_hoodie_olive.jpg',
+      '/canaan_product_hoodie_clay.jpg',
+      '/canaan_product_hoodie_detail.jpg',
+    ];
+  }, [product]);
 
   const handleQuantity = (delta: number) => {
-    setQuantity((prev) => Math.max(1, prev + delta));
+    setQuantity((prev) => {
+      const next = prev + delta;
+      if (next < 1) return 1;
+      if (currentStock > 0 && next > currentStock) return currentStock;
+      return next;
+    });
   };
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedColor, selectedSize);
+    if (!product) return;
+    addToCart(
+      {
+        ...product,
+        price: currentPrice,
+        variantId: selectedVariant?._id,
+        variantAttributes: selectedAttributes,
+      },
+      quantity,
+      selectedAttributes['اللون'] || selectedColor,
+      selectedAttributes['المقاس'] || selectedSize,
+      selectedVariant?._id
+    );
     showToast(`✓ تمت إضافة (${quantity}) من "${product.title.substring(0, 22)}..." إلى السلة`);
   };
 
   const shareProduct = () => {
     if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({
-        title: product.title,
+        title: product?.title || 'سَدِيم',
         url: window.location.href,
       }).catch(() => {});
     } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -80,6 +206,30 @@ export default function ProductDetailPage() {
     setIsWished(next);
     showToast(next ? 'تم حفظ المنتج في المفضلة' : 'تمت الإزالة من المفضلة');
   };
+
+  if (isLoading && !product) {
+    return (
+      <main className="max-w-[1240px] mx-auto px-4 py-20 text-center font-almarai">
+        <div className="w-10 h-10 border-3 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-xs font-bold text-brand-muted">جارٍ جلب تفاصيل المنتج من خوادم سَدِيم...</p>
+      </main>
+    );
+  }
+
+  if (!product) {
+    return (
+      <main className="max-w-[1240px] mx-auto px-4 py-20 text-center font-almarai">
+        <h2 className="text-base font-black text-brand-dark mb-2">عذراً، المنتج غير متوفر حالياً</h2>
+        <p className="text-xs text-brand-muted mb-4">ربما انتهت كمية هذا المنتج أو تم إخفاؤه من قبل المتجر.</p>
+        <Link href="/" className="inline-block px-4 py-2 rounded-xl bg-brand-primary text-white text-xs font-bold">
+          العودة للمتجر الرئيسي
+        </Link>
+      </main>
+    );
+  }
+
+  // Check if product has dynamic definitions from backend category
+  const hasDynamicDefinitions = 'variantDefinitions' in product && product.variantDefinitions && product.variantDefinitions.length > 0;
 
   return (
     <>
@@ -114,7 +264,7 @@ export default function ProductDetailPage() {
             {/* Main Stage Image */}
             <div className="flex-1 rounded-2xl overflow-hidden bg-white border border-brand-border flex items-center justify-center relative aspect-square max-h-[520px] shadow-xs">
               <img
-                src={selectedImage}
+                src={selectedImage || product.image}
                 alt={product.title}
                 className="w-full h-full object-contain p-4"
               />
@@ -224,19 +374,19 @@ export default function ProductDetailPage() {
                 </button>
               </div>
               <span className="text-stone-300">|</span>
-              <span className="font-bold text-brand-trust flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-trust" />
-                جاهز للتوصيل الفوري
+              <span className={`font-bold flex items-center gap-1 ${currentStock > 0 ? 'text-brand-trust' : 'text-red-600'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${currentStock > 0 ? 'bg-brand-trust' : 'bg-red-600'}`} />
+                {currentStock > 0 ? `متوفر وجاهز للتوصيل (${currentStock})` : 'نفد المخزون مؤقتاً'}
               </span>
             </div>
 
             {/* 4. CLEAN PROMINENT PRICE ROW */}
             <div className="flex items-baseline gap-3 p-3 bg-brand-card rounded-xl border border-brand-border/40">
               <div className="text-2xl font-black text-brand-primary flex items-baseline gap-0.5">
-                <span>{product.price}</span>
+                <span>{currentPrice}</span>
                 <span className="text-sm font-bold">₪</span>
               </div>
-              {product.originalPrice && (
+              {product.originalPrice && product.originalPrice > currentPrice && (
                 <div className="text-sm text-brand-muted line-through flex items-baseline gap-0.5">
                   <span>{product.originalPrice}</span>
                   <span className="text-xs">₪</span>
@@ -278,83 +428,160 @@ export default function ProductDetailPage() {
               </button>
             </div>
 
-            {/* 7. COLORS SECTION */}
-            <div className="border-t border-brand-border/60 pt-3">
-              <div className="flex items-center justify-between text-xs font-bold mb-2">
-                <span className="text-brand-muted">اللون المختار:</span>
-                <span className="text-brand-dark font-extrabold">{selectedColor}</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                {[
-                  { name: 'أخضر زيتي ملكي', hex: '#5E6B4A', imgIndex: 0 },
-                  { name: 'تراب الصلصال الدافئ', hex: '#A85A3C', imgIndex: 1 },
-                  { name: 'أسود منجنيزي فاخر', hex: '#2B2420', imgIndex: 0 },
-                  { name: 'بيج الفخار العاجي', hex: '#D9CEBC', imgIndex: 0 },
-                ].map((color) => {
-                  const isActive = selectedColor === color.name;
-                  return (
-                    <button
-                      key={color.name}
-                      type="button"
-                      className={`w-8 h-8 rounded-full cursor-pointer transition-all border-2 border-white shadow-xs ${
-                        isActive ? 'ring-2 ring-brand-primary ring-offset-2 scale-105' : 'hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: color.hex }}
-                      onClick={() => {
-                        setSelectedColor(color.name);
-                        if (gallery[color.imgIndex]) setSelectedImage(gallery[color.imgIndex]);
-                      }}
-                      title={color.name}
-                    />
-                  );
-                })}
-              </div>
-            </div>
+            {/* 7. DYNAMIC VARIANTS ACCORDING TO BACKEND DEFINITIONS */}
+            {hasDynamicDefinitions ? (
+              ('variantDefinitions' in product && product.variantDefinitions) ? (
+                product.variantDefinitions.map((definition) => {
+                  const values = definition.values || [];
+                  const isColor = definition.name.includes('لون') || definition.name === 'اللون';
+                  const isSize = definition.name.includes('مقاس') || definition.name === 'المقاس';
+                  const currentSelected = selectedAttributes[definition.name] || values[0] || '';
 
-            {/* 8. SIZES HORIZONTAL CHIPS WITH INTEGRATED SIZE GUIDE */}
-            <div className="border-t border-brand-border/60 pt-3">
-              <div className="flex items-center justify-between text-xs font-bold mb-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-brand-muted">المقاس:</span>
-                  <span className="text-brand-dark font-extrabold">{selectedSize}</span>
+                  return (
+                    <div key={definition.name} className="border-t border-brand-border/60 pt-3">
+                      <div className="flex items-center justify-between text-xs font-bold mb-2">
+                        <span className="text-brand-muted">{definition.name}:</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-brand-dark font-extrabold">{currentSelected}</span>
+                          {isSize && (
+                            <button
+                              type="button"
+                              className="text-brand-primary hover:underline cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                              onClick={() => setSizeDrawerOpen(true)}
+                            >
+                              <span>دليل المقاسات</span>
+                              <span className="text-xs">‹</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {isColor ? (
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          {values.map((val) => {
+                            const isActive = currentSelected === val;
+                            const hex = COLOR_HEX_MAP[val] || '#B8621B';
+                            return (
+                              <button
+                                key={val}
+                                type="button"
+                                className={`w-8 h-8 rounded-full cursor-pointer transition-all border-2 border-white shadow-xs relative ${
+                                  isActive ? 'ring-2 ring-brand-primary ring-offset-2 scale-105' : 'hover:scale-105 opacity-80 hover:opacity-100'
+                                }`}
+                                style={{ backgroundColor: hex }}
+                                onClick={() => setSelectedAttributes((prev) => ({ ...prev, [definition.name]: val }))}
+                                title={val}
+                              />
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {values.map((val) => {
+                            const isActive = currentSelected === val;
+                            return (
+                              <button
+                                key={val}
+                                type="button"
+                                className={`min-w-[44px] h-10 px-3.5 rounded-lg text-xs font-extrabold border transition-all cursor-pointer flex items-center justify-center ${
+                                  isActive
+                                    ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
+                                    : 'bg-brand-surface text-brand-dark border-brand-border hover:border-brand-dark/50'
+                                }`}
+                                onClick={() => setSelectedAttributes((prev) => ({ ...prev, [definition.name]: val }))}
+                              >
+                                {val}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              ) : null
+            ) : (
+              /* Fallback Static Swatches when no backend definitions exist */
+              <>
+                {/* COLORS SECTION */}
+                <div className="border-t border-brand-border/60 pt-3">
+                  <div className="flex items-center justify-between text-xs font-bold mb-2">
+                    <span className="text-brand-muted">اللون المختار:</span>
+                    <span className="text-brand-dark font-extrabold">{selectedColor}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5">
+                    {[
+                      { name: 'أخضر زيتي ملكي', hex: '#5E6B4A', imgIndex: 0 },
+                      { name: 'تراب الصلصال الدافئ', hex: '#A85A3C', imgIndex: 1 },
+                      { name: 'أسود منجنيزي فاخر', hex: '#2B2420', imgIndex: 0 },
+                      { name: 'بيج الفخار العاجي', hex: '#D9CEBC', imgIndex: 0 },
+                    ].map((color) => {
+                      const isActive = selectedColor === color.name;
+                      return (
+                        <button
+                          key={color.name}
+                          type="button"
+                          className={`w-8 h-8 rounded-full cursor-pointer transition-all border-2 border-white shadow-xs ${
+                            isActive ? 'ring-2 ring-brand-primary ring-offset-2 scale-105' : 'hover:scale-105'
+                          }`}
+                          style={{ backgroundColor: color.hex }}
+                          onClick={() => {
+                            setSelectedColor(color.name);
+                            if (gallery[color.imgIndex]) setSelectedImage(gallery[color.imgIndex]);
+                          }}
+                          title={color.name}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  className="text-brand-primary hover:underline cursor-pointer flex items-center gap-1 text-xs font-bold"
-                  onClick={() => setSizeDrawerOpen(true)}
-                >
-                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                    <path d="M21.3 15.3l-8.6-8.6a1 1 0 0 0-1.4 0l-8.6 8.6a1 1 0 0 0 0 1.4l2.8 2.8a1 1 0 0 0 1.4 0l8.6-8.6a1 1 0 0 0 0-1.4l-2.8-2.8" />
-                    <line x1="7" y1="17" x2="9" y2="15" />
-                    <line x1="11" y1="13" x2="13" y2="11" />
-                    <line x1="15" y1="9" x2="17" y2="7" />
-                  </svg>
-                  <span>دليل المقاسات</span>
-                  <span className="text-sm">‹</span>
-                </button>
-              </div>
-              <div className="flex items-center gap-2 flex-wrap">
-                {['S', 'M', 'L', 'XL', 'XXL'].map((s) => {
-                  const isActive = selectedSize === s;
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      className={`min-w-[44px] h-10 px-3.5 rounded-lg text-xs font-extrabold border transition-all cursor-pointer flex items-center justify-center ${
-                        isActive
-                          ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
-                          : 'bg-brand-surface text-brand-dark border-brand-border hover:border-brand-dark/50'
-                      }`}
-                      onClick={() => setSelectedSize(s)}
-                    >
-                      {s}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
-            {/* 9. DESKTOP PRIMARY BUY CTA & WISHLIST ROW */}
+                {/* SIZES HORIZONTAL CHIPS */}
+                <div className="border-t border-brand-border/60 pt-3">
+                  <div className="flex items-center justify-between text-xs font-bold mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-brand-muted">المقاس:</span>
+                      <span className="text-brand-dark font-extrabold">{selectedSize}</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-brand-primary hover:underline cursor-pointer flex items-center gap-1 text-xs font-bold"
+                      onClick={() => setSizeDrawerOpen(true)}
+                    >
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                        <path d="M21.3 15.3l-8.6-8.6a1 1 0 0 0-1.4 0l-8.6 8.6a1 1 0 0 0 0 1.4l2.8 2.8a1 1 0 0 0 1.4 0l8.6-8.6a1 1 0 0 0 0-1.4l-2.8-2.8" />
+                        <line x1="7" y1="17" x2="9" y2="15" />
+                        <line x1="11" y1="13" x2="13" y2="11" />
+                        <line x1="15" y1="9" x2="17" y2="7" />
+                      </svg>
+                      <span>دليل المقاسات</span>
+                      <span className="text-sm">‹</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {['S', 'M', 'L', 'XL', 'XXL'].map((s) => {
+                      const isActive = selectedSize === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          className={`min-w-[44px] h-10 px-3.5 rounded-lg text-xs font-extrabold border transition-all cursor-pointer flex items-center justify-center ${
+                            isActive
+                              ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
+                              : 'bg-brand-surface text-brand-dark border-brand-border hover:border-brand-dark/50'
+                          }`}
+                          onClick={() => setSelectedSize(s)}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* 8. DESKTOP PRIMARY BUY CTA & WISHLIST ROW */}
             <div className="hidden md:flex items-center gap-3 pt-4 border-t border-brand-border/60">
               {/* Quantity Stepper */}
               <div className="flex items-center border border-brand-border rounded-lg bg-brand-card p-1 shrink-0">
@@ -380,7 +607,8 @@ export default function ProductDetailPage() {
               {/* Dominant Primary CTA */}
               <button
                 type="button"
-                className="flex-1 h-11 bg-brand-primary text-white hover:brightness-110 rounded-lg text-xs md:text-sm font-extrabold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                disabled={currentStock <= 0}
+                className="flex-1 h-11 bg-brand-primary text-white hover:brightness-110 disabled:opacity-50 rounded-lg text-xs md:text-sm font-extrabold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
                 onClick={handleAddToCart}
               >
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -388,7 +616,7 @@ export default function ProductDetailPage() {
                   <line x1="3" y1="6" x2="21" y2="6" />
                   <path d="M16 10a4 4 0 0 1-8 0" />
                 </svg>
-                <span>أضف إلى السلة الموحدة — {product.price * quantity} ₪</span>
+                <span>{currentStock > 0 ? `أضف إلى السلة الموحدة — ${currentPrice * quantity} ₪` : 'نفد المخزون'}</span>
               </button>
 
               {/* Wishlist Button */}
@@ -410,7 +638,7 @@ export default function ProductDetailPage() {
               </button>
             </div>
 
-            {/* 10. SERENE EDITORIAL TRUST REASSURANCE */}
+            {/* 9. SERENE EDITORIAL TRUST REASSURANCE */}
             <div className="space-y-2 pt-3 border-t border-brand-border/60 text-xs text-brand-muted">
               <div className="flex items-center gap-2">
                 <span className="w-4 h-4 rounded-full bg-[var(--brand-trust-soft)] text-brand-trust flex items-center justify-center shrink-0">
@@ -451,7 +679,7 @@ export default function ProductDetailPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
             <div>
               <h3 className="text-base md:text-lg font-extrabold text-brand-dark">تقييمات وتجارب المشترين</h3>
-              <p className="text-xs text-brand-muted mt-0.5">142 تجربة شراء موثقة من زبائن المحافظة الوسطى</p>
+              <p className="text-xs text-brand-muted mt-0.5">{product.reviewsCount || 142} تجربة شراء موثقة من زبائن المحافظة الوسطى</p>
             </div>
             <button
               type="button"
@@ -469,7 +697,7 @@ export default function ProductDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             {/* Summary Box */}
             <div className="md:col-span-4 p-5 bg-brand-surface border border-brand-border rounded-2xl shadow-xs flex flex-col items-center text-center justify-center">
-              <div className="text-4xl font-black text-brand-dark mb-1">4.9</div>
+              <div className="text-4xl font-black text-brand-dark mb-1">{product.rating || '4.9'}</div>
               <div className="flex items-center gap-1 text-[var(--brand-glow,#B08D57)] mb-2">
                 {[...Array(5)].map((_, i) => (
                   <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 24 24">
@@ -557,9 +785,9 @@ export default function ProductDetailPage() {
             <div>
               <h2 className="text-base md:text-lg font-extrabold text-brand-dark flex items-center gap-2">
                 <span className="w-1 h-4 rounded-full bg-brand-primary" />
-                <span>منتجات مشابهة</span>
+                <span>منتجات من الفئة نفسها</span>
               </h2>
-              <p className="text-xs text-brand-muted mt-0.5">خيارات من متاجر المحافظة الوسطى تضاف لنفس طرد سَدِيم الموحد (8 ₪)</p>
+              <p className="text-xs text-brand-muted mt-0.5">خيارات تضاف لنفس طرد سَدِيم الموحد (8 ₪)</p>
             </div>
             <Link href="/explore" className="text-xs font-bold text-brand-primary hover:underline flex items-center gap-1">
               <span>مشاهدة الكل</span>
@@ -568,12 +796,9 @@ export default function ProductDetailPage() {
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-            {products
-              .filter((p) => p.id !== product.id)
-              .slice(0, 4)
-              .map((p) => (
-                <ProductCard key={p.id} product={p} />
-              ))}
+            {relatedProducts.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
           </div>
         </section>
       </main>
@@ -587,7 +812,7 @@ export default function ProductDetailPage() {
           <div className="shrink-0">
             <div className="flex items-baseline gap-0.5">
               <span className="text-lg font-black text-brand-dark">
-                {product.price * quantity}
+                {currentPrice * quantity}
               </span>
               <span className="text-xs font-bold text-brand-dark">₪</span>
             </div>
@@ -620,15 +845,16 @@ export default function ProductDetailPage() {
           {/* Primary Add to Cart Button */}
           <button
             type="button"
+            disabled={currentStock <= 0}
             onClick={handleAddToCart}
-            className="flex-1 h-11 bg-brand-primary text-white hover:brightness-110 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all"
+            className="flex-1 h-11 bg-brand-primary text-white hover:brightness-110 disabled:opacity-50 rounded-lg text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer transition-all"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
               <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
               <line x1="3" y1="6" x2="21" y2="6" />
               <path d="M16 10a4 4 0 0 1-8 0" />
             </svg>
-            <span>أضف للسلة الموحدة</span>
+            <span>{currentStock > 0 ? 'أضف للسلة الموحدة' : 'نفد المخزون'}</span>
           </button>
 
           {/* Wishlist Button */}
@@ -736,7 +962,7 @@ export default function ProductDetailPage() {
           </div>
           <div className="flex justify-between items-center p-2.5 bg-brand-card rounded-lg text-xs">
             <span className="text-brand-muted">المتجر والمنشأ:</span>
-            <strong className="text-brand-dark">خيوط سَدِيم للأزياء · دير البلح</strong>
+            <strong className="text-brand-dark">{product.vendor.name} · {product.vendor.city}</strong>
           </div>
           <div className="flex justify-between items-center p-2.5 bg-brand-card rounded-lg text-xs">
             <span className="text-brand-muted">التوصيل الموحد:</span>

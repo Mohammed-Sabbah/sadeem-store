@@ -440,24 +440,42 @@ export function ProductStudioEditorTab({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div
             onClick={() => {
+              if (hasActiveVariants) {
+                setErrorMessage?.(
+                  'لا يمكن تحويل الصنف إلى (صنف موحد) طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات بالأسفل أولاً لتتمكن من تحويله.'
+                );
+                return;
+              }
               setIsSimple(true);
               if (errorMessage?.includes('لا يمكن تغيير قسم الصنف')) {
                 setErrorMessage?.(null);
               }
             }}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 flex items-start gap-3 select-none ${
-              isSimple
-                ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs ring-2 ring-brand-primary/20'
-                : 'border-brand-border/70 bg-brand-surface/30 hover:bg-brand-surface'
+            className={`p-4 rounded-2xl border transition-all duration-150 flex items-start gap-3 select-none ${
+              hasActiveVariants
+                ? 'border-dashed border-amber-300 bg-amber-50/40 opacity-80 cursor-not-allowed'
+                : isSimple
+                ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs ring-2 ring-brand-primary/20 cursor-pointer'
+                : 'border-brand-border/70 bg-brand-surface/30 hover:bg-brand-surface cursor-pointer'
             }`}
           >
             <div className="mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center border-brand-primary">
               {isSimple && <div className="w-2 h-2 rounded-full bg-brand-primary" />}
             </div>
-            <div>
-              <div className="text-xs font-black text-brand-dark">بدون خيارات (سعر ومخزون موحد)</div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <div className="text-xs font-black text-brand-dark">بدون خيارات (سعر ومخزون موحد)</div>
+                {hasActiveVariants && (
+                  <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80 flex items-center gap-0.5">
+                    <span>🔒</span>
+                    <span>مقفل</span>
+                  </span>
+                )}
+              </div>
               <div className="text-[11px] text-brand-muted mt-0.5 leading-relaxed">
-                الصنف يتوفر بنوع واحد فقط بدون مقاسات أو ألوان (مثل: عسل سدر، ساعة، حقيبة، شال مفرد).
+                {hasActiveVariants
+                  ? 'محمي لوجود خيارات ومقاسات نشطة بالأسفل. يجب حذف الخيارات الحالية أولاً للتحويل إلى صنف مفرد.'
+                  : 'الصنف يتوفر بنوع واحد فقط بدون مقاسات أو ألوان (مثل: عسل سدر، ساعة، حقيبة، شال مفرد).'}
               </div>
             </div>
           </div>

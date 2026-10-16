@@ -59,6 +59,21 @@ export function useProductStudio(productId: string) {
   // Mode: Simple vs Configurable
   const [isSimple, setIsSimple] = useState(false);
 
+  const handleSetIsSimple = (val: boolean) => {
+    if (val) {
+      const hasActiveVariants =
+        options.some((o) => o.values && o.values.length > 0) || variants.length > 0;
+      if (hasActiveVariants) {
+        setErrorMessage(
+          'لا يمكن تحويل الصنف إلى (صنف موحد) طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات بالأسفل أولاً لتتمكن من تحويله.'
+        );
+        return;
+      }
+    }
+    setErrorMessage(null);
+    setIsSimple(val);
+  };
+
   // Simple Product Fields
   const [simplePrice, setSimplePrice] = useState<number | string>(50);
   const [simpleCompareAtPrice, setSimpleCompareAtPrice] = useState<number | string>('');
@@ -824,7 +839,7 @@ export function useProductStudio(productId: string) {
     handleSetPrimaryImage,
     handleRemoveImage,
     isSimple,
-    setIsSimple,
+    setIsSimple: handleSetIsSimple,
     simplePrice,
     setSimplePrice,
     simpleCompareAtPrice,

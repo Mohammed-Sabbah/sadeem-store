@@ -17,6 +17,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Pre-register all models to ensure Mongoose populate works reliably everywhere
+require('./models/User');
+require('./models/Store');
+require('./models/Category');
+require('./models/Product');
+require('./models/Variant');
+require('./models/OptionDefinition');
+require('./models/Region');
+
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require("./routes/user.route")
 const categoryRoutes = require('./routes/categoryRoutes');

@@ -50,7 +50,12 @@ async function toggleMyStoreStatus(req, res, next) {
 async function getStoreById(req, res, next) {
     try {
         const { id } = req.params;
-        const store = await Store.findOne({ _id: id, isDeleted: false })
+        const store = await Store.findOne({
+            _id: id,
+            status: STATUS.ACTIVE,
+            approveStatus: APPROVE_STATUS.APPROVED,
+            isDeleted: false,
+        })
             .populate('categoryId', 'title slug icon')
             .lean();
 
@@ -113,5 +118,6 @@ module.exports = {
     getMyStore,
     toggleMyStoreStatus,
     getStoreById,
+    getPublicStore: getStoreById,
     approveStore,
 };

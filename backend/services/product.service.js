@@ -259,6 +259,12 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
                 if (updates.compareAtPrice !== undefined) {
                     updates.compareAtPrice = updates.compareAtPrice ? roundMoney(updates.compareAtPrice) : null;
                 }
+                if (Array.isArray(updates.images)) {
+                    updates.images = updates.images.filter(Boolean).map(String);
+                    updates.image = updates.images[0] || '';
+                } else if (updates.image) {
+                    updates.images = [String(updates.image)];
+                }
                 updates.storeId = product.storeId;
 
                 const updated = await Variant.findOneAndUpdate(

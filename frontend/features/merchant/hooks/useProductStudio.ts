@@ -171,6 +171,16 @@ export function useProductStudio(productId: string) {
           }));
           setVariants(mappedVariants);
 
+          const initialColorMap: Record<string, string> = {};
+          mappedVariants.forEach((v) => {
+            const colorVal = v.attributes['اللون'] || v.attributes['color'];
+            const variantImg = v.images?.[0];
+            if (colorVal && variantImg && !initialColorMap[colorVal]) {
+              initialColorMap[colorVal] = variantImg;
+            }
+          });
+          setColorImageMap(initialColorMap);
+
           if (!hasOptions && mappedVariants.length > 0) {
             setSimplePrice(mappedVariants[0].price);
             setSimpleCompareAtPrice(mappedVariants[0].compareAtPrice ?? '');
@@ -429,7 +439,8 @@ export function useProductStudio(productId: string) {
 
   const handleRemoveImage = (imgIdx: number) => {
     const targetUrl = images[imgIdx];
-    setImages((prev) => prev.filter((_, idx) => idx !== imgIdx));
+    const nextImages = images.filter((_, idx) => idx !== imgIdx);
+    setImages(nextImages);
 
     const updatedMap = { ...colorImageMap };
     for (const color in updatedMap) {
@@ -438,6 +449,22 @@ export function useProductStudio(productId: string) {
       }
     }
     setColorImageMap(updatedMap);
+
+    const colorOpt = options.find(
+      (o) => o.type === 'COLOR' || o.name === 'اللون' || o.label === 'اللون'
+    );
+    const colorKey = colorOpt ? colorOpt.name || colorOpt.label || 'اللون' : 'اللون';
+
+    setVariants((prev) =>
+      prev.map((v) => {
+        const vColor = v.attributes[colorKey];
+        const assignedImg = updatedMap[vColor] || nextImages[0] || '';
+        return {
+          ...v,
+          images: assignedImg ? [assignedImg] : [],
+        };
+      })
+    );
   };
 
   // Options Helpers
@@ -564,9 +591,27 @@ export function useProductStudio(productId: string) {
     }
   };
 
-  // Visual Color-Image Tap Binding
+  // Visual Color-Image Direct Binding
   const handleBindColorImage = (colorVal: string, imageUrl: string) => {
-    const nextMap = { ...colorImageMap, [colorVal]: imageUrl };
+    const nextMap = { ...colorImageMap };
+
+    if (!colorVal) {
+      // Unbind whatever color was mapped to this image
+      for (const c in nextMap) {
+        if (nextMap[c] === imageUrl) {
+          delete nextMap[c];
+        }
+      }
+    } else {
+      // Remove any previous color this image was assigned to
+      for (const c in nextMap) {
+        if (nextMap[c] === imageUrl && c !== colorVal) {
+          delete nextMap[c];
+        }
+      }
+      nextMap[colorVal] = imageUrl;
+    }
+
     setColorImageMap(nextMap);
 
     const colorOpt = options.find(
@@ -576,10 +621,12 @@ export function useProductStudio(productId: string) {
 
     setVariants((prev) =>
       prev.map((v) => {
-        if (v.attributes[colorKey] === colorVal) {
-          return { ...v, images: [imageUrl] };
-        }
-        return v;
+        const vColor = v.attributes[colorKey];
+        const assignedImg = nextMap[vColor];
+        return {
+          ...v,
+          images: assignedImg ? [assignedImg] : (images[0] ? [images[0]] : []),
+        };
       })
     );
   };

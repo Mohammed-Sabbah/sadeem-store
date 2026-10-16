@@ -283,7 +283,7 @@ export function ProductStudioEditorTab({
               <span>معرض صور الصنف ({images.length})</span>
             </h2>
             <p className="text-[11px] text-brand-muted mt-0.5">
-              اختر صور الصنف من هاتفك أو جهازك. الصورة الأولى ستكون غلاف الصنف الرئيسي.
+              اختر صور الصنف من هاتفك أو جهازك. الصورة الأولى ستكون غلاف الصنف الرئيسي، ويمكنك ربط كل صورة بلونها المخصص مباشرة.
             </p>
           </div>
 
@@ -307,6 +307,15 @@ export function ProductStudioEditorTab({
 
         {/* Upload Zone & Thumbnails */}
         <div className="space-y-4">
+          {colorOpt && colorOpt.values && colorOpt.values.length > 0 && images.length > 0 && (
+            <div className="p-3 bg-brand-primary-soft/35 border border-brand-primary/20 rounded-xl flex items-center gap-2 text-xs text-brand-dark animate-fadeIn">
+              <span className="text-base shrink-0">🎨</span>
+              <span className="leading-relaxed">
+                <strong>ربط الصور بألوان الصنف:</strong> يمكنك تخصيص صورة لكل لون مباشرة من القائمة أسفل كل صورة، لتبديل صورة المنتج تلقائياً أمام الزبون في المتجر عند اختياره للون.
+              </span>
+            </div>
+          )}
+
           {images.length === 0 ? (
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -327,70 +336,124 @@ export function ProductStudioEditorTab({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {images.map((img, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => {
-                    if (idx !== 0) handleSetPrimaryImage(idx);
-                  }}
-                  className={`relative aspect-square rounded-2xl overflow-hidden border group bg-brand-surface shadow-2xs transition-all cursor-pointer ${
-                    idx === 0
-                      ? 'border-brand-primary ring-3 ring-brand-primary/30 shadow-md'
-                      : 'border-brand-border/80 hover:border-brand-primary/60 hover:shadow-xs'
-                  }`}
-                >
-                  <img src={img} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover pointer-events-none" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-3.5">
+              {images.map((img, idx) => {
+                const boundColorForThisImg = Object.entries(colorImageMap).find(
+                  ([_, mappedImg]) => mappedImg === img
+                )?.[0] || '';
 
-                  {/* Primary Cover Badge or Set Cover Action */}
-                  {idx === 0 ? (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 pt-4 flex items-center justify-center">
-                      <span className="bg-brand-primary text-white text-[10px] sm:text-[11px] font-black px-2.5 py-1 rounded-lg shadow-sm flex items-center justify-center gap-1 w-full select-none">
-                        <span>★</span>
-                        <span>الغلاف الرئيسي</span>
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1.5 pt-4 flex items-center justify-center">
+                const hasColorValues = Boolean(colorOpt && colorOpt.values && colorOpt.values.length > 0);
+
+                return (
+                  <div
+                    key={idx}
+                    className={`flex flex-col justify-between rounded-2xl border p-2 transition-all ${
+                      idx === 0
+                        ? 'border-brand-primary bg-brand-primary-soft/20 shadow-xs'
+                        : boundColorForThisImg
+                        ? 'border-brand-primary/40 bg-brand-primary-soft/10 shadow-2xs'
+                        : 'border-brand-border/70 bg-brand-surface/40 hover:bg-brand-surface hover:border-brand-border'
+                    }`}
+                  >
+                    {/* Thumbnail Box */}
+                    <div
+                      onClick={() => {
+                        if (idx !== 0) handleSetPrimaryImage(idx);
+                      }}
+                      className={`relative aspect-square rounded-xl overflow-hidden border bg-brand-surface cursor-pointer group ${
+                        idx === 0
+                          ? 'border-brand-primary ring-2 ring-brand-primary/30 shadow-xs'
+                          : 'border-brand-border/70 hover:border-brand-primary/50'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`صورة ${idx + 1}`}
+                        className="w-full h-full object-cover pointer-events-none"
+                      />
+
+                      {/* Primary Cover Badge or Set Cover Action */}
+                      {idx === 0 ? (
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 pt-4 flex items-center justify-center">
+                          <span className="bg-brand-primary text-white text-[10px] sm:text-[11px] font-black px-2 py-1 rounded-lg shadow-sm flex items-center justify-center gap-1 w-full select-none">
+                            <span>★</span>
+                            <span>الغلاف الرئيسي</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1.5 pt-4 flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetPrimaryImage(idx);
+                            }}
+                            className="w-full py-1.5 px-2 bg-white/95 hover:bg-brand-primary hover:text-white text-brand-dark text-[10px] sm:text-[11px] font-bold rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer select-none"
+                            title="اضغط لتعيين هذه الصورة كغلاف رئيسي"
+                          >
+                            <span className="text-amber-500 font-bold">☆</span>
+                            <span>تعيين كغلاف</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Delete Button (prominent 28x28 touch target) */}
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleSetPrimaryImage(idx);
+                          handleRemoveImage(idx);
                         }}
-                        className="w-full py-1.5 px-2 bg-white/95 hover:bg-brand-primary hover:text-white text-brand-dark text-[10px] sm:text-[11px] font-bold rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer select-none"
-                        title="اضغط لتعيين هذه الصورة كغلاف رئيسي"
+                        className="absolute top-1.5 left-1.5 w-7 h-7 bg-black/75 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-black transition-colors cursor-pointer shadow-md active:scale-90"
+                        title="حذف الصورة من المعرض"
                       >
-                        <span className="text-amber-500 font-bold">☆</span>
-                        <span>تعيين كغلاف</span>
+                        ✕
                       </button>
                     </div>
-                  )}
 
-                  {/* Delete Button (prominent 28x28 touch target) */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveImage(idx);
-                    }}
-                    className="absolute top-1.5 left-1.5 w-7 h-7 bg-black/75 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-black transition-colors cursor-pointer shadow-md active:scale-90"
-                    title="حذف الصورة من المعرض"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
+                    {/* Color Assignment Selector (When Color Options Exist) */}
+                    {hasColorValues && (
+                      <div className="mt-2 pt-2 border-t border-brand-border/40">
+                        <div className="relative">
+                          <select
+                            value={boundColorForThisImg}
+                            onChange={(e) => handleBindColorImage(e.target.value, img)}
+                            className={`w-full h-8 pr-7 pl-2 text-[10px] sm:text-[11px] font-bold rounded-xl border appearance-none transition-all cursor-pointer ${
+                              boundColorForThisImg
+                                ? 'bg-brand-primary-soft border-brand-primary/60 text-brand-dark font-black shadow-2xs'
+                                : 'bg-brand-card border-brand-border/70 text-brand-muted hover:border-brand-primary/40'
+                            }`}
+                            title="تخصيص هذه الصورة للون محدد لعرضها تلقائياً عند اختيار الزبون لهذا اللون"
+                          >
+                            <option value="">صورة عامة (لكل الألوان)</option>
+                            {colorOpt!.values.map((col) => (
+                              <option key={col} value={col}>
+                                🎨 {col}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs">
+                            {boundColorForThisImg ? '🎨' : '🏷️'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Add more button tile in the grid */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessingFiles}
-                className="aspect-square rounded-2xl border-2 border-dashed border-brand-border/80 hover:border-brand-primary bg-brand-surface/30 hover:bg-brand-surface/60 flex flex-col items-center justify-center gap-1.5 text-brand-muted hover:text-brand-primary transition-all cursor-pointer active:scale-95 group"
+                className="flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-dashed border-brand-border/80 hover:border-brand-primary bg-brand-surface/30 hover:bg-brand-surface/60 transition-all cursor-pointer active:scale-95 group min-h-[140px]"
               >
-                <IconPhoto className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-bold">+ صور أخرى</span>
+                <div className="w-10 h-10 rounded-xl bg-brand-card border border-brand-border/70 flex items-center justify-center text-brand-muted group-hover:text-brand-primary group-hover:scale-105 transition-all shadow-2xs mb-2">
+                  <IconPhoto className="w-5 h-5" />
+                </div>
+                <span className="text-[11px] font-bold text-brand-dark">+ صور أخرى</span>
+                <span className="text-[9px] text-brand-muted mt-0.5">من هاتفك</span>
               </button>
             </div>
           )}
@@ -596,7 +659,7 @@ export function ProductStudioEditorTab({
                   <span>خيارات ومقاسات الصنف</span>
                 </h2>
                 <p className="text-[11px] text-brand-muted mt-0.5">
-                  حدد المقاسات أو الألوان. يمكنك تخصيص صورة لكل لون مباشرة بالضغط على مصغرة صورته.
+                  حدد مقاسات أو ألوان الصنف. يمكنك ربط كل لون بصورته المخصصة مباشرة من معرض الصور (الخطوة 2 بالأعلى).
                 </p>
               </div>
 
@@ -1137,7 +1200,8 @@ export function ProductStudioEditorTab({
                           </span>
                         ) : (
                           opt.values.map((val) => {
-                            const boundImg = isColor ? colorImageMap[val] || images[0] : null;
+                            const boundImg = isColor ? colorImageMap[val] : null;
+                            const swatch = isColor ? COLOR_SWATCHES[val] : null;
 
                             return (
                               <div
@@ -1145,109 +1209,26 @@ export function ProductStudioEditorTab({
                                 className="inline-flex items-center gap-1.5 bg-brand-surface/70 hover:bg-brand-surface text-brand-dark pr-2 pl-2.5 py-1 rounded-xl border border-brand-border/70 text-xs font-bold transition-all shadow-2xs group"
                               >
                                 {isColor && (
-                                  <div className="relative inline-flex items-center" data-popover>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveColorPhotoPopover(
-                                          activeColorPhotoPopover === val ? null : val
-                                        );
-                                        setIsAddOptionOpen(false);
-                                        setActiveValuePopoverIdx(null);
-                                      }}
-                                      className="relative w-5 h-5 rounded-md overflow-hidden border border-brand-border/80 shrink-0 hover:scale-110 transition-transform cursor-pointer shadow-2xs group/thumb"
-                                      title={`تغيير صورة هذا اللون: ${val}`}
-                                    >
-                                      <img
-                                        src={boundImg || primaryImage}
-                                        alt={val}
-                                        className="w-full h-full object-cover"
+                                  <>
+                                    {swatch ? (
+                                      <span
+                                        className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/15 shadow-2xs"
+                                        style={{ backgroundColor: swatch.hex }}
+                                        title={val}
                                       />
-                                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
-                                        <IconPhoto className="w-3 h-3 text-white" />
-                                      </div>
-                                    </button>
-
-                                    {activeColorPhotoPopover === val && (
-                                      <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-2.5">
-                                        <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
-                                          <span className="flex items-center gap-1">
-                                            <IconPhoto className="w-3.5 h-3.5 text-brand-primary" />
-                                            <span>صورة لون «{val}»</span>
-                                          </span>
-                                          <button
-                                            type="button"
-                                            onClick={() => setActiveColorPhotoPopover(null)}
-                                            className="text-brand-muted hover:text-brand-dark cursor-pointer"
-                                          >
-                                            <IconX className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-
-                                        {images.length === 0 ? (
-                                          <div className="py-4 text-center text-[11px] text-brand-muted">
-                                            لا توجد صور في المعرض بعد. أضف صوراً في الخطوة 2 أولاً.
-                                          </div>
-                                        ) : (
-                                          <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto no-scrollbar py-1">
-                                            {images.map((imgUrl, imgI) => {
-                                              const isAssigned =
-                                                colorImageMap[val] === imgUrl ||
-                                                (!colorImageMap[val] && imgI === 0);
-                                              return (
-                                                <button
-                                                  key={imgI}
-                                                  type="button"
-                                                  onClick={() => {
-                                                    handleBindColorImage(val, imgUrl);
-                                                    setActiveColorPhotoPopover(null);
-                                                  }}
-                                                  className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer group/item ${
-                                                    isAssigned
-                                                      ? 'border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
-                                                      : 'border-brand-border/70 hover:border-brand-primary/50'
-                                                  }`}
-                                                >
-                                                  <img
-                                                    src={imgUrl}
-                                                    alt={`صورة ${imgI + 1}`}
-                                                    className="w-full h-full object-cover"
-                                                  />
-                                                  {isAssigned && (
-                                                    <div className="absolute inset-0 bg-brand-primary/25 flex items-center justify-center">
-                                                      <span className="w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
-                                                        <IconCheck className="w-3 h-3" />
-                                                      </span>
-                                                    </div>
-                                                  )}
-                                                  <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] font-bold px-1 rounded">
-                                                    {imgI === 0 ? 'الغلاف' : `#${imgI + 1}`}
-                                                  </span>
-                                                </button>
-                                              );
-                                            })}
-                                          </div>
-                                        )}
-
-                                        {colorImageMap[val] && (
-                                          <div className="pt-1.5 border-t border-brand-border/40">
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                const nextMap = { ...colorImageMap };
-                                                delete nextMap[val];
-                                                setColorImageMap(nextMap);
-                                                setActiveColorPhotoPopover(null);
-                                              }}
-                                              className="w-full py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-center"
-                                            >
-                                              إلغاء التخصيص (استخدام الغلاف)
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
+                                    ) : (
+                                      <span className="w-2.5 h-2.5 rounded-full bg-brand-primary/60 shrink-0" />
                                     )}
-                                  </div>
+
+                                    {boundImg && (
+                                      <img
+                                        src={boundImg}
+                                        alt={val}
+                                        className="w-4 h-4 rounded-md object-cover border border-brand-border/80 shrink-0 shadow-2xs"
+                                        title={`صورة مخصصة لهذا اللون (مربوطة من معرض الصور)`}
+                                      />
+                                    )}
+                                  </>
                                 )}
 
                                 <span>{val}</span>
@@ -1279,166 +1260,6 @@ export function ProductStudioEditorTab({
                     </div>
                   );
                 })}
-              </div>
-            )}
-
-            {/* Dedicated Color-Photo Binding Section */}
-            {colorOpt && colorOpt.values && colorOpt.values.length > 0 && (
-              <div className="mt-5 pt-4 border-t border-brand-border/60 animate-fadeIn">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center text-xs shadow-2xs">
-                      <IconPhoto className="w-3.5 h-3.5" />
-                    </span>
-                    <h3 className="text-xs font-black text-brand-dark">
-                      تخصيص صورة لكل لون ({colorOpt.values.length} ألوان)
-                    </h3>
-                  </div>
-                  <p className="text-[11px] text-brand-muted">
-                    اضغط على «تغيير الصورة» لتخصيص صورة من المعرض تظهر تلقائياً للزبون عند اختياره لهذا اللون
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {colorOpt.values.map((colName) => {
-                    const boundPhoto = colorImageMap[colName] || images[0] || primaryImage;
-                    const swatch = COLOR_SWATCHES[colName];
-                    const isCustomBound = Boolean(colorImageMap[colName]);
-
-                    return (
-                      <div
-                        key={colName}
-                        className={`flex items-center justify-between gap-3 p-3 rounded-2xl border transition-all ${
-                          isCustomBound
-                            ? 'bg-brand-card border-brand-primary/40 shadow-xs ring-1 ring-brand-primary/20'
-                            : 'bg-brand-surface/40 border-brand-border/70 hover:bg-brand-card'
-                        }`}
-                      >
-                        {/* Color Name & Swatch */}
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          {swatch ? (
-                            <span
-                              className="w-5 h-5 rounded-full shrink-0 shadow-2xs border border-black/10"
-                              style={{ backgroundColor: swatch.hex }}
-                            />
-                          ) : (
-                            <span className="w-5 h-5 rounded-full shrink-0 bg-brand-primary-soft text-brand-primary text-xs flex items-center justify-center font-black">
-                              ●
-                            </span>
-                          )}
-                          <div className="min-w-0">
-                            <div className="text-xs font-black text-brand-dark truncate">{colName}</div>
-                            <div className="text-[10px] text-brand-muted mt-0.5">
-                              {isCustomBound ? 'صورة مخصصة' : 'صورة الغلاف الافتراضية'}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Bound Image Thumbnail & Trigger */}
-                        <div className="relative flex items-center gap-2 shrink-0" data-popover>
-                          <div className="w-11 h-11 rounded-xl overflow-hidden border border-brand-border/80 bg-brand-surface shrink-0 shadow-xs">
-                            <img src={boundPhoto} alt={colName} className="w-full h-full object-cover" />
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setActiveColorPhotoPopover(
-                                activeColorPhotoPopover === colName ? null : colName
-                              );
-                              setActiveValuePopoverIdx(null);
-                              setIsAddOptionOpen(false);
-                            }}
-                            className="px-3 py-2 rounded-xl border border-brand-border/80 hover:border-brand-primary text-brand-dark bg-brand-card hover:bg-brand-surface active:scale-95 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                          >
-                            <span>تغيير</span>
-                            <IconChevronDown
-                              className={`w-3 h-3 text-brand-muted transition-transform duration-200 ${
-                                activeColorPhotoPopover === colName ? 'rotate-180' : ''
-                              }`}
-                            />
-                          </button>
-
-                          {/* Popover */}
-                          {activeColorPhotoPopover === colName && (
-                            <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-2 w-72 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-2xl p-3 z-50 animate-fadeIn space-y-2.5">
-                              <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-xs font-bold text-brand-dark">
-                                <span>اختر صورة لون «{colName}»</span>
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveColorPhotoPopover(null)}
-                                  className="text-brand-muted hover:text-brand-dark p-0.5 cursor-pointer text-xs"
-                                >
-                                  ✕
-                                </button>
-                              </div>
-
-                              {images.length === 0 ? (
-                                <p className="text-[11px] text-brand-muted py-3 text-center">
-                                  لا توجد صور في المعرض. أضف صوراً في الخطوة 2 أولاً.
-                                </p>
-                              ) : (
-                                <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto no-scrollbar py-1">
-                                  {images.map((imgUrl, imgI) => {
-                                    const isAssigned =
-                                      colorImageMap[colName] === imgUrl ||
-                                      (!colorImageMap[colName] && imgI === 0);
-                                    return (
-                                      <button
-                                        key={imgI}
-                                        type="button"
-                                        onClick={() => {
-                                          handleBindColorImage(colName, imgUrl);
-                                          setActiveColorPhotoPopover(null);
-                                        }}
-                                        className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer ${
-                                          isAssigned
-                                            ? 'border-brand-primary ring-2 ring-brand-primary/30 shadow-xs'
-                                            : 'border-brand-border/70 hover:border-brand-primary/50'
-                                        }`}
-                                      >
-                                        <img
-                                          src={imgUrl}
-                                          alt={`صورة ${imgI + 1}`}
-                                          className="w-full h-full object-cover"
-                                        />
-                                        {isAssigned && (
-                                          <div className="absolute inset-0 bg-brand-primary/30 flex items-center justify-center">
-                                            <span className="w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center text-[10px] font-bold shadow-xs">
-                                              ✓
-                                            </span>
-                                          </div>
-                                        )}
-                                        <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] font-bold px-1 rounded">
-                                          {imgI === 0 ? 'الغلاف' : `#${imgI + 1}`}
-                                        </span>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-
-                              {isCustomBound && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const nextMap = { ...colorImageMap };
-                                    delete nextMap[colName];
-                                    setColorImageMap(nextMap);
-                                    setActiveColorPhotoPopover(null);
-                                  }}
-                                  className="w-full py-1 text-[11px] font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-center"
-                                >
-                                  إلغاء التخصيص (استخدام الغلاف)
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
             )}
           </div>

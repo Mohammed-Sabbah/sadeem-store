@@ -223,18 +223,14 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
         const existingFound = await Variant.find({
             _id: { $in: requestedExistingIds },
             productId: product._id,
-            isDeleted: false,
         }).session(session || null);
 
-        if (existingFound.length !== requestedExistingIds.length) {
-            const err = new Error('واحد أو أكثر من الأصناف لا ينتمي لهذا المنتج أو تم حذفه');
-            err.statusCode = 400;
-            throw err;
-        }
+        const existingIdsSet = new Set(existingFound.map((v) => String(v._id)));
+        const variantsToUpdate = variants.filter((v) => (v._id || v.id) && existingIdsSet.has(String(v._id || v.id)));
+        const variantsToCreate = variants.filter((v) => !((v._id || v.id) && existingIdsSet.has(String(v._id || v.id))));
 
         try {
-            const newVariantsPayload = variants
-                .filter((v) => !v._id && !v.id)
+            const newVariantsPayload = variantsToCreate
                 .map((raw, idx) => {
                     const prepared = prepareVariantPayload(raw, productUpdates?.title || product.title, idx + 1, product.storeId);
                     return {
@@ -252,7 +248,7 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
 
             const updatedVariantIds = [];
 
-            for (const v of variants.filter((item) => item._id || item.id)) {
+            for (const v of variantsToUpdate) {
                 const variantId = v._id || v.id;
                 const updates = { ...v };
                 delete updates._id;
@@ -268,9 +264,11 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
                 delete updates.__v;
 
                 if (updates.status && updates.isActive === undefined) {
-                    updates.isActive = updates.status === 'ACTIVE';
-                } else if (updates.isActive !== undefined && updates.status === undefined) {
-                    updates.status = updates.isActive ? 'ACTIVE' : 'INACTIVE';
+                    const s = String(updates.status).toLowerCase();
+                    updates.isActive = s === 'active';
+                    updates.status = updates.isActive ? STATUS.ACTIVE : STATUS.IN_ACTIVE;
+                } else if (updates.isActive !== undefined) {
+                    updates.status = updates.isActive ? STATUS.ACTIVE : STATUS.IN_ACTIVE;
                 }
 
                 if (updates.sku) updates.sku = String(updates.sku).trim().toUpperCase();
@@ -282,8 +280,8 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
                 updates.storeId = product.storeId;
 
                 const updated = await Variant.findOneAndUpdate(
-                    { _id: variantId, productId: product._id, isDeleted: false },
-                    { $set: updates },
+                    { _id: variantId, productId: product._id },
+                    { $set: { ...updates, isDeleted: false } },
                     { new: true, runValidators: true, ...options }
                 );
 

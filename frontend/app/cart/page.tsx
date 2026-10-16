@@ -71,8 +71,8 @@ export default function CartPage() {
     showToast(`تم حفظ "${title}" في قائمة المفضلة بنجاح`);
   };
 
-  const handleRemove = (id: string, title: string) => {
-    removeFromCart(id);
+  const handleRemove = (id: string, title: string, variantId?: string, color?: string, size?: string) => {
+    removeFromCart(id, variantId, color, size);
     showToast(`تمت إزالة "${title}" من السلة`);
   };
 
@@ -125,103 +125,106 @@ export default function CartPage() {
 
               {/* Items Linear Container */}
               <div className="space-y-3">
-                {items.map(({ product, quantity, selectedColor, selectedSize }, idx) => (
-                  <article
-                    key={product.id}
-                    className="p-3.5 sm:p-4 rounded-xl bg-white border border-brand-border-subtle flex gap-3 sm:gap-4 items-start shadow-xs transition-colors hover:border-brand-primary/20"
-                  >
-                    {/* Thumbnail */}
-                    <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-lg bg-brand-surface border border-brand-border/60 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
-                      <img
-                        src={(product.image && product.image.trim()) || '/canaan_product_hoodie_olive.jpg'}
-                        alt={product.title}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
+                {items.map(({ product, quantity, selectedColor, selectedSize, selectedVariantId }, idx) => {
+                  const itemKey = `${product.id}-${selectedVariantId || ''}-${selectedSize || ''}-${selectedColor || ''}-${idx}`;
+                  return (
+                    <article
+                      key={itemKey}
+                      className="p-3.5 sm:p-4 rounded-xl bg-white border border-brand-border-subtle flex gap-3 sm:gap-4 items-start shadow-xs transition-colors hover:border-brand-primary/20"
+                    >
+                      {/* Thumbnail */}
+                      <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-lg bg-brand-surface border border-brand-border/60 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={(product.image && product.image.trim()) || '/placeholder_product.svg'}
+                          alt={product.title}
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
 
-                    {/* Details Box */}
-                    <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-1.5 text-[11px] text-brand-muted font-medium truncate">
-                          <span className="text-brand-primary">●</span>
-                          <span className="font-bold text-brand-dark">{product.vendor.name}</span>
-                          <span>({product.vendor.city} · موثق)</span>
-                        </div>
-                        <div className="text-left flex-shrink-0">
-                          <div className="text-sm sm:text-base font-extrabold text-brand-primary">
-                            {product.price * quantity} <span className="text-xs font-bold">₪</span>
+                      {/* Details Box */}
+                      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-1.5 text-[11px] text-brand-muted font-medium truncate">
+                            <span className="text-brand-primary">●</span>
+                            <span className="font-bold text-brand-dark">{product.vendor.name}</span>
+                            <span>({product.vendor.city} · موثق)</span>
                           </div>
-                          {quantity > 1 && (
-                            <span className="text-[10px] text-brand-subtle block">({product.price} ₪ للقطعة)</span>
-                          )}
-                        </div>
-                      </div>
-
-                      <h2 className="text-xs sm:text-sm font-bold text-brand-dark line-clamp-1 hover:text-brand-primary transition-colors m-0">
-                        <Link href={`/product/${product.id}`} className="no-underline text-inherit">
-                          {product.title}
-                        </Link>
-                      </h2>
-
-                      <div className="text-[11px] text-brand-muted flex items-center gap-1.5">
-                        <span>المقاس: <strong className="text-brand-dark">{selectedSize || 'L'}</strong></span>
-                        <span>·</span>
-                        <span>اللون: <strong className="text-brand-dark">{selectedColor || 'أخضر زيتي'}</strong></span>
-                      </div>
-
-                      {/* Action Controls: Stepper on Right, Links on Left */}
-                      <div className="flex items-center justify-between mt-2 pt-2 border-t border-brand-border-subtle/50">
-                        <div className="flex items-center border border-brand-border rounded-lg bg-brand-surface overflow-hidden h-7 sm:h-8">
-                          <button
-                            type="button"
-                            className="w-7 sm:w-8 h-full flex items-center justify-center text-sm font-bold text-brand-dark hover:bg-brand-border/40 transition active:scale-95 disabled:opacity-30 cursor-pointer border-0 bg-transparent"
-                            onClick={() => updateQuantity(product.id, quantity - 1)}
-                            disabled={quantity <= 1}
-                            title="إنقاص الكمية"
-                          >
-                            −
-                          </button>
-                          <span className="w-7 sm:w-8 text-center text-xs font-extrabold text-brand-dark select-none">{quantity}</span>
-                          <button
-                            type="button"
-                            className="w-7 sm:w-8 h-full flex items-center justify-center text-sm font-bold text-brand-dark hover:bg-brand-border/40 transition active:scale-95 cursor-pointer border-0 bg-transparent"
-                            onClick={() => updateQuantity(product.id, quantity + 1)}
-                            title="زيادة الكمية"
-                          >
-                            +
-                          </button>
+                          <div className="text-left flex-shrink-0">
+                            <div className="text-sm sm:text-base font-extrabold text-brand-primary">
+                              {product.price * quantity} <span className="text-xs font-bold">₪</span>
+                            </div>
+                            {quantity > 1 && (
+                              <span className="text-[10px] text-brand-subtle block">({product.price} ₪ للقطعة)</span>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-3 text-xs font-medium">
-                          <button
-                            type="button"
-                            className="text-brand-muted hover:text-brand-primary flex items-center gap-1 cursor-pointer transition-colors border-0 bg-transparent p-0"
-                            onClick={() => handleWishlist(product.title)}
-                            title="حفظ في المفضلة"
-                          >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                            </svg>
-                            <span>حفظ</span>
-                          </button>
+                        <h2 className="text-xs sm:text-sm font-bold text-brand-dark line-clamp-1 hover:text-brand-primary transition-colors m-0">
+                          <Link href={`/product/${product.id}`} className="no-underline text-inherit">
+                            {product.title}
+                          </Link>
+                        </h2>
 
-                          <button
-                            type="button"
-                            className="text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer transition-colors border-0 bg-transparent p-0"
-                            onClick={() => handleRemove(product.id, product.title)}
-                            title="إزالة من السلة"
-                          >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                            <span>إزالة</span>
-                          </button>
+                        <div className="text-[11px] text-brand-muted flex items-center gap-1.5">
+                          <span>المقاس: <strong className="text-brand-dark">{selectedSize || 'L'}</strong></span>
+                          <span>·</span>
+                          <span>اللون: <strong className="text-brand-dark">{selectedColor || 'أخضر زيتي'}</strong></span>
+                        </div>
+
+                        {/* Action Controls: Stepper on Right, Links on Left */}
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-brand-border-subtle/50">
+                          <div className="flex items-center border border-brand-border rounded-lg bg-brand-surface overflow-hidden h-7 sm:h-8">
+                            <button
+                              type="button"
+                              className="w-7 sm:w-8 h-full flex items-center justify-center text-sm font-bold text-brand-dark hover:bg-brand-border/40 transition active:scale-95 disabled:opacity-30 cursor-pointer border-0 bg-transparent"
+                              onClick={() => updateQuantity(product.id, quantity - 1, selectedVariantId, selectedColor, selectedSize)}
+                              disabled={quantity <= 1}
+                              title="إنقاص الكمية"
+                            >
+                              −
+                            </button>
+                            <span className="w-7 sm:w-8 text-center text-xs font-extrabold text-brand-dark select-none">{quantity}</span>
+                            <button
+                              type="button"
+                              className="w-7 sm:w-8 h-full flex items-center justify-center text-sm font-bold text-brand-dark hover:bg-brand-border/40 transition active:scale-95 cursor-pointer border-0 bg-transparent"
+                              onClick={() => updateQuantity(product.id, quantity + 1, selectedVariantId, selectedColor, selectedSize)}
+                              title="زيادة الكمية"
+                            >
+                              +
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-3 text-xs font-medium">
+                            <button
+                              type="button"
+                              className="text-brand-muted hover:text-brand-primary flex items-center gap-1 cursor-pointer transition-colors border-0 bg-transparent p-0"
+                              onClick={() => handleWishlist(product.title)}
+                              title="حفظ في المفضلة"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+                              </svg>
+                              <span>حفظ</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              className="text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer transition-colors border-0 bg-transparent p-0"
+                              onClick={() => handleRemove(product.id, product.title, selectedVariantId, selectedColor, selectedSize)}
+                              title="إزالة من السلة"
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              </svg>
+                              <span>إزالة</span>
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             </div>
 

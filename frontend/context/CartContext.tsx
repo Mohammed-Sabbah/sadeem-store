@@ -54,6 +54,34 @@ export const DEFAULT_CART_ITEMS: CartItem[] = [
   },
 ];
 
+function isSameCartItem(
+  item: CartItem,
+  productId: string,
+  selectedVariantId?: string,
+  selectedColor?: string,
+  selectedSize?: string
+): boolean {
+  if (item.product.id !== productId) return false;
+
+  // 1. If both have a variantId, compare directly
+  if (selectedVariantId && item.selectedVariantId) {
+    return item.selectedVariantId === selectedVariantId;
+  }
+
+  // 2. If one has variantId and the other does not, they are distinct items
+  if (Boolean(selectedVariantId) !== Boolean(item.selectedVariantId)) {
+    return false;
+  }
+
+  // 3. Fallback to color and size comparison
+  const itemColor = (item.selectedColor || '').trim();
+  const targetColor = (selectedColor || '').trim();
+  const itemSize = (item.selectedSize || '').trim();
+  const targetSize = (selectedSize || '').trim();
+
+  return itemColor === targetColor && itemSize === targetSize;
+}
+
 interface CartContextType {
   items: CartItem[];
   addToCart: (
@@ -63,8 +91,19 @@ interface CartContextType {
     selectedSize?: string,
     selectedVariantId?: string
   ) => void;
-  removeFromCart: (productId: string, selectedVariantId?: string) => void;
-  updateQuantity: (productId: string, quantity: number, selectedVariantId?: string) => void;
+  removeFromCart: (
+    productId: string,
+    selectedVariantId?: string,
+    selectedColor?: string,
+    selectedSize?: string
+  ) => void;
+  updateQuantity: (
+    productId: string,
+    quantity: number,
+    selectedVariantId?: string,
+    selectedColor?: string,
+    selectedSize?: string
+  ) => void;
   clearCart: () => void;
   totalItems: number;
   subtotal: number;
@@ -106,12 +145,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     selectedVariantId?: string
   ) => {
     setItems((prev) => {
-      const existing = prev.find(
-        (item) => item.product.id === product.id && item.selectedVariantId === selectedVariantId
+      const existingIndex = prev.findIndex((item) =>
+        isSameCartItem(item, product.id, selectedVariantId, selectedColor, selectedSize)
       );
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id && item.selectedVariantId === selectedVariantId
+      if (existingIndex > -1) {
+        return prev.map((item, idx) =>
+          idx === existingIndex
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
@@ -120,23 +159,33 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
-  const removeFromCart = (productId: string, selectedVariantId?: string) => {
+  const removeFromCart = (
+    productId: string,
+    selectedVariantId?: string,
+    selectedColor?: string,
+    selectedSize?: string
+  ) => {
     setItems((prev) =>
       prev.filter(
-        (item) =>
-          !(item.product.id === productId && (selectedVariantId ? item.selectedVariantId === selectedVariantId : true))
+        (item) => !isSameCartItem(item, productId, selectedVariantId, selectedColor, selectedSize)
       )
     );
   };
 
-  const updateQuantity = (productId: string, quantity: number, selectedVariantId?: string) => {
+  const updateQuantity = (
+    productId: string,
+    quantity: number,
+    selectedVariantId?: string,
+    selectedColor?: string,
+    selectedSize?: string
+  ) => {
     if (quantity <= 0) {
-      removeFromCart(productId, selectedVariantId);
+      removeFromCart(productId, selectedVariantId, selectedColor, selectedSize);
       return;
     }
     setItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId && (selectedVariantId ? item.selectedVariantId === selectedVariantId : true)
+        isSameCartItem(item, productId, selectedVariantId, selectedColor, selectedSize)
           ? { ...item, quantity }
           : item
       )

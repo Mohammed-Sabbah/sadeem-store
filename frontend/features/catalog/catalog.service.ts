@@ -61,7 +61,7 @@ function isPublicVariant(variant: ApiVariant): boolean {
   return variant.status === 'active' && variant.approveStatus === 'approved' && !variant.isDeleted;
 }
 
-const DEFAULT_CATALOG_PRODUCT_IMAGE = '/canaan_product_hoodie_olive.jpg';
+const DEFAULT_CATALOG_PRODUCT_IMAGE = '/placeholder_product.svg';
 const DEFAULT_CATALOG_STORE_IMAGE = '/canaan_store_fashion_cover.jpg';
 
 export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {

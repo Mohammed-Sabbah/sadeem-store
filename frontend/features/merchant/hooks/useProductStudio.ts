@@ -204,13 +204,42 @@ export function useProductStudio(productId: string) {
     const activeCat = categories.find((c) => c._id === categoryId);
     if (activeCat?.variantAttributes && activeCat.variantAttributes.length > 0) {
       const mappedDefs: OptionDefinition[] = activeCat.variantAttributes.map((attr) => {
-        const isColor = attr.name.includes('لون') || attr.name === 'اللون';
-        const isSize = attr.name.includes('مقاس') || attr.name === 'المقاس';
+        const lower = attr.name.toLowerCase();
+        const isColor = lower === 'color' || attr.name.includes('لون');
+        const isSize = lower === 'size' || lower.includes('size_') || attr.name.includes('مقاس');
+        const isStorage = lower === 'storage' || attr.name.includes('تخزين') || attr.name.includes('سعة');
+        const isWeight = lower === 'weight' || attr.name.includes('وزن');
+        const isVolume = lower === 'volume' || attr.name.includes('حجم');
+
+        let label = attr.name;
+        let type: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC' = 'TEXT';
+        let unit: string | null = null;
+
+        if (isColor) {
+          label = 'اللون';
+          type = 'COLOR';
+        } else if (isSize) {
+          label = 'المقاس';
+          type = 'SIZE';
+        } else if (isStorage) {
+          label = 'سعة التخزين';
+          type = 'NUMERIC';
+          unit = 'gb';
+        } else if (isWeight) {
+          label = 'الوزن';
+          type = 'NUMERIC';
+          unit = 'kg';
+        } else if (isVolume) {
+          label = 'الحجم / السعة';
+          type = 'NUMERIC';
+          unit = 'ml';
+        }
+
         return {
           key: attr.name,
-          label: attr.name,
-          type: isColor ? 'COLOR' : isSize ? 'SIZE' : 'TEXT',
-          unit: null,
+          label,
+          type,
+          unit,
           values: attr.values.map((v) => ({
             key: v,
             label: v,
@@ -225,7 +254,17 @@ export function useProductStudio(productId: string) {
 
     merchantService.fetchOptionsByCategory(categoryId).then((res) => {
       if (res.success && res.data?.definitions) {
-        setAllowedDefinitions(res.data.definitions);
+        const catTitle = activeCat?.title || '';
+        const catSlug = activeCat?.slug || '';
+        const isShoes = catTitle.includes('حذاء') || catTitle.includes('أحذية') || catSlug.includes('shoe');
+        const isKids = catTitle.includes('أطفال') || catSlug.includes('kid');
+
+        const refinedDefs = res.data.definitions.filter((def) => {
+          if (def.key === 'size_shoes' && !isShoes) return false;
+          if (def.key === 'size_kids' && !isKids) return false;
+          return true;
+        });
+        setAllowedDefinitions(refinedDefs);
       }
     });
   }, [categoryId, categories]);
@@ -427,6 +466,10 @@ export function useProductStudio(productId: string) {
   const handleRemoveOption = (indexToRemove: number) => {
     const remaining = options.filter((_, idx) => idx !== indexToRemove);
     setOptions(remaining);
+    const validRemaining = remaining.filter((o) => o.values && o.values.length > 0);
+    if (validRemaining.length === 0) {
+      setVariants([]);
+    }
     if (
       !remaining.some((o) => o.values && o.values.length > 0) &&
       errorMessage?.includes('لا يمكن تغيير قسم الصنف')
@@ -461,6 +504,10 @@ export function useProductStudio(productId: string) {
         ...opt,
         values: opt.values.filter((v) => v !== valToRemove),
       };
+      const valid = copy.filter((o) => o.values && o.values.length > 0);
+      if (valid.length === 0) {
+        setVariants([]);
+      }
       const hasAnyValues = copy.some((o) => o.values && o.values.length > 0);
       if (!hasAnyValues && errorMessage?.includes('لا يمكن تغيير قسم الصنف')) {
         setErrorMessage(null);
@@ -497,9 +544,15 @@ export function useProductStudio(productId: string) {
 
   // Automatic Real-Time Live Sync of Variants
   useEffect(() => {
-    if (isSimple) return;
+    if (isSimple) {
+      setVariants([]);
+      return;
+    }
     const validOptions = options.filter((o) => o.values && o.values.length > 0);
-    if (validOptions.length === 0) return;
+    if (validOptions.length === 0) {
+      setVariants([]);
+      return;
+    }
 
     const cartesian = (arrays: string[][]): string[][] => {
       return arrays.reduce<string[][]>(

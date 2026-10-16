@@ -223,13 +223,42 @@ export default function AddProductModal({
     const activeCat = categories.find((c) => c._id === categoryId);
     if (activeCat?.variantAttributes && activeCat.variantAttributes.length > 0) {
       const mappedDefs: OptionDefinition[] = activeCat.variantAttributes.map((attr) => {
-        const isColor = attr.name.includes('لون') || attr.name === 'اللون';
-        const isSize = attr.name.includes('مقاس') || attr.name === 'المقاس';
+        const lower = attr.name.toLowerCase();
+        const isColor = lower === 'color' || attr.name.includes('لون');
+        const isSize = lower === 'size' || lower.includes('size_') || attr.name.includes('مقاس');
+        const isStorage = lower === 'storage' || attr.name.includes('تخزين') || attr.name.includes('سعة');
+        const isWeight = lower === 'weight' || attr.name.includes('وزن');
+        const isVolume = lower === 'volume' || attr.name.includes('حجم');
+
+        let label = attr.name;
+        let type: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC' = 'TEXT';
+        let unit: string | null = null;
+
+        if (isColor) {
+          label = 'اللون';
+          type = 'COLOR';
+        } else if (isSize) {
+          label = 'المقاس';
+          type = 'SIZE';
+        } else if (isStorage) {
+          label = 'سعة التخزين';
+          type = 'NUMERIC';
+          unit = 'gb';
+        } else if (isWeight) {
+          label = 'الوزن';
+          type = 'NUMERIC';
+          unit = 'kg';
+        } else if (isVolume) {
+          label = 'الحجم / السعة';
+          type = 'NUMERIC';
+          unit = 'ml';
+        }
+
         return {
           key: attr.name,
-          label: attr.name,
-          type: isColor ? 'COLOR' : isSize ? 'SIZE' : 'TEXT',
-          unit: null,
+          label,
+          type,
+          unit,
           values: attr.values.map((v) => ({
             key: v,
             label: v,
@@ -244,7 +273,17 @@ export default function AddProductModal({
 
     merchantService.fetchOptionsByCategory(categoryId).then((res) => {
       if (res.success && res.data?.definitions) {
-        setCategoryOptionDefinitions(res.data.definitions);
+        const catTitle = activeCat?.title || '';
+        const catSlug = activeCat?.slug || '';
+        const isShoes = catTitle.includes('حذاء') || catTitle.includes('أحذية') || catSlug.includes('shoe');
+        const isKids = catTitle.includes('أطفال') || catSlug.includes('kid');
+
+        const refinedDefs = res.data.definitions.filter((def) => {
+          if (def.key === 'size_shoes' && !isShoes) return false;
+          if (def.key === 'size_kids' && !isKids) return false;
+          return true;
+        });
+        setCategoryOptionDefinitions(refinedDefs);
       }
     });
   }, [categoryId, categories]);

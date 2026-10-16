@@ -200,12 +200,35 @@ export function useProductStudio(productId: string) {
   // Load category options on category switch
   useEffect(() => {
     if (!categoryId) return;
+
+    const activeCat = categories.find((c) => c._id === categoryId);
+    if (activeCat?.variantAttributes && activeCat.variantAttributes.length > 0) {
+      const mappedDefs: OptionDefinition[] = activeCat.variantAttributes.map((attr) => {
+        const isColor = attr.name.includes('لون') || attr.name === 'اللون';
+        const isSize = attr.name.includes('مقاس') || attr.name === 'المقاس';
+        return {
+          key: attr.name,
+          label: attr.name,
+          type: isColor ? 'COLOR' : isSize ? 'SIZE' : 'TEXT',
+          unit: null,
+          values: attr.values.map((v) => ({
+            key: v,
+            label: v,
+            isActive: true,
+          })),
+          isActive: true,
+        };
+      });
+      setAllowedDefinitions(mappedDefs);
+      return;
+    }
+
     merchantService.fetchOptionsByCategory(categoryId).then((res) => {
       if (res.success && res.data?.definitions) {
         setAllowedDefinitions(res.data.definitions);
       }
     });
-  }, [categoryId]);
+  }, [categoryId, categories]);
 
   // Calculated Metrics
   const variantsCount = isSimple ? 1 : variants.length;

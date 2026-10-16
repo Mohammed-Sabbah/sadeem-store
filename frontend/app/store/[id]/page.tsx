@@ -183,9 +183,9 @@ export default function StoreDetailPage() {
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 sm:-mt-16 mb-4">
               {/* Store Avatar Squircle */}
               <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-4 border-brand-surface bg-brand-surface shadow-md shrink-0 relative z-10 flex items-center justify-center font-black text-brand-primary text-xl bg-white">
-                {currentStore.image ? (
+                {Boolean(currentStore.image && currentStore.image.trim()) ? (
                   <img
-                    src={currentStore.image}
+                    src={currentStore.image.trim()}
                     alt={currentStore.name}
                     className="w-full h-full object-cover"
                   />
@@ -400,8 +400,8 @@ export default function StoreDetailPage() {
           {/* Store Identification Card */}
           <div className="flex items-center gap-3.5 p-3 bg-brand-card border border-brand-border/60 rounded-xl">
             <div className="w-13 h-13 rounded-xl overflow-hidden shrink-0 border border-brand-border flex items-center justify-center font-bold bg-white text-brand-primary">
-              {currentStore.image ? (
-                <img src={currentStore.image} alt={currentStore.name} className="w-full h-full object-cover" />
+              {Boolean(currentStore.image && currentStore.image.trim()) ? (
+                <img src={currentStore.image.trim()} alt={currentStore.name} className="w-full h-full object-cover" />
               ) : (
                 currentStore.name.slice(0, 2)
               )}

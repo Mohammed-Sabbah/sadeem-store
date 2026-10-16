@@ -281,7 +281,7 @@ export default function ExplorePage() {
                   className="relative w-full h-44 overflow-hidden bg-stone-900 block"
                 >
                   <img
-                    src={store.image}
+                    src={(store.image && store.image.trim()) || '/canaan_store_fashion_cover.jpg'}
                     alt={store.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />

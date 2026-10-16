@@ -153,11 +153,14 @@ export default function ProductDetailPage() {
   const currentStock = selectedVariant?.stock ?? (product?.inStock ? 10 : 0);
 
   const gallery = useMemo(() => {
-    if (!product) return [];
-    if (product.gallery && product.gallery.length > 0) return product.gallery;
+    if (!product) return ['/canaan_product_hoodie_olive.jpg'];
+    const validPrimary = (product.image && product.image.trim()) || '/canaan_product_hoodie_olive.jpg';
+    if (product.gallery && product.gallery.length > 0) {
+      const filtered = product.gallery.filter((img) => Boolean(img && img.trim()));
+      if (filtered.length > 0) return filtered;
+    }
     return [
-      product.image,
-      '/canaan_product_hoodie_olive.jpg',
+      validPrimary,
       '/canaan_product_hoodie_clay.jpg',
       '/canaan_product_hoodie_detail.jpg',
     ];
@@ -264,7 +267,7 @@ export default function ProductDetailPage() {
             {/* Main Stage Image */}
             <div className="flex-1 rounded-2xl overflow-hidden bg-white border border-brand-border flex items-center justify-center relative aspect-square max-h-[520px] shadow-xs">
               <img
-                src={selectedImage || product.image}
+                src={(selectedImage && selectedImage.trim()) || (product.image && product.image.trim()) || '/canaan_product_hoodie_olive.jpg'}
                 alt={product.title}
                 className="w-full h-full object-contain p-4"
               />

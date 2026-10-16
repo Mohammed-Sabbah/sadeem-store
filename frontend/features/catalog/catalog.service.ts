@@ -23,6 +23,7 @@ export interface ApiProduct {
   title: string;
   description: string;
   image: string;
+  images?: string[];
   categoryId: string | { _id: string; title: string; slug: string; variantAttributes?: { name: string; values: string[] }[] };
   storeId: string | {
     _id: string;
@@ -60,6 +61,9 @@ function isPublicVariant(variant: ApiVariant): boolean {
   return variant.status === 'active' && variant.approveStatus === 'approved' && !variant.isDeleted;
 }
 
+const DEFAULT_CATALOG_PRODUCT_IMAGE = '/canaan_product_hoodie_olive.jpg';
+const DEFAULT_CATALOG_STORE_IMAGE = '/canaan_store_fashion_cover.jpg';
+
 export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
   const variants = product.variants.filter(isPublicVariant);
   if (variants.length === 0) return null;
@@ -67,13 +71,17 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
   const store = typeof product.storeId === 'object' ? product.storeId : null;
   const available = variants.find((variant) => variant.stock > 0) || variants[0];
   const attributes = category?.variantAttributes || [];
+  const resolvedImage =
+    (product.image && product.image.trim()) ||
+    product.images?.find((img) => img && img.trim()) ||
+    DEFAULT_CATALOG_PRODUCT_IMAGE;
 
   return {
     id: product._id,
     title: product.title,
     price: available.price,
     currency: '₪',
-    image: product.image,
+    image: resolvedImage,
     vendor: {
       id: store?._id || (typeof product.storeId === 'string' ? product.storeId : ''),
       name: store?.name || 'متجر معتمد في سَدِيم',
@@ -100,7 +108,7 @@ function mapCatalogStore(store: ApiStore): CatalogStore {
     city: store.address?.city || 'المحافظة الوسطى',
     address: store.address?.detailedAddress || '',
     verified: true,
-    image: store.logo || '',
+    image: (store.logo && store.logo.trim()) || DEFAULT_CATALOG_STORE_IMAGE,
     description: store.description || '',
     deliveryBadge: 'طرد موحد 8 ₪',
   };

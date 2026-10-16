@@ -133,7 +133,7 @@ export default function CartPage() {
                     {/* Thumbnail */}
                     <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-lg bg-brand-surface border border-brand-border/60 p-1 flex-shrink-0 flex items-center justify-center overflow-hidden">
                       <img
-                        src={product.image}
+                        src={(product.image && product.image.trim()) || '/canaan_product_hoodie_olive.jpg'}
                         alt={product.title}
                         className="w-full h-full object-contain"
                       />

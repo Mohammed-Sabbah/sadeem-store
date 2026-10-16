@@ -588,7 +588,7 @@ export default function CheckoutPage() {
                 <div key={item.product.id} className="flex items-center gap-3 p-2 rounded-lg bg-brand-surface border border-brand-border-subtle">
                   <div className="w-10 h-10 rounded-md bg-white border border-brand-border/60 p-0.5 flex-shrink-0 flex items-center justify-center overflow-hidden">
                     <img
-                      src={item.product.image}
+                      src={(item.product.image && item.product.image.trim()) || '/canaan_product_hoodie_olive.jpg'}
                       alt={item.product.title}
                       className="w-full h-full object-contain"
                     />

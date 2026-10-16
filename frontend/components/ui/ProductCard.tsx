@@ -73,7 +73,7 @@ export function ProductCard({
 
           <img
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            src={product.image}
+            src={(product.image && product.image.trim()) || '/canaan_product_hoodie_olive.jpg'}
             alt={product.title}
             loading="lazy"
           />

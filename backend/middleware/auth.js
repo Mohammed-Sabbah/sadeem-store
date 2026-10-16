@@ -6,7 +6,10 @@ const { verifyToken } = require('../utils/token');
 
 async function authenticate(req, res, next) {
     try {
-        const token = req.cookies && req.cookies.accessToken;
+        let token = req.cookies && req.cookies.accessToken;
+        if (!token && req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+            token = req.headers.authorization.split(' ')[1];
+        }
 
         if (!token) {
             return error(res, 401, 'Unauthorized');
@@ -68,7 +71,10 @@ async function verifyActiveStore(req, res, next) {
 
 async function optionalAuthenticate(req, res, next) {
     try {
-        const token = req.cookies && req.cookies.accessToken;
+        let token = req.cookies && req.cookies.accessToken;
+        if (!token && req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+            token = req.headers.authorization.split(' ')[1];
+        }
         if (!token) {
             return next();
         }

@@ -160,10 +160,10 @@ export function ProductStudioEditorTab({
       return;
     }
     if (hasActiveVariants && newCatId !== categoryId) {
-      setErrorMessage?.(
-        'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
+      const confirmChange = window.confirm(
+        'تغيير قسم الصنف سيقوم بإعادة ضبط خيارات ومقاسات المنتج لتتوافق مع خيارات القسم الجديد. هل تود المتابعة؟'
       );
-      return;
+      if (!confirmChange) return;
     }
     setErrorMessage?.(null);
     setCategoryId(newCatId);
@@ -201,8 +201,8 @@ export function ProductStudioEditorTab({
                   التصنيف المعتمد <span className="text-red-500">*</span>
                 </label>
                 {hasActiveVariants && (
-                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
-                    محمي لوجود خيارات
+                  <span className="text-[10px] font-bold text-brand-muted bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border/60">
+                    تغيير القسم يعيد ضبط الخيارات
                   </span>
                 )}
               </div>

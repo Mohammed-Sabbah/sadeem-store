@@ -185,24 +185,6 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
     const product = await productQuery;
     if (!product) return null;
 
-    if (
-        productUpdates?.categoryId &&
-        String(productUpdates.categoryId) !== String(product.categoryId)
-    ) {
-        const targetOptions =
-            productUpdates.options !== undefined ? productUpdates.options : product.options;
-        const hasOptions =
-            Array.isArray(targetOptions) &&
-            targetOptions.some((o) => Array.isArray(o.values) && o.values.length > 0);
-        if (hasOptions) {
-            const err = new Error(
-                'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
-            );
-            err.statusCode = 400;
-            throw err;
-        }
-    }
-
     if (variants && Array.isArray(variants)) {
         await validateProductOptionsAndVariants({
             categoryId: productUpdates?.categoryId || product.categoryId,

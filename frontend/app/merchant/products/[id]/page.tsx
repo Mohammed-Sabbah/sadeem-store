@@ -32,7 +32,7 @@ export default function MerchantProductStudioPage() {
       {/* 1. Master Header with Breadcrumb, Badges & Tabs */}
       <ProductStudioHeader
         productId={studio.productId}
-        name={studio.name}
+        name={studio.product?.title || studio.product?.name || studio.name}
         primaryImage={studio.primaryImage}
         categories={studio.categories}
         categoryId={studio.categoryId}
@@ -150,7 +150,7 @@ export default function MerchantProductStudioPage() {
       {/* 3. Sticky Bottom Save Dock */}
       {(studio.activeTab === 'editor' || studio.activeTab === 'settings') && (
         <ProductStudioFloatingBar
-          name={studio.name}
+          name={studio.product?.title || studio.product?.name || studio.name}
           variantsCount={studio.variantsCount}
           totalStock={studio.totalStock}
           isAnonymousVendor={studio.isAnonymousVendor}

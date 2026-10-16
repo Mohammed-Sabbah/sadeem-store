@@ -183,16 +183,26 @@ export function useProductStudio(productId: string) {
     };
   }, [productId]);
 
-  // Category Change with Guard against active variants
+  // Category Change with friendly reset for active variants
   const handleCategoryChange = (newCatId: string) => {
+    if (newCatId === categoryId) return;
+
     const hasActiveVariants =
       !isSimple && (options.some((o) => o.values && o.values.length > 0) || variants.length > 0);
-    if (hasActiveVariants && newCatId !== categoryId) {
-      setErrorMessage(
-        'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
+
+    if (hasActiveVariants) {
+      const confirmChange = window.confirm(
+        'تغيير قسم الصنف سيقوم بإعادة ضبط خيارات ومقاسات المنتج لتتوافق مع خيارات القسم الجديد. هل تود المتابعة؟'
       );
-      return;
+      if (!confirmChange) return;
+
+      // Reset options and variants cleanly
+      setOptions([]);
+      setVariants([]);
+      setColorImageMap({});
+      setDeletedVariantKeys([]);
     }
+
     setErrorMessage(null);
     setCategoryId(newCatId);
   };
@@ -207,9 +217,28 @@ export function useProductStudio(productId: string) {
         const lower = attr.name.toLowerCase();
         const isColor = lower === 'color' || attr.name.includes('لون');
         const isSize = lower === 'size' || lower.includes('size_') || attr.name.includes('مقاس');
-        const isStorage = lower === 'storage' || attr.name.includes('تخزين') || attr.name.includes('سعة');
-        const isWeight = lower === 'weight' || attr.name.includes('وزن');
-        const isVolume = lower === 'volume' || attr.name.includes('حجم');
+        const isVolume =
+          lower === 'volume' ||
+          attr.name.includes('حجم') ||
+          attr.name.includes('مل') ||
+          attr.name.includes('لتر');
+        const isBattery =
+          lower.includes('battery') ||
+          attr.name.includes('بطارية') ||
+          attr.name.includes('أمبير') ||
+          attr.name.includes('واط');
+        const isWeight =
+          lower === 'weight' ||
+          attr.name.includes('وزن') ||
+          attr.name.includes('كغم') ||
+          attr.name.includes('جرام');
+        const isStorage =
+          !isVolume &&
+          !isBattery &&
+          (lower === 'storage' ||
+            attr.name.includes('تخزين') ||
+            attr.name.includes('ذاكرة') ||
+            attr.name.includes('جيجا'));
 
         let label = attr.name;
         let type: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC' = 'TEXT';
@@ -221,18 +250,22 @@ export function useProductStudio(productId: string) {
         } else if (isSize) {
           label = 'المقاس';
           type = 'SIZE';
+        } else if (isVolume) {
+          label = attr.name;
+          type = 'NUMERIC';
+          unit = 'ml';
+        } else if (isBattery) {
+          label = attr.name;
+          type = 'NUMERIC';
+          unit = 'mah';
         } else if (isStorage) {
-          label = 'سعة التخزين';
+          label = attr.name;
           type = 'NUMERIC';
           unit = 'gb';
         } else if (isWeight) {
-          label = 'الوزن';
+          label = attr.name;
           type = 'NUMERIC';
           unit = 'kg';
-        } else if (isVolume) {
-          label = 'الحجم / السعة';
-          type = 'NUMERIC';
-          unit = 'ml';
         }
 
         return {

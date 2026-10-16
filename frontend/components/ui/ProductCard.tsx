@@ -8,17 +8,23 @@ import { useCart } from '@/context/CartContext';
 interface ProductCardProps {
   product: Product;
   isWishlistPage?: boolean;
+  showWishlist?: boolean;
   onRemoveFromWishlist?: (productId: string) => void;
 }
 
-export function ProductCard({ product, isWishlistPage = false, onRemoveFromWishlist }: ProductCardProps) {
+export function ProductCard({
+  product,
+  isWishlistPage = false,
+  showWishlist = true,
+  onRemoveFromWishlist,
+}: ProductCardProps) {
   const { addToCart } = useCart();
   const [isWished, setIsWished] = useState(isWishlistPage);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1);
+    addToCart(product, 1, undefined, undefined, product.variantId);
   };
 
   const handleToggleWish = (e: React.MouseEvent) => {
@@ -44,24 +50,26 @@ export function ProductCard({ product, isWishlistPage = false, onRemoveFromWishl
             </span>
           )}
 
-          <button
-            type="button"
-            className="absolute top-2.5 left-2.5 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm border border-brand-border/60 flex items-center justify-center shadow-sm transition-transform hover:scale-105 active:scale-95"
-            title={isWishlistPage ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
-            onClick={handleToggleWish}
-          >
-            <svg
-              width="15"
-              height="15"
-              viewBox="0 0 24 24"
-              fill={activeWish ? 'var(--brand-primary)' : 'none'}
-              stroke={activeWish ? 'var(--brand-primary)' : 'currentColor'}
-              strokeWidth="2"
-              className={activeWish ? 'text-brand-primary' : 'text-brand-muted'}
+          {showWishlist && (
+            <button
+              type="button"
+              className="absolute top-2.5 left-2.5 z-10 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm border border-brand-border/60 flex items-center justify-center shadow-sm transition-transform hover:scale-105 active:scale-95"
+              title={isWishlistPage ? 'إزالة من المفضلة' : 'حفظ في المفضلة'}
+              onClick={handleToggleWish}
             >
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-            </svg>
-          </button>
+              <svg
+                width="15"
+                height="15"
+                viewBox="0 0 24 24"
+                fill={activeWish ? 'var(--brand-primary)' : 'none'}
+                stroke={activeWish ? 'var(--brand-primary)' : 'currentColor'}
+                strokeWidth="2"
+                className={activeWish ? 'text-brand-primary' : 'text-brand-muted'}
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </button>
+          )}
 
           <img
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -100,7 +108,7 @@ export function ProductCard({ product, isWishlistPage = false, onRemoveFromWishl
             <svg width="12" height="12" viewBox="0 0 24 24" fill="#B08D57" stroke="#B08D57" strokeWidth="1">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
-            <span className="font-bold text-brand-dark">{product.rating}</span>
+            <span className="font-bold text-brand-dark">{product.rating ?? '4.9'}</span>
             <span>({product.reviewsCount || 38} طلب موثق)</span>
           </div>
 

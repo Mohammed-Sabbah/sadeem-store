@@ -46,7 +46,13 @@ function prepareVariantPayload(rawVariant, productTitle, index = 1, storeId = nu
     variant.stock = Math.max(0, Math.floor(Number(variant.stock) || 0));
 
     if (variant.compareAtPrice !== undefined && variant.compareAtPrice !== null && String(variant.compareAtPrice).trim() !== '') {
-        variant.compareAtPrice = roundMoney(variant.compareAtPrice);
+        const compareVal = roundMoney(variant.compareAtPrice);
+        if (compareVal <= variant.price) {
+            const err = new Error(`السعر قبل الخصم (${compareVal} ₪) يجب أن يكون أكبر من سعر البيع (${variant.price} ₪)`);
+            err.statusCode = 400;
+            throw err;
+        }
+        variant.compareAtPrice = compareVal;
     } else {
         variant.compareAtPrice = null;
     }
@@ -308,7 +314,7 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
         }
     }
 
-    if (!variants && (productUpdates?.stock !== undefined || productUpdates?.price !== undefined)) {
+    if (!variants && (productUpdates?.stock !== undefined || productUpdates?.price !== undefined || productUpdates?.compareAtPrice !== undefined)) {
         const variantUpdates = {};
         if (productUpdates.stock !== undefined) {
             variantUpdates.stock = Math.max(0, Math.floor(Number(productUpdates.stock) || 0));
@@ -317,6 +323,21 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
         if (productUpdates.price !== undefined) {
             variantUpdates.price = roundMoney(productUpdates.price);
             delete productUpdates.price;
+        }
+        if (productUpdates.compareAtPrice !== undefined) {
+            if (productUpdates.compareAtPrice !== null && String(productUpdates.compareAtPrice).trim() !== '') {
+                const cmp = roundMoney(productUpdates.compareAtPrice);
+                const effectivePrice = variantUpdates.price !== undefined ? variantUpdates.price : product.minPrice;
+                if (cmp <= effectivePrice) {
+                    const err = new Error(`السعر قبل الخصم (${cmp} ₪) يجب أن يكون أكبر من سعر البيع (${effectivePrice} ₪)`);
+                    err.statusCode = 400;
+                    throw err;
+                }
+                variantUpdates.compareAtPrice = cmp;
+            } else {
+                variantUpdates.compareAtPrice = null;
+            }
+            delete productUpdates.compareAtPrice;
         }
         await Variant.updateMany(
             { productId: product._id, isDeleted: false },

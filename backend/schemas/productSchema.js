@@ -32,14 +32,6 @@ const productFields = [
     'totalStock',
     'price',
     'stock',
-    'simplePrice',
-    'simpleStock',
-];
-
-const createProductFields = [
-    ...productFields,
-    'price',
-    'stock',
     'sku',
     'compareAtPrice',
     'simplePrice',
@@ -47,6 +39,10 @@ const createProductFields = [
     'simpleSku',
     'simpleCompareAtPrice',
     'isSimple',
+];
+
+const createProductFields = [
+    ...productFields,
 ];
 
 function validateProductFields(value, fields, requireFields) {
@@ -192,10 +188,50 @@ const validateProduct = [
         .isFloat({ min: 0 })
         .withMessage('Product stock must be a nonnegative number')
         .toFloat(),
+    body('compareAtPrice')
+        .optional({ values: 'falsy', nullable: true })
+        .isFloat({ min: 0 })
+        .withMessage('Compare at price must be a nonnegative number')
+        .toFloat()
+        .custom((val, { req }) => {
+            const price = req.body.price !== undefined ? req.body.price : req.body.simplePrice;
+            if (price !== undefined && val <= Number(price)) {
+                throw new Error('السعر قبل الخصم يجب أن يكون أكبر من سعر البيع الحالي');
+            }
+            return true;
+        }),
+    body('simpleCompareAtPrice')
+        .optional({ values: 'falsy', nullable: true })
+        .isFloat({ min: 0 })
+        .withMessage('Compare at price must be a nonnegative number')
+        .toFloat()
+        .custom((val, { req }) => {
+            const price = req.body.price !== undefined ? req.body.price : req.body.simplePrice;
+            if (price !== undefined && val <= Number(price)) {
+                throw new Error('السعر قبل الخصم يجب أن يكون أكبر من سعر البيع الحالي');
+            }
+            return true;
+        }),
     body('variants')
         .optional()
         .isArray()
         .withMessage('Product variants must be an array'),
+    body('variants.*.compareAtPrice')
+        .optional({ values: 'falsy', nullable: true })
+        .isFloat({ min: 0 })
+        .withMessage('Variant compare at price must be a nonnegative number')
+        .toFloat()
+        .custom((val, { req, path }) => {
+            const match = path.match(/variants\[(\d+)\]/);
+            if (match && req.body.variants) {
+                const idx = parseInt(match[1], 10);
+                const variant = req.body.variants[idx];
+                if (variant && variant.price !== undefined && val <= Number(variant.price)) {
+                    throw new Error(`السعر قبل الخصم (${val} ₪) يجب أن يكون أكبر من سعر البيع (${variant.price} ₪)`);
+                }
+            }
+            return true;
+        }),
     validateRequest,
 ];
 
@@ -259,10 +295,50 @@ const validateProductUpdate = [
         .optional()
         .isArray()
         .withMessage('Product options must be an array'),
+    body('compareAtPrice')
+        .optional({ values: 'falsy', nullable: true })
+        .isFloat({ min: 0 })
+        .withMessage('Compare at price must be a nonnegative number')
+        .toFloat()
+        .custom((val, { req }) => {
+            const price = req.body.price !== undefined ? req.body.price : req.body.simplePrice;
+            if (price !== undefined && val <= Number(price)) {
+                throw new Error('السعر قبل الخصم يجب أن يكون أكبر من سعر البيع الحالي');
+            }
+            return true;
+        }),
+    body('simpleCompareAtPrice')
+        .optional({ values: 'falsy', nullable: true })
+        .isFloat({ min: 0 })
+        .withMessage('Compare at price must be a nonnegative number')
+        .toFloat()
+        .custom((val, { req }) => {
+            const price = req.body.price !== undefined ? req.body.price : req.body.simplePrice;
+            if (price !== undefined && val <= Number(price)) {
+                throw new Error('السعر قبل الخصم يجب أن يكون أكبر من سعر البيع الحالي');
+            }
+            return true;
+        }),
     body('variants')
         .optional()
         .isArray({ min: 1 })
         .withMessage('Product must have at least one variant when updating variants'),
+    body('variants.*.compareAtPrice')
+        .optional({ values: 'falsy', nullable: true })
+        .isFloat({ min: 0 })
+        .withMessage('Variant compare at price must be a nonnegative number')
+        .toFloat()
+        .custom((val, { req, path }) => {
+            const match = path.match(/variants\[(\d+)\]/);
+            if (match && req.body.variants) {
+                const idx = parseInt(match[1], 10);
+                const variant = req.body.variants[idx];
+                if (variant && variant.price !== undefined && val <= Number(variant.price)) {
+                    throw new Error(`السعر قبل الخصم (${val} ₪) يجب أن يكون أكبر من سعر البيع (${variant.price} ₪)`);
+                }
+            }
+            return true;
+        }),
     validateRequest,
 ];
 

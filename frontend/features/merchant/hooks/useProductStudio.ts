@@ -89,6 +89,7 @@ export function useProductStudio(productId: string) {
 
   // Bulk Values Tool
   const [bulkPriceInput, setBulkPriceInput] = useState('');
+  const [bulkCompareAtPriceInput, setBulkCompareAtPriceInput] = useState('');
   const [bulkStockInput, setBulkStockInput] = useState('');
 
   // Generated Variants Matrix
@@ -750,6 +751,21 @@ export function useProductStudio(productId: string) {
     setBulkStockInput('');
   };
 
+  const handleApplyBulkCompareAtPrice = () => {
+    const val = Number(bulkCompareAtPriceInput);
+    if (isNaN(val) || val <= 0) {
+      alert('يرجى إدخال سعر صحيح قبل الخصم');
+      return;
+    }
+    const invalidPrice = variants.find((v) => val <= v.price);
+    if (invalidPrice) {
+      alert(`السعر قبل الخصم (${val} ₪) يجب أن يكون أكبر من أسعار البيع الحالية للأصناف (يوجد صنف بسعر ${invalidPrice.price} ₪).`);
+      return;
+    }
+    setVariants((prev) => prev.map((v) => ({ ...v, compareAtPrice: val })));
+    setBulkCompareAtPriceInput('');
+  };
+
   // Quick Delta Stock
   const handleQuickDeltaStock = async (variantId: string | undefined, delta: number) => {
     if (!productId) return;
@@ -773,14 +789,37 @@ export function useProductStudio(productId: string) {
       return;
     }
 
-    if (!isSimple && variants.length === 0) {
-      setErrorMessage('يجب إضافة خيار واحد على الأقل للمنتج متعدد الخيارات');
-      return;
-    }
-
-    if (!isSimple && variants.length > 100) {
-      setErrorMessage('تجاوزت الحد الأقصى للأصناف (100 صنف كحد أقصى)');
-      return;
+    if (isSimple) {
+      if (!simplePrice || Number(simplePrice) <= 0) {
+        setErrorMessage('يرجى تحديد سعر بيع صحيح للمنتج');
+        return;
+      }
+      if (simpleCompareAtPrice && Number(simpleCompareAtPrice) <= Number(simplePrice)) {
+        setErrorMessage(`السعر قبل الخصم (${simpleCompareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع الحالي (${simplePrice} ₪)`);
+        return;
+      }
+    } else {
+      if (variants.length === 0) {
+        setErrorMessage('يجب إضافة خيار واحد على الأقل للمنتج متعدد الخيارات');
+        return;
+      }
+      if (variants.length > 100) {
+        setErrorMessage('تجاوزت الحد الأقصى للأصناف (100 صنف كحد أقصى)');
+        return;
+      }
+      const hasInvalidPrice = variants.some((v) => !v.price || v.price <= 0);
+      if (hasInvalidPrice) {
+        setErrorMessage('يرجى التأكد من تحديد سعر بيع صحيح لكل صنف');
+        return;
+      }
+      const invalidCompare = variants.find(
+        (v) => v.compareAtPrice && Number(v.compareAtPrice) <= Number(v.price)
+      );
+      if (invalidCompare) {
+        const vSummary = Object.values(invalidCompare.attributes || {}).join(' / ') || 'المتغير';
+        setErrorMessage(`السعر قبل الخصم للصنف «${vSummary}» (${invalidCompare.compareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع (${invalidCompare.price} ₪)`);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -793,6 +832,10 @@ export function useProductStudio(productId: string) {
       description,
       categoryId,
       images,
+      simplePrice: Number(simplePrice) || 0,
+      simpleCompareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null,
+      simpleStock: Math.max(0, parseInt(String(simpleStock)) || 0),
+      simpleSku: simpleSku.trim(),
       options: isSimple ? [] : options,
       variants: isSimple
         ? [
@@ -907,6 +950,8 @@ export function useProductStudio(productId: string) {
     setShowCustomInput,
     bulkPriceInput,
     setBulkPriceInput,
+    bulkCompareAtPriceInput,
+    setBulkCompareAtPriceInput,
     bulkStockInput,
     setBulkStockInput,
     variants,
@@ -934,6 +979,7 @@ export function useProductStudio(productId: string) {
     handleRemoveOptionValue,
     handleBindColorImage,
     handleApplyBulkPrice,
+    handleApplyBulkCompareAtPrice,
     handleApplyBulkStock,
     handleQuickDeltaStock,
     handleSaveProduct,

@@ -82,6 +82,9 @@ interface ProductStudioEditorTabProps {
   bulkPriceInput: string;
   setBulkPriceInput: (val: string) => void;
   handleApplyBulkPrice: () => void;
+  bulkCompareAtPriceInput: string;
+  setBulkCompareAtPriceInput: (val: string) => void;
+  handleApplyBulkCompareAtPrice: () => void;
   bulkStockInput: string;
   setBulkStockInput: (val: string) => void;
   handleApplyBulkStock: () => void;
@@ -146,6 +149,9 @@ export function ProductStudioEditorTab({
   bulkPriceInput,
   setBulkPriceInput,
   handleApplyBulkPrice,
+  bulkCompareAtPriceInput,
+  setBulkCompareAtPriceInput,
+  handleApplyBulkCompareAtPrice,
   bulkStockInput,
   setBulkStockInput,
   handleApplyBulkStock,
@@ -641,6 +647,25 @@ export function ProductStudioEditorTab({
                 </span>
               </div>
             </div>
+
+            {/* Live Discount / Validation Feedback */}
+            {Number(simpleCompareAtPrice) > 0 && Number(simplePrice) > 0 && (
+              <div className="col-span-2 sm:col-span-4 -mt-1">
+                {Number(simpleCompareAtPrice) <= Number(simplePrice) ? (
+                  <div className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200/80 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                    <span>⚠️</span>
+                    <span>السعر قبل الخصم ({simpleCompareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع الحالي ({simplePrice} ₪).</span>
+                  </div>
+                ) : (
+                  <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                    <span>🏷️</span>
+                    <span>
+                      وفر الزبون {Number(simpleCompareAtPrice) - Number(simplePrice)} ₪ (خصم {Math.round(((Number(simpleCompareAtPrice) - Number(simplePrice)) / Number(simpleCompareAtPrice)) * 100)}%)
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1295,10 +1320,10 @@ export function ProductStudioEditorTab({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   {/* Bulk Price Capsule */}
                   <div className="flex items-center gap-2 bg-brand-card p-1.5 pr-3 rounded-xl border border-brand-border/80 shadow-2xs">
-                    <span className="text-xs font-black text-brand-muted shrink-0">السعر الموحد:</span>
+                    <span className="text-xs font-black text-brand-muted shrink-0">سعر البيع:</span>
                     <div className="flex items-center gap-1 flex-1 min-w-0">
                       <span className="text-xs font-bold text-brand-primary">₪</span>
                       <input
@@ -1317,7 +1342,32 @@ export function ProductStudioEditorTab({
                       disabled={!bulkPriceInput}
                       className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-primary-hover active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0 shadow-2xs"
                     >
-                      تطبيق على الكل
+                      تطبيق
+                    </button>
+                  </div>
+
+                  {/* Bulk Compare At Price Capsule */}
+                  <div className="flex items-center gap-2 bg-brand-card p-1.5 pr-3 rounded-xl border border-brand-border/80 shadow-2xs">
+                    <span className="text-xs font-black text-brand-muted shrink-0">قبل الخصم:</span>
+                    <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <span className="text-xs font-bold text-brand-muted">₪</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        placeholder="مثال: 60"
+                        value={bulkCompareAtPriceInput}
+                        onChange={(e) => setBulkCompareAtPriceInput(e.target.value)}
+                        className="w-full h-8 text-xs font-bold text-brand-dark bg-transparent focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyBulkCompareAtPrice}
+                      disabled={!bulkCompareAtPriceInput}
+                      className="px-3 py-1.5 bg-brand-surface hover:bg-brand-border/40 text-brand-dark text-xs font-bold rounded-lg active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0 border border-brand-border/80"
+                    >
+                      تطبيق
                     </button>
                   </div>
 
@@ -1341,7 +1391,7 @@ export function ProductStudioEditorTab({
                       disabled={!bulkStockInput}
                       className="px-3.5 py-1.5 bg-brand-trust text-white text-xs font-bold rounded-lg hover:bg-brand-trust/90 active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0 shadow-2xs"
                     >
-                      تطبيق على الكل
+                      تطبيق
                     </button>
                   </div>
                 </div>
@@ -1357,9 +1407,10 @@ export function ProductStudioEditorTab({
               <div className="space-y-2">
                 {/* Table Header (Desktop Only) */}
                 <div className="hidden md:grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-black text-brand-muted border-b border-brand-border/40">
-                  <div className="col-span-4">الصنف والتوليفة</div>
-                  <div className="col-span-3">رمز SKU</div>
+                  <div className="col-span-3">الصنف والتوليفة</div>
+                  <div className="col-span-2">رمز SKU</div>
                   <div className="col-span-2">سعر البيع</div>
+                  <div className="col-span-2">قبل الخصم</div>
                   <div className="col-span-2">المخزون بالمستودع</div>
                   <div className="col-span-1 text-center">الإجراء</div>
                 </div>
@@ -1382,8 +1433,8 @@ export function ProductStudioEditorTab({
                       >
                         {/* Desktop Grid Row */}
                         <div className="hidden md:grid grid-cols-12 items-center gap-3">
-                          {/* Col 1-4: Thumbnail & Attributes */}
-                          <div className="col-span-4 flex items-center gap-2.5">
+                          {/* Col 1-3: Thumbnail & Attributes */}
+                          <div className="col-span-3 flex items-center gap-2.5">
                             <img
                               src={variantPhoto}
                               alt={attrSummary}
@@ -1404,14 +1455,14 @@ export function ProductStudioEditorTab({
                             </div>
                           </div>
 
-                          {/* Col 5-7: SKU */}
-                          <div className="col-span-3">
+                          {/* Col 4-5: SKU */}
+                          <div className="col-span-2">
                             <span className="font-mono text-[10px] text-brand-muted bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border/60">
                               {v.sku}
                             </span>
                           </div>
 
-                          {/* Col 8-9: Price */}
+                          {/* Col 6-7: Price */}
                           <div className="col-span-2">
                             <div className="relative inline-flex items-center">
                               <input
@@ -1430,6 +1481,44 @@ export function ProductStudioEditorTab({
                                 ₪
                               </span>
                             </div>
+                          </div>
+
+                          {/* Col 8-9: Compare At Price */}
+                          <div className="col-span-2">
+                            <div className="relative inline-flex items-center">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                value={v.compareAtPrice ?? ''}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                  const updated = [...variants];
+                                  updated[vIdx] = { ...v, compareAtPrice: val };
+                                  setVariants(updated);
+                                }}
+                                placeholder="اختياري"
+                                className={`w-20 h-8 pr-2 pl-4 text-xs font-bold rounded-lg border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary ${
+                                  v.compareAtPrice != null && Number(v.compareAtPrice) > 0 && Number(v.compareAtPrice) <= Number(v.price)
+                                    ? 'border-red-400 bg-red-50/30'
+                                    : 'border-brand-border/70'
+                                }`}
+                              />
+                              <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-brand-muted pointer-events-none">
+                                ₪
+                              </span>
+                            </div>
+                            {v.compareAtPrice != null && Number(v.compareAtPrice) > 0 && (
+                              <div className="mt-1">
+                                {Number(v.compareAtPrice) <= Number(v.price) ? (
+                                  <span className="text-[9px] font-bold text-red-600 block leading-tight">يجب أن يكون أكبر</span>
+                                ) : (
+                                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200/80">
+                                    خصم {Math.round(((Number(v.compareAtPrice) - Number(v.price)) / Number(v.compareAtPrice)) * 100)}%
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {/* Col 10-11: Stepper */}
@@ -1563,28 +1652,57 @@ export function ProductStudioEditorTab({
                           </div>
 
                           <div className="flex items-center justify-between gap-2 pt-1 border-t border-brand-border/30">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-brand-muted font-bold">السعر:</span>
-                              <div className="relative inline-flex items-center">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.5"
-                                  value={v.price}
-                                  onChange={(e) => {
-                                    const updated = [...variants];
-                                    updated[vIdx] = { ...v, price: Number(e.target.value) || 0 };
-                                    setVariants(updated);
-                                  }}
-                                  className="w-20 h-8 pr-2 pl-4 text-xs font-black rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
-                                />
-                                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-brand-muted pointer-events-none">
-                                  ₪
-                                </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-brand-muted font-bold">السعر:</span>
+                                <div className="relative inline-flex items-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={v.price}
+                                    onChange={(e) => {
+                                      const updated = [...variants];
+                                      updated[vIdx] = { ...v, price: Number(e.target.value) || 0 };
+                                      setVariants(updated);
+                                    }}
+                                    className="w-16 h-8 pr-1.5 pl-3.5 text-xs font-black rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                                  />
+                                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-brand-muted pointer-events-none">
+                                    ₪
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-brand-muted font-bold">قبل الخصم:</span>
+                                <div className="relative inline-flex items-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={v.compareAtPrice ?? ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                      const updated = [...variants];
+                                      updated[vIdx] = { ...v, compareAtPrice: val };
+                                      setVariants(updated);
+                                    }}
+                                    placeholder="اختياري"
+                                    className={`w-16 h-8 pr-1.5 pl-3.5 text-xs font-bold rounded-lg border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary ${
+                                      v.compareAtPrice != null && Number(v.compareAtPrice) > 0 && Number(v.compareAtPrice) <= Number(v.price)
+                                        ? 'border-red-400 bg-red-50/30'
+                                        : 'border-brand-border/70'
+                                    }`}
+                                  />
+                                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-brand-muted pointer-events-none">
+                                    ₪
+                                  </span>
+                                </div>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <span className="text-[10px] text-brand-muted font-bold">المخزون:</span>
                               <div className="inline-flex items-center h-8 bg-brand-card rounded-lg border border-brand-border/70 px-1 shadow-2xs">
                                 <button
@@ -1626,6 +1744,20 @@ export function ProductStudioEditorTab({
                               </div>
                             </div>
                           </div>
+
+                          {v.compareAtPrice != null && Number(v.compareAtPrice) > 0 && (
+                            <div className="pt-0.5">
+                              {Number(v.compareAtPrice) <= Number(v.price) ? (
+                                <div className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                                  ⚠️ السعر قبل الخصم ({v.compareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع ({v.price} ₪).
+                                </div>
+                              ) : (
+                                <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                                  🏷️ وفر {Number(v.compareAtPrice) - Number(v.price)} ₪ (خصم {Math.round(((Number(v.compareAtPrice) - Number(v.price)) / Number(v.compareAtPrice)) * 100)}%)
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

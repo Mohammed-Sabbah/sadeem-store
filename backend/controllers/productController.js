@@ -56,6 +56,7 @@ async function createProduct(req, res, next) {
                 price: resolvedPrice,
                 stock: resolvedStock,
                 sku: resolvedSku,
+                compareAtPrice: req.body.compareAtPrice !== undefined ? req.body.compareAtPrice : req.body.simpleCompareAtPrice,
                 attributes: {},
                 image: image || (galleryImages[0] || ''),
             }];
@@ -147,6 +148,9 @@ async function updateProduct(req, res, next) {
 
         if (req.body.price !== undefined) productUpdates.price = req.body.price;
         else if (req.body.simplePrice !== undefined) productUpdates.price = req.body.simplePrice;
+
+        if (req.body.compareAtPrice !== undefined) productUpdates.compareAtPrice = req.body.compareAtPrice;
+        else if (req.body.simpleCompareAtPrice !== undefined) productUpdates.compareAtPrice = req.body.simpleCompareAtPrice;
 
         if (images !== undefined) {
             productUpdates.images = images;

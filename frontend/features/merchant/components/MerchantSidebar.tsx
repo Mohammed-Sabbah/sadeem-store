@@ -133,27 +133,19 @@ export default function MerchantSidebar({
               </div>
             </div>
 
-            {/* Quick Readiness Toggle Button */}
-            <button
-              type="button"
-              onClick={handleToggleStoreStatus}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] font-bold border transition-all duration-150 active:scale-97 cursor-pointer ${
-                isStoreActive
-                  ? 'bg-brand-trust-soft text-brand-trust border-brand-trust/30 hover:bg-brand-trust-soft/80'
-                  : 'bg-brand-card text-brand-muted border-brand-border hover:bg-brand-surface'
-              }`}
-              title="تغيير جاهزية المتجر لاستقبال طلبات الزبائن وتوجيه المندوب"
+            {/* Reassuring 24/7 Store Readiness Badge */}
+            <div
+              className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-[11px] font-bold bg-brand-trust-soft text-brand-trust border border-brand-trust/20 select-none shadow-2xs"
+              title="متجرك متاح للطلب على مدار الساعة؛ يتم فرز وتوصيل الطلبيات في مواعيد العمل التشغيلية لسَدِيم"
             >
               <div className="flex items-center gap-1.5">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    isStoreActive ? 'bg-brand-trust shadow-xs' : 'bg-brand-muted'
-                  }`}
-                />
-                <span>{isStoreActive ? 'يستقبل الطلبيات' : 'مغلق مؤقتاً'}</span>
+                <span className="w-2 h-2 rounded-full bg-brand-trust shadow-xs" />
+                <span>متجر معتمد · يستقبل الطلبات</span>
               </div>
-              <span className="text-[10px] text-brand-muted">تبديل ▾</span>
-            </button>
+              <span className="text-[10px] text-brand-trust/80 font-mono font-bold bg-white/70 px-1.5 py-0.2 rounded border border-brand-trust/20">
+                24/7
+              </span>
+            </div>
           </div>
         )}
 

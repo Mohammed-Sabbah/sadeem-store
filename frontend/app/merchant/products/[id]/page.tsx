@@ -130,6 +130,9 @@ export default function MerchantProductStudioPage() {
           bulkPriceInput={studio.bulkPriceInput}
           setBulkPriceInput={studio.setBulkPriceInput}
           handleApplyBulkPrice={studio.handleApplyBulkPrice}
+          bulkCompareAtPriceInput={studio.bulkCompareAtPriceInput}
+          setBulkCompareAtPriceInput={studio.setBulkCompareAtPriceInput}
+          handleApplyBulkCompareAtPrice={studio.handleApplyBulkCompareAtPrice}
           bulkStockInput={studio.bulkStockInput}
           setBulkStockInput={studio.setBulkStockInput}
           handleApplyBulkStock={studio.handleApplyBulkStock}

@@ -102,7 +102,7 @@ export interface ProductFormData {
   images: string[];
   isSimple: boolean;
   simplePrice: number;
-  simpleCompareAtPrice?: number;
+  simpleCompareAtPrice?: number | null;
   simpleStock: number;
   simpleSku: string;
   options: ProductOption[];

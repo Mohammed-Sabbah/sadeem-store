@@ -21,29 +21,8 @@ export default function StoreDetailPage() {
   const [storeDrawerOpen, setStoreDrawerOpen] = useState(false);
   const [copiedToast, setCopiedToast] = useState(false);
 
-  // Sync any local overrides (e.g. from merchant product studio)
-  const [localAnonymousMap, setLocalAnonymousMap] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('sadeem_merchant_products');
-      if (raw) {
-        const list = JSON.parse(raw);
-        const map: Record<string, boolean> = {};
-        list.forEach((item: any) => {
-          if (item._id) {
-            map[item._id] = !!item.isAnonymousVendor;
-          }
-        });
-        setLocalAnonymousMap(map);
-      }
-    } catch {}
-  }, []);
-
-  const isAnonymous = (p: any) => {
-    if (localAnonymousMap[p.id] !== undefined) return localAnonymousMap[p.id];
-    return !!p.isAnonymousVendor;
-  };
+  // Helper to determine if a product is an anonymous direct Sadeem supply
+  const isAnonymous = (p: any) => Boolean(p.isAnonymousVendor);
 
   // Fetch real store from backend
   useEffect(() => {
@@ -77,8 +56,9 @@ export default function StoreDetailPage() {
     catalogService.getProducts({ storeId: id })
       .then((items) => {
         if (!active) return;
-        if (items.length > 0) {
-          setStoreProducts(items);
+        const visibleItems = items.filter((item) => !item.isAnonymousVendor);
+        if (visibleItems.length > 0) {
+          setStoreProducts(visibleItems);
         } else {
           // Fallback to local products matching vendor
           const currentStore = store || stores.find((s) => s.id === id) || stores[0];

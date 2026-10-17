@@ -22,7 +22,11 @@ function createProductFilter(query, admin = false, storeId = null) {
         filter.approveStatus = APPROVE_STATUS.APPROVED;
         filter.isActive = true;
         filter.isSuspended = false;
-        if (query.storeId) filter.storeId = new mongoose.Types.ObjectId(query.storeId);
+        if (query.storeId) {
+            filter.storeId = new mongoose.Types.ObjectId(query.storeId);
+            // White-label / anonymous products are hidden from the merchant's public store page
+            filter.isAnonymousVendor = { $ne: true };
+        }
     }
 
     if (query.categoryId) {

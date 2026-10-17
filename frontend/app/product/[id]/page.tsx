@@ -172,20 +172,6 @@ export default function ProductDetailPage() {
     };
   }, [id]);
 
-  // Sync anonymous vendor settings from localStorage if merchant modified locally
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('sadeem_merchant_products');
-      if (raw && product) {
-        const list = JSON.parse(raw);
-        const match = list.find((item: any) => item._id === id || item._id === product.id);
-        if (match && match.isAnonymousVendor !== undefined) {
-          setIsAnonymousVendor(!!match.isAnonymousVendor);
-        }
-      }
-    } catch {}
-  }, [id, product]);
-
   // Fetch related products
   useEffect(() => {
     if (!product) return;

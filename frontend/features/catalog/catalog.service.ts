@@ -193,9 +193,9 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
     gallery,
     vendor: {
       id: store?._id || (typeof product.storeId === 'string' ? product.storeId : ''),
-      name: store?.name || 'متجر معتمد في سَدِيم',
-      city: store?.address?.city || 'المحافظة الوسطى',
-      verified: Boolean(store),
+      name: product.isAnonymousVendor ? 'توريد مباشر وموثق عبر سَدِيم' : (store?.name || 'متجر معتمد في سَدِيم'),
+      city: product.isAnonymousVendor ? 'المحافظة الوسطى' : (store?.address?.city || 'المحافظة الوسطى'),
+      verified: true,
     },
     category: category?.title || '',
     categoryId: category?._id || (typeof product.categoryId === 'string' ? product.categoryId : ''),

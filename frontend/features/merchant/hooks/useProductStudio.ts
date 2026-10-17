@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { merchantKeys } from '../queries/merchant.keys';
 import { merchantService } from '@/features/merchant/services/merchant.service';
 import { taxonomyService, type CategoryItem } from '@/features/store/services/taxonomy.service';
 import type {
@@ -25,6 +27,7 @@ export interface VariantItemState {
 
 export function useProductStudio(productId: string) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Active Hub Tab
   const [activeTab, setActiveTab] = useState<StudioTab>('overview');
@@ -861,6 +864,9 @@ export function useProductStudio(productId: string) {
     if (result.success && result.data) {
       setProduct(result.data);
       setSaveSuccessMessage('تم حفظ كافة التعديلات بنجاح وتحديث كتالوج المتجر.');
+      // Invalidate merchant queries so product list & metrics are updated in background
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.productDetail(productId) });
       setTimeout(() => setSaveSuccessMessage(null), 4000);
     } else {
       setErrorMessage(result.message || 'فشل حفظ التعديلات');
@@ -872,11 +878,21 @@ export function useProductStudio(productId: string) {
       return;
     }
     setIsSaving(true);
+
+    // 0ms Optimistic UI: Immediately remove product from React Query cache
+    queryClient.setQueryData<ProductItem[]>(merchantKeys.products(), (old) =>
+      old ? old.filter((p) => p._id !== productId) : []
+    );
+
     const res = await merchantService.deleteProduct(productId);
     setIsSaving(false);
     if (res.success) {
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
+      queryClient.removeQueries({ queryKey: merchantKeys.productDetail(productId) });
       router.push('/merchant/dashboard');
     } else {
+      // Rollback cache if deletion failed
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
       setErrorMessage('تعذر حذف المنتج حالياً');
     }
   };

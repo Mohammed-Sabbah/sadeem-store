@@ -83,15 +83,24 @@ export function ProductCard({
         <div className="p-3 flex flex-col flex-1 gap-1.5">
           {/* Vendor Row */}
           <div className="flex items-center gap-1.5 text-[11px] text-brand-muted font-medium">
-            <span>{product.vendor.name}</span>
-            <span>•</span>
-            <span>{product.vendor.city}</span>
-            {product.vendor.verified && (
-              <span className="text-brand-trust inline-flex items-center" title="متجر معتمد وموثق">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
+            {product.isAnonymousVendor ? (
+              <span className="text-brand-trust font-extrabold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-trust inline-block" />
+                <span>توريد مباشر وموثق عبر سَدِيم</span>
               </span>
+            ) : (
+              <>
+                <span>{product.vendor.name}</span>
+                <span>•</span>
+                <span>{product.vendor.city}</span>
+                {product.vendor.verified && (
+                  <span className="text-brand-trust inline-flex items-center" title="متجر معتمد وموثق">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                  </span>
+                )}
+              </>
             )}
           </div>
 

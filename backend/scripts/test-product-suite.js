@@ -439,10 +439,67 @@ async function runProductSuite() {
     }
 
     // ----------------------------------------------------------------
+    // TEST 14: تحديث منتج بسيط بدون _id وتعديل الاسم والوصف والتوريد المجهول
+    // ----------------------------------------------------------------
+    const simpleProd = await createProductDocuments(
+        {
+            storeId: testStore1._id,
+            categoryId: subCategory._id,
+            title: 'منتج تجربة بسيط أصلي',
+            description: 'وصف قديم',
+            isAnonymousVendor: false,
+        },
+        [
+            {
+                sku: `SKU-SIMP-${Date.now()}`,
+                attributes: {},
+                price: 40,
+                stock: 10,
+            },
+        ]
+    );
+
+    // تحديث المنتج بـ payload يشبه تماماً ما يرسله المستخدم بدون _id
+    const updatedSimple = await updateProductDocuments({
+        id: simpleProd.product._id,
+        storeId: testStore1._id,
+        productUpdates: {
+            title: 'اختبار 1 معدل',
+            description: 'اختبار 1 اختبار 1 اختبار 1 اختبار 1',
+            isAnonymousVendor: true,
+        },
+        variants: [
+            {
+                sku: `SKU-SIMP-${Date.now()}`,
+                attributes: {},
+                price: 45,
+                compareAtPrice: null,
+                stock: 15,
+                isActive: true,
+                images: [],
+            },
+        ],
+    });
+
+    if (
+        updatedSimple &&
+        updatedSimple.product.title === 'اختبار 1 معدل' &&
+        updatedSimple.product.description === 'اختبار 1 اختبار 1 اختبار 1 اختبار 1' &&
+        updatedSimple.product.isAnonymousVendor === true &&
+        updatedSimple.product.minPrice === 45 &&
+        updatedSimple.variants.length === 1 &&
+        updatedSimple.variants[0].stock === 15
+    ) {
+        console.log('✔ [PASS] تحديث المنتج البسيط وتعديل الاسم والوصف وحالة التوريد المجهول بنجاح تام وبدون أي تعارض فهارس (E11000)');
+    } else {
+        throw new Error('فشل تحديث بيانات المنتج البسيط والاسم والوصف!');
+    }
+
+    // ----------------------------------------------------------------
     // CLEANUP
     // ----------------------------------------------------------------
-    await Variant.deleteMany({ productId: { $in: [createdProduct._id, store2Product._id] } });
-    await Product.deleteMany({ _id: { $in: [createdProduct._id, store2Product._id] } });
+    await Variant.deleteMany({ productId: { $in: [createdProduct._id, store2Product._id, simpleProd.product._id] } });
+    await Product.deleteMany({ _id: { $in: [createdProduct._id, store2Product._id, simpleProd.product._id] } });
     await Store.deleteMany({ _id: { $in: [testStore1._id, testStore2._id] } });
     await User.deleteMany({ _id: { $in: [testUser1._id, testUser2._id] } });
     await Category.deleteMany({ _id: { $in: [topCategory._id, subCategory._id] } });

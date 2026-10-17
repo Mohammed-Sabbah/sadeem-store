@@ -199,46 +199,83 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
         });
 
         const originalVariants = await Variant.find({ productId: product._id, isDeleted: false })
-            .select('_id')
-            .session(session || null)
-            .lean();
+            .session(session || null);
         const originalVariantIds = originalVariants.map((v) => v._id);
 
-        const requestedExistingIds = variants
-            .filter((v) => v._id || v.id)
-            .map((v) => String(v._id || v.id));
+        const getAttrKey = (attrs) => {
+            if (!attrs) return 'default';
+            let entries = [];
+            if (attrs instanceof Map) entries = [...attrs.entries()];
+            else if (typeof attrs === 'object') entries = Object.entries(attrs);
+            const sorted = entries
+                .filter(([k, v]) => k && v !== undefined && v !== null && String(v).trim())
+                .map(([k, v]) => [String(k).trim().toLowerCase(), String(v).trim()])
+                .sort(([a], [b]) => a.localeCompare(b));
+            return sorted.length > 0 ? sorted.map(([k, v]) => `${k}:${v}`).join('|') : 'default';
+        };
 
-        const existingFound = await Variant.find({
-            _id: { $in: requestedExistingIds },
-            productId: product._id,
-        }).session(session || null);
+        const availableOriginals = [...originalVariants];
+        const variantsToUpdate = [];
+        const variantsToCreate = [];
 
-        const existingIdsSet = new Set(existingFound.map((v) => String(v._id)));
-        const variantsToUpdate = variants.filter((v) => (v._id || v.id) && existingIdsSet.has(String(v._id || v.id)));
-        const variantsToCreate = variants.filter((v) => !((v._id || v.id) && existingIdsSet.has(String(v._id || v.id))));
+        for (const raw of variants) {
+            let matchedIdx = -1;
+            const rawId = raw._id || raw.id;
+            const rawSku = raw.sku ? String(raw.sku).trim().toUpperCase() : null;
+            const rawAttrKey = getAttrKey(raw.attributes);
+
+            // Tier 1: تطابق دقيق عبر _id
+            if (rawId) {
+                matchedIdx = availableOriginals.findIndex((ov) => String(ov._id) === String(rawId));
+            }
+
+            // Tier 2: تطابق عبر attrKey (مثل default للمنتج البسيط، أو المقاس واللون نفسه)
+            if (matchedIdx === -1 && rawAttrKey) {
+                matchedIdx = availableOriginals.findIndex((ov) => ov.attrKey === rawAttrKey);
+            }
+
+            // Tier 3: تطابق عبر رمز الصنف SKU داخل نفس المنتج
+            if (matchedIdx === -1 && rawSku) {
+                matchedIdx = availableOriginals.findIndex((ov) => ov.sku && ov.sku.toUpperCase() === rawSku);
+            }
+
+            // Tier 4: تطابق حتمي للمنتج البسيط ذو الصنف الواحد (1-to-1)
+            if (matchedIdx === -1 && availableOriginals.length === 1 && variants.length === 1) {
+                matchedIdx = 0;
+            }
+
+            if (matchedIdx !== -1) {
+                const matchedVariant = availableOriginals[matchedIdx];
+                availableOriginals.splice(matchedIdx, 1);
+                variantsToUpdate.push({
+                    originalId: matchedVariant._id,
+                    data: raw,
+                });
+            } else {
+                variantsToCreate.push(raw);
+            }
+        }
+
+        const unreferencedOriginalIds = availableOriginals.map((ov) => ov._id);
 
         try {
-            const newVariantsPayload = variantsToCreate
-                .map((raw, idx) => {
-                    const prepared = prepareVariantPayload(raw, productUpdates?.title || product.title, idx + 1, product.storeId);
-                    return {
-                        ...prepared,
+            // أ) الحذف الناعم للأصناف المستثناة أولاً لتفريغ الفهارس الفريدة ومنع أي تعارض
+            if (unreferencedOriginalIds.length > 0) {
+                await Variant.updateMany(
+                    {
                         productId: product._id,
-                        storeId: product.storeId,
-                        isActive: product.isActive,
-                        isSuspended: product.isSuspended,
-                    };
-                });
+                        _id: { $in: unreferencedOriginalIds },
+                        isDeleted: false,
+                    },
+                    { $set: { isDeleted: true } },
+                    options
+                );
+            }
 
-            const createdVariants = newVariantsPayload.length > 0
-                ? await Variant.create(newVariantsPayload, options)
-                : [];
-
+            // ب) تحديث الأصناف القائمة المتطابقة
             const updatedVariantIds = [];
-
-            for (const v of variantsToUpdate) {
-                const variantId = v._id || v.id;
-                const updates = { ...v };
+            for (const { originalId, data } of variantsToUpdate) {
+                const updates = { ...data };
                 delete updates._id;
                 delete updates.id;
                 delete updates.productId;
@@ -274,7 +311,7 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
                 updates.storeId = product.storeId;
 
                 const updated = await Variant.findOneAndUpdate(
-                    { _id: variantId, productId: product._id },
+                    { _id: originalId, productId: product._id },
                     { $set: { ...updates, isDeleted: false } },
                     { new: true, runValidators: true, ...options }
                 );
@@ -284,22 +321,39 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
                 }
             }
 
-            const retainedIds = [
-                ...updatedVariantIds,
-                ...createdVariants.map((v) => v._id),
-            ];
-
-            // الحذف الناعم (Soft Delete) للأصناف المستثناة
-            await Variant.updateMany(
-                {
-                    productId: product._id,
-                    _id: { $nin: retainedIds },
-                    isDeleted: false,
-                },
-                { $set: { isDeleted: true } },
-                options
-            );
+            // ج) إنشاء الأصناف الإضافية الجديدة تماماً
+            if (variantsToCreate.length > 0) {
+                const newVariantsPayload = variantsToCreate.map((raw, idx) => {
+                    const prepared = prepareVariantPayload(
+                        raw,
+                        productUpdates?.title || product.title,
+                        idx + 1,
+                        product.storeId
+                    );
+                    return {
+                        ...prepared,
+                        productId: product._id,
+                        storeId: product.storeId,
+                        isActive: product.isActive,
+                        isSuspended: product.isSuspended,
+                    };
+                });
+                await Variant.create(newVariantsPayload, options);
+            }
         } catch (err) {
+            if (err.code === 11000 || (err.name === 'MongoServerError' && err.message && err.message.includes('E11000'))) {
+                const keyPattern = err.keyPattern || {};
+                if (keyPattern.sku || (err.message && err.message.includes('sku_1'))) {
+                    const customErr = new Error('رمز الصنف (SKU) مستخدم مسبقاً في متجرك. يرجى اختيار رمز آخر.');
+                    customErr.statusCode = 400;
+                    throw customErr;
+                }
+                if (keyPattern.attrKey || (err.message && err.message.includes('attrKey_1'))) {
+                    const customErr = new Error('هذه التركيبة من المقاسات أو الخصائص مسجلة مسبقاً لهذا المنتج.');
+                    customErr.statusCode = 400;
+                    throw customErr;
+                }
+            }
             if (!session) {
                 try {
                     await Variant.deleteMany({
@@ -347,6 +401,19 @@ async function updateProductDocuments({ id, storeId, productUpdates, variants, s
     }
 
     if (productUpdates && Object.keys(productUpdates).length > 0) {
+        if (productUpdates.slug) {
+            const existingSlug = await Product.findOne({
+                storeId: product.storeId,
+                slug: productUpdates.slug,
+                _id: { $ne: product._id },
+                isDeleted: false,
+            }).session(session || null);
+
+            if (existingSlug) {
+                productUpdates.slug = `${productUpdates.slug}-${Math.floor(100 + Math.random() * 900)}`;
+            }
+        }
+
         Object.assign(product, productUpdates);
         await product.save(options);
     }

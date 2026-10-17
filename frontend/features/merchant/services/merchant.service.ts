@@ -326,8 +326,9 @@ export const merchantService = {
           isActive: v.isActive !== undefined ? v.isActive : true,
           images: v.images || [],
         };
-        if (v._id && /^[0-9a-fA-F]{24}$/.test(v._id)) {
-          item._id = v._id;
+        const rawId = v._id || (v as any).id;
+        if (rawId && /^[0-9a-fA-F]{24}$/.test(String(rawId).trim())) {
+          item._id = String(rawId).trim();
         }
         return item;
       });

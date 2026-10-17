@@ -236,7 +236,13 @@ const validateProduct = [
 ];
 
 const validateProductUpdate = [
-    body().custom((value) => validateProductFields(value, productFields, false)),
+    body().custom((value) => {
+        validateProductFields(value, productFields, false);
+        if (!value.title && value.name) {
+            value.title = value.name;
+        }
+        return true;
+    }),
     body('title')
         .optional()
         .isString()
@@ -260,7 +266,7 @@ const validateProductUpdate = [
         .isMongoId()
         .withMessage('Invalid category ID'),
     body('description')
-        .optional()
+        .optional({ nullable: true })
         .isString()
         .withMessage('Product description must be a string')
         .bail()
@@ -268,7 +274,7 @@ const validateProductUpdate = [
         .isLength({ max: 3000 })
         .withMessage('Product description must be at most 3000 characters'),
     body('image')
-        .optional()
+        .optional({ nullable: true })
         .isString()
         .withMessage('Product image must be a string')
         .bail()

@@ -82,6 +82,7 @@ export function useProductStudio(productId: string) {
   const [simpleCompareAtPrice, setSimpleCompareAtPrice] = useState<number | string>('');
   const [simpleStock, setSimpleStock] = useState<number | string>(10);
   const [simpleSku, setSimpleSku] = useState('');
+  const [simpleVariantId, setSimpleVariantId] = useState<string | null>(null);
 
   // Configurable Options & Visual Color-Image Map
   const [options, setOptions] = useState<ProductOption[]>([]);
@@ -190,6 +191,7 @@ export function useProductStudio(productId: string) {
             setSimpleCompareAtPrice(mappedVariants[0].compareAtPrice ?? '');
             setSimpleStock(mappedVariants[0].stock);
             setSimpleSku(mappedVariants[0].sku);
+            setSimpleVariantId(mappedVariants[0]._id || null);
           }
         } else {
           setErrorMessage(prodRes.message || 'تعذر تحميل بيانات المنتج');
@@ -638,7 +640,6 @@ export function useProductStudio(productId: string) {
   // Automatic Real-Time Live Sync of Variants
   useEffect(() => {
     if (isSimple) {
-      setVariants([]);
       return;
     }
     const validOptions = options.filter((o) => o.values && o.values.length > 0);
@@ -843,8 +844,8 @@ export function useProductStudio(productId: string) {
       variants: isSimple
         ? [
             {
-              _id: variants[0]?._id,
-              sku: simpleSku.trim() || `SDM-ITM-${Math.floor(1000 + Math.random() * 9000)}`,
+              _id: simpleVariantId || variants[0]?._id || (product?.variants && product.variants[0]?._id) || undefined,
+              sku: simpleSku.trim() || (product?.variants && product.variants[0]?.sku) || `SDM-ITM-${Math.floor(1000 + Math.random() * 9000)}`,
               attributes: {},
               attrKey: 'default',
               price: Number(simplePrice) || 0,
@@ -863,6 +864,12 @@ export function useProductStudio(productId: string) {
     setIsSaving(false);
     if (result.success && result.data) {
       setProduct(result.data);
+      setName(result.data.name || result.data.title || '');
+      setDescription(result.data.description || '');
+      if (result.data.variants && result.data.variants.length > 0) {
+        setSimpleVariantId(result.data.variants[0]._id || null);
+        setSimpleSku(result.data.variants[0].sku || simpleSku);
+      }
       setSaveSuccessMessage('تم حفظ كافة التعديلات بنجاح وتحديث كتالوج المتجر.');
       // Invalidate merchant queries so product list & metrics are updated in background
       void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });

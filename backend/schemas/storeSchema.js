@@ -1,5 +1,4 @@
 const { body, param } = require('express-validator');
-const mongoose = require('mongoose');
 const validateRequest = require('./validateRequest');
 const Region = require('../models/Region');
 const { GAZA_REGIONS } = require('../constants/gaza-regions');
@@ -39,11 +38,6 @@ const validateSellerStore = [
         .withMessage('Store name is required')
         .isLength({ min: 2, max: 150 })
         .withMessage('Store name must be between 2 and 150 characters'),
-
-    body('store.categoryId')
-        .trim()
-        .notEmpty()
-        .withMessage('Store category is required'),
 
     body('store.logo')
         .optional()
@@ -133,12 +127,14 @@ const validateSellerStore = [
 
     body('store').customSanitizer((store, { req }) => {
         const storeInput = store || {};
+        const storeFields = { ...storeInput };
+        delete storeFields.categoryId;
+        delete storeFields.categoryIdIsObjectId;
         const userInput = req.body.user || {};
         const address = storeInput.address || {};
 
         return {
-            ...storeInput,
-            categoryIdIsObjectId: mongoose.Types.ObjectId.isValid(storeInput.categoryId),
+            ...storeFields,
             address: {
                 ...address,
                 isDefault: address.isDefault ?? false,

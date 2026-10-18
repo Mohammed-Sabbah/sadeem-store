@@ -6,6 +6,7 @@ export interface CategoryItem {
   slug: string;
   icon?: string;
   order?: number;
+  variantAttributes?: { name: string; values: string[] }[];
 }
 
 export interface CityItem {

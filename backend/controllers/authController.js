@@ -3,17 +3,16 @@ const bcrypt = require('bcryptjs');
 const mongoose = require('mongoose');
 const User = require('../models/User');
 const Store = require('../models/Store');
-const Category = require('../models/Category');
 const Wallet = require('../models/Wallet');
 const Otp = require('../models/otp.model');
 const RefreshToken = require('../models/refreshToken.model');
-const { ROLE, STATUS, STORE_APPROVE_STATUS } = require('../constants/enums');
+const { ROLE, STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { setAuthCookies, clearAuthCookies, getCookieOptions, cookieOptions } = require('../config/cookies');
 const { issueAccessToken, issueRefreshToken, verifyToken, hashRefreshToken, createSession } = require('../utils/token');
 const { generateOtp, sendEmail } = require('../utils/email');
 const { success, error } = require('../utils/responses');
 const { sanitizeUser } = require("../utils/user")
-
+const { withMongoTransaction } = require("../config/db")
 
 async function checkRegistrationConflicts(email, phoneNumber) {
     const existingUser = await User.findOne({ email });
@@ -34,26 +33,6 @@ async function createUserWithWallet(userData, session) {
     const [user] = await User.create([userData], options);
     await Wallet.create([{ userId: user._id, balance: 0, currency: 'ILS' }], options);
     return user;
-}
-
-async function withMongoTransaction(callback) {
-    const session = await mongoose.startSession();
-
-    try {
-        return await session.withTransaction(() => callback(session));
-    } catch (txError) {
-        const isNoReplicaSet = txError && txError.message && (
-            txError.message.includes('replica set') ||
-            txError.message.includes('Transaction numbers are only allowed')
-        );
-
-        if (isNoReplicaSet) {
-            return await callback(null);
-        }
-        throw txError;
-    } finally {
-        await session.endSession();
-    }
 }
 
 async function register(req, res, next) {
@@ -97,26 +76,6 @@ async function registerSeller(req, res, next) {
             return error(res, 409, conflict);
         }
 
-        // Resolve Category by ObjectId or slug/title
-        let category = null;
-        if (storeInput.categoryId) {
-            if (storeInput.categoryIdIsObjectId) {
-                category = await Category.findById(storeInput.categoryId);
-            }
-            if (!category) {
-                category = await Category.findOne({
-                    $or: [
-                        { slug: storeInput.categoryId },
-                        { title: storeInput.categoryId },
-                    ],
-                }).collation({ locale: 'en', strength: 2 });
-            }
-        }
-
-        if (!category) {
-            return error(res, 400, 'Invalid store category');
-        }
-
         const hashedPassword = await bcrypt.hash(userInput.password, 12);
         const { user: createdUser, store: createdStore } = await withMongoTransaction(async (session) => {
             const options = session ? { session } : {};
@@ -137,14 +96,13 @@ async function registerSeller(req, res, next) {
                 [
                     {
                         ownerId: user._id,
-                        categoryId: category._id,
                         name: storeInput.name,
                         logo: storeInput.logo,
                         description: storeInput.description,
                         address: storeInput.address,
                         phoneNumber: storeInput.phoneNumber,
-                        status: STATUS.IN_ACTIVE,
-                        approveStatus: STORE_APPROVE_STATUS.PENDING,
+                        status: STATUS.ACTIVE,
+                        approveStatus: APPROVE_STATUS.PENDING,
                     },
                 ],
                 options
@@ -185,15 +143,12 @@ async function login(req, res, next) {
             if (!store)
                 return error(res, 401, 'Store not found');
 
-            if (store.approveStatus === STORE_APPROVE_STATUS.PENDING) {
+            if (store.approveStatus === APPROVE_STATUS.PENDING) {
                 return error(res, 403, 'Your merchant store is pending admin approval');
             }
 
-            if (store.approveStatus === STORE_APPROVE_STATUS.REJECTED) {
+            if (store.approveStatus === APPROVE_STATUS.REJECTED) {
                 return error(res, 403, 'Your merchant store has been rejected by admin');
-            }
-            if (store.status !== STATUS.ACTIVE) {
-                return error(res, 403, 'Your merchant store is inactive');
             }
         }
 

@@ -1,4 +1,6 @@
 const Category = require('../models/Category');
+const Product = require('../models/Product');
+const Variant = require('../models/Variant');
 const { success, error } = require('../utils/responses');
 
 async function getAllCategories(req, res, next) {
@@ -64,4 +66,7 @@ module.exports = {
     getAllCategories,
     getCategoryBySlug,
     createCategory,
+    updateCategory,
+    deleteCategoryVariantAttribute,
+    deleteCategory,
 };

@@ -1,23 +1,45 @@
 const Store = require('../models/Store');
 const User = require('../models/User');
-const { STATUS, STORE_APPROVE_STATUS } = require('../constants/enums');
+const { STATUS, APPROVE_STATUS } = require('../constants/enums');
+const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
+
+async function getPublicStore(req, res, next) {
+    try {
+        const store = await Store.findOne({
+            _id: req.params.id,
+            status: STATUS.ACTIVE,
+            approveStatus: APPROVE_STATUS.APPROVED,
+            isDeleted: false,
+        })
+            .select('name logo description address status approveStatus')
+            .lean();
+
+        if (!store) {
+            return error(res, 404, 'Store not found');
+        }
+
+        return success(res, 200, { store });
+    } catch (err) {
+        return next(err);
+    }
+}
 
 async function approveStore(req, res, next) {
     const { id } = req.params;
     if (!id) return error(res, 400, 'Store ID is required');
 
     try {
-
         const store = await Store.findOneAndUpdate(
             {
                 _id: id,
                 isDeleted: false,
-                approveStatus: STORE_APPROVE_STATUS.PENDING,
+                approveStatus: APPROVE_STATUS.PENDING,
+                approveStatus: APPROVE_STATUS.PENDING,
             },
             {
                 $set: {
-                    approveStatus: STORE_APPROVE_STATUS.APPROVED,
+                    approveStatus: APPROVE_STATUS.APPROVED,
                     status: STATUS.ACTIVE
                 }
             },
@@ -48,5 +70,6 @@ async function approveStore(req, res, next) {
 }
 
 module.exports = {
+    getPublicStore,
     approveStore,
 };

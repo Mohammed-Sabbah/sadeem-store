@@ -98,7 +98,7 @@ export async function sendRequest<T>(path: string, options: RequestOptions = {})
       return {
         success: false,
         statusCode: res.status,
-        message: body?.message || fallbackMessage(res.status),
+        message: body?.message || body?.msg || fallbackMessage(res.status),
         errors: body?.errors || null,
       };
     }
@@ -128,4 +128,24 @@ export function postRequest<T>(path: string, body?: any, options?: RequestOption
     body: body instanceof FormData ? body : JSON.stringify(body),
     ...options,
   });
+}
+
+export function putRequest<T>(path: string, body?: any, options?: RequestOptions) {
+  return sendRequest<T>(path, {
+    method: 'PUT',
+    body: body instanceof FormData ? body : JSON.stringify(body),
+    ...options,
+  });
+}
+
+export function patchRequest<T>(path: string, body?: any, options?: RequestOptions) {
+  return sendRequest<T>(path, {
+    method: 'PATCH',
+    body: body instanceof FormData ? body : JSON.stringify(body),
+    ...options,
+  });
+}
+
+export function deleteRequest<T>(path: string, options?: RequestOptions) {
+  return sendRequest<T>(path, { method: 'DELETE', ...options });
 }

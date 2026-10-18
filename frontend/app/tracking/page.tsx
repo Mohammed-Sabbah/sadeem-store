@@ -324,7 +324,7 @@ function TrackingContent() {
                 <div key={idx} className="flex items-center justify-between gap-2.5 p-2 rounded-lg bg-brand-surface border border-brand-border-subtle">
                   <div className="flex items-center gap-2 min-w-0">
                     <img
-                      src={item.product.image}
+                      src={(item.product.image && item.product.image.trim()) || '/canaan_product_hoodie_olive.jpg'}
                       alt={item.product.title}
                       className="w-9 h-9 rounded-md object-contain bg-white border border-brand-border/60 p-0.5 flex-shrink-0"
                     />

@@ -12,9 +12,6 @@ const {
     updateCategory,
     deleteCategoryVariantAttribute,
     deleteCategory,
-    updateCategory,
-    deleteCategoryVariantAttribute,
-    deleteCategory,
 } = require('../controllers/categoryController');
 
 // Validators

@@ -1,6 +1,7 @@
 const Store = require('../models/Store');
 const User = require('../models/User');
 const { STATUS, APPROVE_STATUS } = require('../constants/enums');
+const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 
 async function getPublicStore(req, res, next) {
@@ -29,11 +30,11 @@ async function approveStore(req, res, next) {
     if (!id) return error(res, 400, 'Store ID is required');
 
     try {
-
         const store = await Store.findOneAndUpdate(
             {
                 _id: id,
                 isDeleted: false,
+                approveStatus: APPROVE_STATUS.PENDING,
                 approveStatus: APPROVE_STATUS.PENDING,
             },
             {

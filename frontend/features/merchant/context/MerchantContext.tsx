@@ -1,7 +1,16 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { merchantService } from '../services/merchant.service';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useMerchantProfileQuery,
+  useMerchantProductsQuery,
+  useToggleProductActiveMutation,
+  useDeleteProductMutation,
+  useQuickStockMutation,
+  useCreateProductMutation,
+} from '../queries/useMerchantQueries';
+import { merchantKeys } from '../queries/merchant.keys';
 import type {
   StoreProfile,
   ProductItem,
@@ -30,37 +39,22 @@ interface MerchantContextValue {
 const MerchantContext = createContext<MerchantContextValue | null>(null);
 
 export function MerchantProvider({ children }: { children: React.ReactNode }) {
-  const [store, setStore] = useState<StoreProfile | null>(null);
-  const [products, setProducts] = useState<ProductItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const profileQuery = useMerchantProfileQuery();
+  const productsQuery = useMerchantProductsQuery();
+
+  const toggleActiveMutation = useToggleProductActiveMutation();
+  const deleteMutation = useDeleteProductMutation();
+  const quickStockMutation = useQuickStockMutation();
+  const createProductMutation = useCreateProductMutation();
+
+  const store = profileQuery.data || null;
+  const products = productsQuery.data || [];
+  const isLoading = profileQuery.isLoading || productsQuery.isLoading;
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [storeRes, productsRes] = await Promise.all([
-        merchantService.getStoreProfile(),
-        merchantService.getMyProducts(),
-      ]);
-
-      if (storeRes.data) {
-        setStore(storeRes.data);
-      }
-      if (productsRes.data) {
-        setProducts(productsRes.data);
-      }
-    } catch (err) {
-      console.error('Failed loading merchant context data:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadData();
-  }, [loadData]);
 
   // Auto clear feedback message
   useEffect(() => {
@@ -69,7 +63,7 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [feedbackMessage]);
 
-  // Dynamic live metrics computation
+  // Dynamic live metrics computation based on cached query data
   const metrics: MerchantMetrics = useMemo(() => {
     const total = products.length;
     const inStock = products.filter((p) => p.inStock && (p.totalStock ?? 0) > 0).length;
@@ -88,9 +82,8 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
 
   const handleCreateProduct = async (formData: ProductFormData): Promise<boolean> => {
     try {
-      const res = await merchantService.createProduct(formData);
+      const res = await createProductMutation.mutateAsync(formData);
       if (res.success && res.data) {
-        setProducts((prev) => [res.data, ...prev]);
         setFeedbackMessage({
           type: 'success',
           text: `تم حفظ وإضافة «${res.data.name}» بنجاح في الكتالوج`,
@@ -108,87 +101,59 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
   };
 
   const handleToggleActive = async (productId: string, currentActive: boolean) => {
-    setProducts((prev) =>
-      prev.map((p) => (p._id === productId ? { ...p, isActive: !currentActive } : p))
-    );
-
     try {
-      await merchantService.toggleProduct(productId, currentActive);
+      await toggleActiveMutation.mutateAsync({ productId, currentActive });
       setFeedbackMessage({
         type: 'success',
         text: !currentActive ? 'تم تفعيل ظهور المنتج للزبائن' : 'تم إخفاء المنتج مؤقتاً',
       });
     } catch {
-      setProducts((prev) =>
-        prev.map((p) => (p._id === productId ? { ...p, isActive: currentActive } : p))
-      );
+      setFeedbackMessage({
+        type: 'error',
+        text: 'تعذر تعديل حالة المنتج، يرجى المحاولة لاحقاً',
+      });
     }
   };
 
   const handleDeleteProduct = async (productId: string) => {
-    setProducts((prev) => prev.filter((p) => p._id !== productId));
-
     try {
-      await merchantService.deleteProduct(productId);
+      await deleteMutation.mutateAsync(productId);
       setFeedbackMessage({
         type: 'success',
         text: 'تم حذف المنتج من الكتالوج بنجاح',
       });
     } catch {
-      void loadData();
+      setFeedbackMessage({
+        type: 'error',
+        text: 'تعذر حذف المنتج، يرجى المحاولة لاحقاً',
+      });
     }
   };
 
   const handleQuickStockUpdate = async (productId: string, newStock: number, variantId?: string) => {
-    const clampedStock = Math.max(0, newStock);
-
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p._id !== productId) return p;
-
-        if (variantId && p.variants && p.variants.length > 0) {
-          const updatedVariants = p.variants.map((v) =>
-            v._id === variantId || v.sku === variantId ? { ...v, stock: clampedStock } : v
-          );
-          const newTotalStock = updatedVariants.reduce((sum, v) => sum + (v.stock ?? 0), 0);
-          return {
-            ...p,
-            variants: updatedVariants,
-            totalStock: newTotalStock,
-            inStock: newTotalStock > 0,
-          };
-        }
-
-        return {
-          ...p,
-          totalStock: clampedStock,
-          inStock: clampedStock > 0,
-        };
-      })
-    );
-
     try {
-      await merchantService.quickUpdateStock(productId, clampedStock, variantId);
+      await quickStockMutation.mutateAsync({ productId, newStock, variantId });
+      setFeedbackMessage({
+        type: 'success',
+        text: 'تم تحديث الكمية المتوفرة فورياً',
+      });
     } catch {
-      void loadData();
+      setFeedbackMessage({
+        type: 'error',
+        text: 'تعذر تحديث المخزون',
+      });
     }
   };
 
   const handleToggleStoreStatus = async () => {
-    if (!store) return;
-    const nextStatus = store.status === 'active' ? 'inActive' : 'active';
+    // Permanent active 24/7 store
+  };
 
-    setStore((prev) => (prev ? { ...prev, status: nextStatus } : prev));
-
-    try {
-      await merchantService.toggleStoreStatus(nextStatus);
-      setFeedbackMessage({
-        type: 'success',
-        text: nextStatus === 'active' ? 'تم فتح المتجر واستقبال الطلبيات' : 'تم إغلاق المتجر مؤقتاً',
-      });
-    } catch {
-      setStore((prev) => (prev ? { ...prev, status: store.status } : prev));
-    }
+  const refreshData = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: merchantKeys.profile() }),
+      queryClient.invalidateQueries({ queryKey: merchantKeys.products() }),
+    ]);
   };
 
   const value: MerchantContextValue = {
@@ -206,7 +171,7 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
     handleToggleStoreStatus,
     isDrawerOpen,
     setIsDrawerOpen,
-    refreshData: loadData,
+    refreshData,
   };
 
   return <MerchantContext.Provider value={value}>{children}</MerchantContext.Provider>;

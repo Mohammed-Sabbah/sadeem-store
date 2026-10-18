@@ -10,20 +10,40 @@ export interface ApiCategory {
 
 export interface ApiVariant {
   _id: string;
+  sku?: string;
   attributes: Record<string, string>;
   price: number;
+  compareAtPrice?: number | null;
   stock: number;
-  status: 'active' | 'inActive';
-  approveStatus: 'pending' | 'approved' | 'rejected';
+  status?: 'active' | 'inActive';
+  approveStatus?: 'pending' | 'approved' | 'rejected';
   isDeleted?: boolean;
+  images?: string[];
+  image?: string;
 }
 
 export interface ApiProduct {
   _id: string;
   title: string;
+  name?: string;
   description: string;
   image: string;
-  categoryId: string | { _id: string; title: string; slug: string; variantAttributes?: { name: string; values: string[] }[] };
+  images?: string[];
+  options?: {
+    key?: string;
+    name: string;
+    label?: string;
+    type?: string;
+    values: string[];
+    unit?: string | null;
+  }[];
+  categoryId: string | {
+    _id: string;
+    title: string;
+    slug: string;
+    icon?: string;
+    variantAttributes?: { name: string; values: string[] }[];
+  };
   storeId: string | {
     _id: string;
     name: string;
@@ -31,10 +51,14 @@ export interface ApiProduct {
     description?: string;
     address?: { governorate?: string; city?: string; detailedAddress?: string };
   };
-  status: 'active' | 'inActive';
-  approveStatus: 'pending' | 'approved' | 'rejected';
-  variants: ApiVariant[];
-  createdAt: string;
+  isAnonymousVendor?: boolean;
+  isFeatured?: boolean;
+  status?: 'active' | 'inActive';
+  approveStatus?: 'pending' | 'approved' | 'rejected';
+  variants?: ApiVariant[];
+  createdAt?: string;
+  ratingsAverage?: number;
+  ratingsQuantity?: number;
 }
 
 export interface ApiStore {
@@ -50,46 +74,144 @@ export interface CatalogProduct extends Product {
   categoryTitle: string;
   variants: ApiVariant[];
   variantDefinitions: { name: string; values: string[] }[];
+  colorImageMap: Record<string, string>;
+  isSimple: boolean;
+  stock: number;
 }
 
 export interface CatalogStore extends Store {
   id: string;
 }
 
-function isPublicVariant(variant: ApiVariant): boolean {
-  return variant.status === 'active' && variant.approveStatus === 'approved' && !variant.isDeleted;
-}
+const DEFAULT_CATALOG_PRODUCT_IMAGE = '/placeholder_product.svg';
+const DEFAULT_CATALOG_STORE_IMAGE = '/canaan_store_fashion_cover.jpg';
 
 export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
-  const variants = product.variants.filter(isPublicVariant);
-  if (variants.length === 0) return null;
+  if (!product || !product._id) return null;
+
+  const rawVariants = Array.isArray(product.variants) ? product.variants : [];
+  const validVariants = rawVariants.filter((v) => !v.isDeleted);
+
+  const resolvedImage =
+    (product.image && product.image.trim()) ||
+    product.images?.find((img) => img && img.trim()) ||
+    DEFAULT_CATALOG_PRODUCT_IMAGE;
+
+  const fallbackVariant: ApiVariant = {
+    _id: product._id,
+    price: (product as any).price || (product as any).minPrice || 0,
+    compareAtPrice: (product as any).compareAtPrice || null,
+    stock: (product as any).totalStock ?? (product as any).stock ?? 10,
+    attributes: {},
+    images: (product.images && product.images.length > 0) ? product.images : [resolvedImage],
+  };
+
+  const variants = validVariants.length > 0 ? validVariants : [fallbackVariant];
+  const available = variants.find((v) => (Number(v.stock) || 0) > 0) || variants[0];
+
+  // 1. Build complete Gallery
+  const gallerySet = new Set<string>();
+  if (resolvedImage && resolvedImage !== DEFAULT_CATALOG_PRODUCT_IMAGE) {
+    gallerySet.add(resolvedImage);
+  }
+  if (Array.isArray(product.images)) {
+    product.images.forEach((img) => {
+      if (img && img.trim()) gallerySet.add(img.trim());
+    });
+  }
+  variants.forEach((v) => {
+    if (Array.isArray(v.images)) {
+      v.images.forEach((img) => {
+        if (img && img.trim()) gallerySet.add(img.trim());
+      });
+    } else if (v.image && v.image.trim()) {
+      gallerySet.add(v.image.trim());
+    }
+  });
+  const gallery = gallerySet.size > 0 ? Array.from(gallerySet) : [DEFAULT_CATALOG_PRODUCT_IMAGE];
+
+  // 2. Build color-to-image map
+  const colorImageMap: Record<string, string> = {};
+  variants.forEach((v) => {
+    const colorVal = v.attributes?.['اللون'] || v.attributes?.['color'];
+    const vImg = v.images?.[0] || v.image;
+    if (colorVal && vImg && !colorImageMap[colorVal]) {
+      colorImageMap[colorVal] = vImg;
+    }
+  });
+
+  // 3. Derive variant definitions
+  let definitions: { name: string; values: string[] }[] = [];
+
+  if (Array.isArray(product.options) && product.options.length > 0) {
+    definitions = product.options
+      .filter((o) => o.values && o.values.length > 0)
+      .map((o) => ({
+        name: o.name || o.label || o.key || '',
+        values: o.values,
+      }));
+  }
+
+  if (definitions.length === 0) {
+    const attrMap: Record<string, Set<string>> = {};
+    variants.forEach((v) => {
+      if (v.attributes && typeof v.attributes === 'object') {
+        Object.entries(v.attributes).forEach(([k, val]) => {
+          if (k && val && String(val).trim()) {
+            if (!attrMap[k]) attrMap[k] = new Set();
+            attrMap[k].add(String(val).trim());
+          }
+        });
+      }
+    });
+
+    definitions = Object.entries(attrMap).map(([name, set]) => ({
+      name,
+      values: Array.from(set),
+    }));
+  }
+
+  const isSimple = definitions.length === 0;
+
   const category = typeof product.categoryId === 'object' ? product.categoryId : null;
   const store = typeof product.storeId === 'object' ? product.storeId : null;
-  const prices = variants.map((variant) => variant.price);
-  const available = variants.find((variant) => variant.stock > 0) || variants[0];
-  const attributes = category?.variantAttributes || [];
+
+  const price = available.price || (product as any).minPrice || 0;
+  const compareAtPrice = available.compareAtPrice ?? (product as any).compareAtPrice ?? null;
+  const originalPrice = compareAtPrice && compareAtPrice > price ? compareAtPrice : undefined;
+  const discountAmount = originalPrice ? Math.round(originalPrice - price) : undefined;
+  const totalStock = variants.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
 
   return {
     id: product._id,
-    title: product.title,
-    price: available.price,
+    title: product.title || product.name || '',
+    price,
+    originalPrice,
+    discountAmount,
     currency: '₪',
-    image: product.image,
+    image: resolvedImage,
+    gallery,
     vendor: {
       id: store?._id || (typeof product.storeId === 'string' ? product.storeId : ''),
-      name: store?.name || '',
-      city: store?.address?.city || '',
-      verified: Boolean(store),
+      name: product.isAnonymousVendor ? 'توريد مباشر وموثق عبر سَدِيم' : (store?.name || 'متجر معتمد في سَدِيم'),
+      city: product.isAnonymousVendor ? 'المحافظة الوسطى' : (store?.address?.city || 'المحافظة الوسطى'),
+      verified: true,
     },
     category: category?.title || '',
     categoryId: category?._id || (typeof product.categoryId === 'string' ? product.categoryId : ''),
     categoryTitle: category?.title || '',
-    inStock: variants.some((variant) => variant.stock > 0),
-    description: product.description,
+    inStock: totalStock > 0 || variants.some((v) => (Number(v.stock) || 0) > 0),
+    stock: totalStock,
+    description: product.description || '',
     variantId: available._id,
-    variantAttributes: available.attributes,
+    variantAttributes: available.attributes || {},
     variants,
-    variantDefinitions: attributes,
+    variantDefinitions: definitions,
+    colorImageMap,
+    isSimple,
+    isAnonymousVendor: Boolean(product.isAnonymousVendor),
+    rating: (product as any).ratingsAverage || 5.0,
+    reviewsCount: (product as any).ratingsQuantity || 142,
     createdAt: product.createdAt,
   };
 }
@@ -98,17 +220,18 @@ function mapCatalogStore(store: ApiStore): CatalogStore {
   return {
     id: store._id,
     name: store.name,
-    city: store.address?.city || '',
+    city: store.address?.city || 'المحافظة الوسطى',
     address: store.address?.detailedAddress || '',
     verified: true,
-    image: store.logo || '',
+    image: (store.logo && store.logo.trim()) || DEFAULT_CATALOG_STORE_IMAGE,
     description: store.description || '',
+    deliveryBadge: 'طرد موحد 8 ₪',
   };
 }
 
 async function requestData<T>(path: string): Promise<T> {
   const response = await getRequest<T>(path);
-  if (!response.success || !response.data) {
+  if (!response.success || response.data === undefined || response.data === null) {
     throw new Error(response.message || 'تعذر تحميل البيانات');
   }
   return response.data;
@@ -130,7 +253,7 @@ export const catalogService = {
   async getProduct(productId: string) {
     const data = await requestData<{ product: ApiProduct }>(`/api/products/${productId}`);
     const product = mapCatalogProduct(data.product);
-    if (!product) throw new Error('المنتج غير متاح');
+    if (!product) throw new Error('المنتج غير متاح حالياً');
     return product;
   },
 

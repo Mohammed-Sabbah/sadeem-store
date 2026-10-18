@@ -219,12 +219,74 @@ export default function AddProductModal({
   // Load allowed options for selected category
   useEffect(() => {
     if (!categoryId) return;
+
+    const activeCat = categories.find((c) => c._id === categoryId);
+    if (activeCat?.variantAttributes && activeCat.variantAttributes.length > 0) {
+      const mappedDefs: OptionDefinition[] = activeCat.variantAttributes.map((attr) => {
+        const lower = attr.name.toLowerCase();
+        const isColor = lower === 'color' || attr.name.includes('لون');
+        const isSize = lower === 'size' || lower.includes('size_') || attr.name.includes('مقاس');
+        const isStorage = lower === 'storage' || attr.name.includes('تخزين') || attr.name.includes('سعة');
+        const isWeight = lower === 'weight' || attr.name.includes('وزن');
+        const isVolume = lower === 'volume' || attr.name.includes('حجم');
+
+        let label = attr.name;
+        let type: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC' = 'TEXT';
+        let unit: string | null = null;
+
+        if (isColor) {
+          label = 'اللون';
+          type = 'COLOR';
+        } else if (isSize) {
+          label = 'المقاس';
+          type = 'SIZE';
+        } else if (isStorage) {
+          label = 'سعة التخزين';
+          type = 'NUMERIC';
+          unit = 'gb';
+        } else if (isWeight) {
+          label = 'الوزن';
+          type = 'NUMERIC';
+          unit = 'kg';
+        } else if (isVolume) {
+          label = 'الحجم / السعة';
+          type = 'NUMERIC';
+          unit = 'ml';
+        }
+
+        return {
+          key: attr.name,
+          label,
+          type,
+          unit,
+          values: attr.values.map((v) => ({
+            key: v,
+            label: v,
+            isActive: true,
+          })),
+          isActive: true,
+        };
+      });
+      setCategoryOptionDefinitions(mappedDefs);
+      return;
+    }
+
     merchantService.fetchOptionsByCategory(categoryId).then((res) => {
       if (res.success && res.data?.definitions) {
-        setCategoryOptionDefinitions(res.data.definitions);
+        const catTitle = activeCat?.title || '';
+        const catSlug = activeCat?.slug || '';
+        const isShoes = catTitle.includes('حذاء') || catTitle.includes('أحذية') || catSlug.includes('shoe');
+        const isKids = catTitle.includes('أطفال') || catSlug.includes('kid');
+
+        const refinedDefs = res.data.definitions.filter((def) => {
+          if (def.key === 'size_shoes' && !isShoes) return false;
+          if (def.key === 'size_kids' && !isKids) return false;
+          return true;
+        });
+        setCategoryOptionDefinitions(refinedDefs);
       }
     });
-  }, [categoryId]);
+  }, [categoryId, categories]);
 
   // Category Change with Guard against active variants
   const handleCategoryChange = (newCatId: string) => {
@@ -421,16 +483,27 @@ export default function AddProductModal({
   };
 
   const applyBulkValues = () => {
+    const p = typeof bulkPrice === 'number' && bulkPrice > 0 ? bulkPrice : null;
+    const cmp = typeof bulkCompareAtPrice === 'number' && bulkCompareAtPrice > 0 ? bulkCompareAtPrice : null;
+
+    if (p !== null && cmp !== null && cmp <= p) {
+      setErrorMessage(`السعر قبل الخصم (${cmp} ₪) يجب أن يكون أكبر من سعر البيع (${p} ₪).`);
+      return;
+    }
+
+    setErrorMessage(null);
     setVariantsRows((prev) =>
-      prev.map((r) => ({
-        ...r,
-        price: typeof bulkPrice === 'number' && bulkPrice > 0 ? bulkPrice : r.price,
-        compareAtPrice:
-          typeof bulkCompareAtPrice === 'number' && bulkCompareAtPrice > 0
-            ? bulkCompareAtPrice
-            : r.compareAtPrice,
-        stock: typeof bulkStock === 'number' && bulkStock >= 0 ? bulkStock : r.stock,
-      }))
+      prev.map((r) => {
+        const effectivePrice = p !== null ? p : r.price;
+        const effectiveCompare = cmp !== null ? cmp : r.compareAtPrice;
+
+        return {
+          ...r,
+          price: effectivePrice,
+          compareAtPrice: effectiveCompare,
+          stock: typeof bulkStock === 'number' && bulkStock >= 0 ? bulkStock : r.stock,
+        };
+      })
     );
   };
 
@@ -465,6 +538,10 @@ export default function AddProductModal({
         setErrorMessage('يرجى تحديد كمية المخزون المتاحة في محلك.');
         return;
       }
+      if (simpleCompareAtPrice && Number(simpleCompareAtPrice) <= Number(simplePrice)) {
+        setErrorMessage(`السعر قبل الخصم (${simpleCompareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع الحالي (${simplePrice} ₪).`);
+        return;
+      }
     } else {
       if (variantsRows.length === 0) {
         setErrorMessage('يرجى إضافة قيم وخيارات للمتغيرات (مثل المقاسات أو الألوان).');
@@ -473,6 +550,14 @@ export default function AddProductModal({
       const hasInvalidVariant = variantsRows.some((r) => !r.price || r.price <= 0);
       if (hasInvalidVariant) {
         setErrorMessage('يرجى التأكد من كتابة سعر صالح لكل متغير.');
+        return;
+      }
+      const invalidCompare = variantsRows.find(
+        (r) => r.compareAtPrice && Number(r.compareAtPrice) <= Number(r.price)
+      );
+      if (invalidCompare) {
+        const vTitle = Object.values(invalidCompare.attributes).join(' / ') || 'المتغير';
+        setErrorMessage(`السعر قبل الخصم للصنف «${vTitle}» (${invalidCompare.compareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع (${invalidCompare.price} ₪).`);
         return;
       }
     }
@@ -849,8 +934,22 @@ export default function AddProductModal({
                       setSimpleCompareAtPrice(e.target.value === '' ? '' : Number(e.target.value))
                     }
                     placeholder="65"
-                    className="w-full h-11 px-3 text-xs font-medium rounded-xl border border-brand-border bg-white text-brand-muted focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
+                    className={`w-full h-11 px-3 text-xs font-medium rounded-xl border bg-white focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary ${
+                      simpleCompareAtPrice && simplePrice && Number(simpleCompareAtPrice) <= Number(simplePrice)
+                        ? 'border-red-400 text-red-600'
+                        : 'border-brand-border text-brand-dark'
+                    }`}
                   />
+                  {simpleCompareAtPrice && simplePrice && Number(simpleCompareAtPrice) <= Number(simplePrice) && (
+                    <span className="text-[10px] text-red-600 font-bold block mt-1">
+                      يجب أن يتجاوز سعر البيع ({simplePrice} ₪)
+                    </span>
+                  )}
+                  {simpleCompareAtPrice && simplePrice && Number(simpleCompareAtPrice) > Number(simplePrice) && (
+                    <span className="text-[10px] text-brand-trust font-bold block mt-1">
+                      وفر {Number(simpleCompareAtPrice) - Number(simplePrice)} ₪ (خصم {Math.round(((Number(simpleCompareAtPrice) - Number(simplePrice)) / Number(simpleCompareAtPrice)) * 100)}%)
+                    </span>
+                  )}
                 </div>
 
                 <div>
@@ -1600,8 +1699,27 @@ export default function AddProductModal({
                                       e.target.value === '' ? undefined : Number(e.target.value)
                                     )
                                   }
-                                  className="h-7 px-2 text-xs font-medium rounded-lg border border-brand-border w-22 text-brand-muted"
+                                  className={`h-7 px-2 text-xs font-medium rounded-lg border w-22 ${
+                                    v.compareAtPrice && v.price && Number(v.compareAtPrice) <= Number(v.price)
+                                      ? 'border-red-400 text-red-600 bg-red-50/40'
+                                      : 'border-brand-border text-brand-dark'
+                                  }`}
+                                  title={
+                                    v.compareAtPrice && v.price && Number(v.compareAtPrice) <= Number(v.price)
+                                      ? `السعر قبل الخصم يجب أن يكون أكبر من سعر البيع (${v.price} ₪)`
+                                      : undefined
+                                  }
                                 />
+                                {v.compareAtPrice && v.price && Number(v.compareAtPrice) <= Number(v.price) && (
+                                  <span className="text-[9px] text-red-600 font-bold block leading-tight mt-0.5 whitespace-nowrap">
+                                    يجب أن يتجاوز {v.price} ₪
+                                  </span>
+                                )}
+                                {v.compareAtPrice && v.price && Number(v.compareAtPrice) > Number(v.price) && (
+                                  <span className="text-[9px] text-brand-trust font-bold block leading-tight mt-0.5 whitespace-nowrap">
+                                    خصم {Math.round(((Number(v.compareAtPrice) - Number(v.price)) / Number(v.compareAtPrice)) * 100)}%
+                                  </span>
+                                )}
                               </td>
                               <td className="p-3">
                                 <input
@@ -1698,8 +1816,22 @@ export default function AddProductModal({
                                     e.target.value === '' ? undefined : Number(e.target.value)
                                   )
                                 }
-                                className="w-full h-8 px-2 text-xs font-medium rounded-lg border border-brand-border text-brand-muted"
+                                className={`w-full h-8 px-2 text-xs font-medium rounded-lg border ${
+                                  v.compareAtPrice && v.price && Number(v.compareAtPrice) <= Number(v.price)
+                                    ? 'border-red-400 text-red-600 bg-red-50/40'
+                                    : 'border-brand-border text-brand-dark'
+                                }`}
                               />
+                              {v.compareAtPrice && v.price && Number(v.compareAtPrice) <= Number(v.price) && (
+                                <span className="text-[9px] text-red-600 font-bold block leading-tight mt-0.5">
+                                  يجب أن يتجاوز {v.price} ₪
+                                </span>
+                              )}
+                              {v.compareAtPrice && v.price && Number(v.compareAtPrice) > Number(v.price) && (
+                                <span className="text-[9px] text-brand-trust font-bold block leading-tight mt-0.5">
+                                  خصم {Math.round(((Number(v.compareAtPrice) - Number(v.price)) / Number(v.compareAtPrice)) * 100)}%
+                                </span>
+                              )}
                             </div>
 
                             <div>

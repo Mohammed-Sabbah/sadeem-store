@@ -22,6 +22,7 @@ export interface Product {
   isAnonymousVendor?: boolean;
   variantId?: string;
   variantAttributes?: Record<string, string>;
+  createdAt?: string;
 }
 
 export interface Store {

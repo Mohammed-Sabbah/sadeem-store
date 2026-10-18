@@ -82,6 +82,9 @@ interface ProductStudioEditorTabProps {
   bulkPriceInput: string;
   setBulkPriceInput: (val: string) => void;
   handleApplyBulkPrice: () => void;
+  bulkCompareAtPriceInput: string;
+  setBulkCompareAtPriceInput: (val: string) => void;
+  handleApplyBulkCompareAtPrice: () => void;
   bulkStockInput: string;
   setBulkStockInput: (val: string) => void;
   handleApplyBulkStock: () => void;
@@ -146,6 +149,9 @@ export function ProductStudioEditorTab({
   bulkPriceInput,
   setBulkPriceInput,
   handleApplyBulkPrice,
+  bulkCompareAtPriceInput,
+  setBulkCompareAtPriceInput,
+  handleApplyBulkCompareAtPrice,
   bulkStockInput,
   setBulkStockInput,
   handleApplyBulkStock,
@@ -154,15 +160,19 @@ export function ProductStudioEditorTab({
   const hasActiveVariants =
     !isSimple && (options.some((o) => o.values && o.values.length > 0) || variants.length > 0);
 
+  const colorOpt = options.find(
+    (o) => o.type === 'COLOR' || o.name === 'اللون' || o.label === 'اللون'
+  );
+
   const onCategoryChange = (newCatId: string) => {
-    if (handleCategoryChange) {
-      handleCategoryChange(newCatId);
-      return;
-    }
     if (hasActiveVariants && newCatId !== categoryId) {
       setErrorMessage?.(
         'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
       );
+      return;
+    }
+    if (handleCategoryChange) {
+      handleCategoryChange(newCatId);
       return;
     }
     setErrorMessage?.(null);
@@ -201,8 +211,9 @@ export function ProductStudioEditorTab({
                   التصنيف المعتمد <span className="text-red-500">*</span>
                 </label>
                 {hasActiveVariants && (
-                  <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80">
-                    محمي لوجود خيارات
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/80 flex items-center gap-1 shadow-2xs">
+                    <span>🔒</span>
+                    <span>مقفل لوجود خيارات ومخزون</span>
                   </span>
                 )}
               </div>
@@ -210,8 +221,13 @@ export function ProductStudioEditorTab({
                 <IconPackage className="w-4 h-4 text-brand-muted absolute right-3.5 pointer-events-none" />
                 <select
                   value={categoryId}
+                  disabled={hasActiveVariants}
                   onChange={(e) => onCategoryChange(e.target.value)}
-                  className="w-full h-11 pr-10 pl-9 text-base sm:text-xs font-bold rounded-xl border border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 transition-all appearance-none cursor-pointer"
+                  className={`w-full h-11 pr-10 pl-9 text-base sm:text-xs font-bold rounded-xl border transition-all appearance-none ${
+                    hasActiveVariants
+                      ? 'border-dashed border-amber-300 bg-amber-50/40 text-brand-muted cursor-not-allowed select-none'
+                      : 'border-brand-border/70 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary focus:ring-4 focus:ring-brand-primary/10 cursor-pointer'
+                  }`}
                 >
                   {categories.map((c) => (
                     <option key={c._id} value={c._id}>
@@ -221,6 +237,13 @@ export function ProductStudioEditorTab({
                 </select>
                 <IconChevronDown className="w-3.5 h-3.5 text-brand-muted absolute left-3.5 pointer-events-none" />
               </div>
+
+              {hasActiveVariants && (
+                <p className="mt-1.5 text-[11px] text-amber-900 bg-amber-50/80 p-2.5 rounded-xl border border-amber-200/70 leading-relaxed font-normal">
+                  لحماية مصفوفة المقاسات ورموز التتبع (SKU) من الحذف غير المقصود، يجب حذف خيارات الصنف الحالية بالأسفل أولاً (أو تحويل الصنف إلى مفرد) لتتمكن من تغيير القسم.
+                </p>
+              )}
+
               {errorMessage && errorMessage.includes('لا يمكن تغيير قسم الصنف') && (
                 <div className="mt-2.5 p-3 rounded-xl bg-red-50 text-red-800 text-xs font-bold border border-red-200/80 animate-fadeIn flex items-start justify-between gap-2 shadow-xs">
                   <div className="flex items-start gap-2">
@@ -266,7 +289,7 @@ export function ProductStudioEditorTab({
               <span>معرض صور الصنف ({images.length})</span>
             </h2>
             <p className="text-[11px] text-brand-muted mt-0.5">
-              اختر صور الصنف من هاتفك أو جهازك. الصورة الأولى ستكون غلاف الصنف الرئيسي.
+              اختر صور الصنف من هاتفك أو جهازك. الصورة الأولى ستكون غلاف الصنف الرئيسي، ويمكنك ربط كل صورة بلونها المخصص مباشرة.
             </p>
           </div>
 
@@ -290,6 +313,15 @@ export function ProductStudioEditorTab({
 
         {/* Upload Zone & Thumbnails */}
         <div className="space-y-4">
+          {colorOpt && colorOpt.values && colorOpt.values.length > 0 && images.length > 0 && (
+            <div className="p-3 bg-brand-primary-soft/35 border border-brand-primary/20 rounded-xl flex items-center gap-2 text-xs text-brand-dark animate-fadeIn">
+              <span className="text-base shrink-0">🎨</span>
+              <span className="leading-relaxed">
+                <strong>ربط الصور بألوان الصنف:</strong> يمكنك تخصيص صورة لكل لون مباشرة من القائمة أسفل كل صورة، لتبديل صورة المنتج تلقائياً أمام الزبون في المتجر عند اختياره للون.
+              </span>
+            </div>
+          )}
+
           {images.length === 0 ? (
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -310,57 +342,124 @@ export function ProductStudioEditorTab({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-              {images.map((img, idx) => (
-                <div
-                  key={idx}
-                  className={`relative aspect-square rounded-2xl overflow-hidden border group bg-brand-surface shadow-2xs transition-all ${
-                    idx === 0
-                      ? 'border-brand-primary ring-2 ring-brand-primary/25'
-                      : 'border-brand-border/80'
-                  }`}
-                >
-                  <img src={img} alt={`صورة ${idx + 1}`} className="w-full h-full object-cover" />
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-3.5">
+              {images.map((img, idx) => {
+                const boundColorForThisImg = Object.entries(colorImageMap).find(
+                  ([_, mappedImg]) => mappedImg === img
+                )?.[0] || '';
 
-                  {/* Primary Cover Badge */}
-                  {idx === 0 ? (
-                    <span className="absolute bottom-1.5 right-1.5 bg-brand-primary text-white text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-md shadow-xs flex items-center gap-1 select-none">
-                      <span className="text-[9px]">★</span>
-                      <span>الغلاف الرئيسي</span>
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleSetPrimaryImage(idx)}
-                      className="absolute bottom-1.5 right-1.5 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 bg-black/75 hover:bg-black sm:bg-white/95 sm:hover:bg-white text-white sm:text-brand-dark text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-md shadow-xs transition-all active:scale-95 cursor-pointer flex items-center gap-1 backdrop-blur-xs select-none"
-                      title="تعيين كغلاف رئيسي للمنتج"
-                    >
-                      <span className="text-[9px] text-amber-300 sm:text-amber-600">☆</span>
-                      <span>تعيين كغلاف</span>
-                    </button>
-                  )}
+                const hasColorValues = Boolean(colorOpt && colorOpt.values && colorOpt.values.length > 0);
 
-                  {/* Delete Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(idx)}
-                    className="absolute top-1.5 left-1.5 w-6 h-6 bg-black/75 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs transition-colors cursor-pointer shadow-xs active:scale-90"
-                    title="حذف الصورة من المعرض"
+                return (
+                  <div
+                    key={idx}
+                    className={`flex flex-col justify-between rounded-2xl border p-2 transition-all ${
+                      idx === 0
+                        ? 'border-brand-primary bg-brand-primary-soft/20 shadow-xs'
+                        : boundColorForThisImg
+                        ? 'border-brand-primary/40 bg-brand-primary-soft/10 shadow-2xs'
+                        : 'border-brand-border/70 bg-brand-surface/40 hover:bg-brand-surface hover:border-brand-border'
+                    }`}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
+                    {/* Thumbnail Box */}
+                    <div
+                      onClick={() => {
+                        if (idx !== 0) handleSetPrimaryImage(idx);
+                      }}
+                      className={`relative aspect-square rounded-xl overflow-hidden border bg-brand-surface cursor-pointer group ${
+                        idx === 0
+                          ? 'border-brand-primary ring-2 ring-brand-primary/30 shadow-xs'
+                          : 'border-brand-border/70 hover:border-brand-primary/50'
+                      }`}
+                    >
+                      <img
+                        src={img}
+                        alt={`صورة ${idx + 1}`}
+                        className="w-full h-full object-cover pointer-events-none"
+                      />
+
+                      {/* Primary Cover Badge or Set Cover Action */}
+                      {idx === 0 ? (
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/50 to-transparent p-1.5 pt-4 flex items-center justify-center">
+                          <span className="bg-brand-primary text-white text-[10px] sm:text-[11px] font-black px-2 py-1 rounded-lg shadow-sm flex items-center justify-center gap-1 w-full select-none">
+                            <span>★</span>
+                            <span>الغلاف الرئيسي</span>
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-1.5 pt-4 flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSetPrimaryImage(idx);
+                            }}
+                            className="w-full py-1.5 px-2 bg-white/95 hover:bg-brand-primary hover:text-white text-brand-dark text-[10px] sm:text-[11px] font-bold rounded-lg shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1 cursor-pointer select-none"
+                            title="اضغط لتعيين هذه الصورة كغلاف رئيسي"
+                          >
+                            <span className="text-amber-500 font-bold">☆</span>
+                            <span>تعيين كغلاف</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Delete Button (prominent 28x28 touch target) */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveImage(idx);
+                        }}
+                        className="absolute top-1.5 left-1.5 w-7 h-7 bg-black/75 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-black transition-colors cursor-pointer shadow-md active:scale-90"
+                        title="حذف الصورة من المعرض"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Color Assignment Selector (When Color Options Exist) */}
+                    {hasColorValues && (
+                      <div className="mt-2 pt-2 border-t border-brand-border/40">
+                        <div className="relative">
+                          <select
+                            value={boundColorForThisImg}
+                            onChange={(e) => handleBindColorImage(e.target.value, img)}
+                            className={`w-full h-8 pr-7 pl-2 text-[10px] sm:text-[11px] font-bold rounded-xl border appearance-none transition-all cursor-pointer ${
+                              boundColorForThisImg
+                                ? 'bg-brand-primary-soft border-brand-primary/60 text-brand-dark font-black shadow-2xs'
+                                : 'bg-brand-card border-brand-border/70 text-brand-muted hover:border-brand-primary/40'
+                            }`}
+                            title="تخصيص هذه الصورة للون محدد لعرضها تلقائياً عند اختيار الزبون لهذا اللون"
+                          >
+                            <option value="">صورة عامة (لكل الألوان)</option>
+                            {colorOpt!.values.map((col) => (
+                              <option key={col} value={col}>
+                                🎨 {col}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-xs">
+                            {boundColorForThisImg ? '🎨' : '🏷️'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
 
               {/* Add more button tile in the grid */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessingFiles}
-                className="aspect-square rounded-2xl border-2 border-dashed border-brand-border/80 hover:border-brand-primary bg-brand-surface/30 hover:bg-brand-surface/60 flex flex-col items-center justify-center gap-1.5 text-brand-muted hover:text-brand-primary transition-all cursor-pointer active:scale-95 group"
+                className="flex flex-col items-center justify-center p-3 rounded-2xl border-2 border-dashed border-brand-border/80 hover:border-brand-primary bg-brand-surface/30 hover:bg-brand-surface/60 transition-all cursor-pointer active:scale-95 group min-h-[140px]"
               >
-                <IconPhoto className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                <span className="text-[11px] font-bold">+ صور أخرى</span>
+                <div className="w-10 h-10 rounded-xl bg-brand-card border border-brand-border/70 flex items-center justify-center text-brand-muted group-hover:text-brand-primary group-hover:scale-105 transition-all shadow-2xs mb-2">
+                  <IconPhoto className="w-5 h-5" />
+                </div>
+                <span className="text-[11px] font-bold text-brand-dark">+ صور أخرى</span>
+                <span className="text-[9px] text-brand-muted mt-0.5">من هاتفك</span>
               </button>
             </div>
           )}
@@ -427,24 +526,42 @@ export function ProductStudioEditorTab({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div
             onClick={() => {
+              if (hasActiveVariants) {
+                setErrorMessage?.(
+                  'لا يمكن تحويل الصنف إلى (صنف موحد) طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات بالأسفل أولاً لتتمكن من تحويله.'
+                );
+                return;
+              }
               setIsSimple(true);
               if (errorMessage?.includes('لا يمكن تغيير قسم الصنف')) {
                 setErrorMessage?.(null);
               }
             }}
-            className={`p-4 rounded-2xl border cursor-pointer transition-all duration-150 flex items-start gap-3 select-none ${
-              isSimple
-                ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs ring-2 ring-brand-primary/20'
-                : 'border-brand-border/70 bg-brand-surface/30 hover:bg-brand-surface'
+            className={`p-4 rounded-2xl border transition-all duration-150 flex items-start gap-3 select-none ${
+              hasActiveVariants
+                ? 'border-dashed border-amber-300 bg-amber-50/40 opacity-80 cursor-not-allowed'
+                : isSimple
+                ? 'border-brand-primary bg-brand-primary-soft/40 shadow-xs ring-2 ring-brand-primary/20 cursor-pointer'
+                : 'border-brand-border/70 bg-brand-surface/30 hover:bg-brand-surface cursor-pointer'
             }`}
           >
             <div className="mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center border-brand-primary">
               {isSimple && <div className="w-2 h-2 rounded-full bg-brand-primary" />}
             </div>
-            <div>
-              <div className="text-xs font-black text-brand-dark">بدون خيارات (سعر ومخزون موحد)</div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between gap-1">
+                <div className="text-xs font-black text-brand-dark">بدون خيارات (سعر ومخزون موحد)</div>
+                {hasActiveVariants && (
+                  <span className="text-[9px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200/80 flex items-center gap-0.5">
+                    <span>🔒</span>
+                    <span>مقفل</span>
+                  </span>
+                )}
+              </div>
               <div className="text-[11px] text-brand-muted mt-0.5 leading-relaxed">
-                الصنف يتوفر بنوع واحد فقط بدون مقاسات أو ألوان (مثل: عسل سدر، ساعة، حقيبة، شال مفرد).
+                {hasActiveVariants
+                  ? 'محمي لوجود خيارات ومقاسات نشطة بالأسفل. يجب حذف الخيارات الحالية أولاً للتحويل إلى صنف مفرد.'
+                  : 'الصنف يتوفر بنوع واحد فقط بدون مقاسات أو ألوان (مثل: عسل سدر، ساعة، حقيبة، شال مفرد).'}
               </div>
             </div>
           </div>
@@ -530,6 +647,25 @@ export function ProductStudioEditorTab({
                 </span>
               </div>
             </div>
+
+            {/* Live Discount / Validation Feedback */}
+            {Number(simpleCompareAtPrice) > 0 && Number(simplePrice) > 0 && (
+              <div className="col-span-2 sm:col-span-4 -mt-1">
+                {Number(simpleCompareAtPrice) <= Number(simplePrice) ? (
+                  <div className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200/80 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                    <span>⚠️</span>
+                    <span>السعر قبل الخصم ({simpleCompareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع الحالي ({simplePrice} ₪).</span>
+                  </div>
+                ) : (
+                  <div className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/80 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
+                    <span>🏷️</span>
+                    <span>
+                      وفر الزبون {Number(simpleCompareAtPrice) - Number(simplePrice)} ₪ (خصم {Math.round(((Number(simpleCompareAtPrice) - Number(simplePrice)) / Number(simpleCompareAtPrice)) * 100)}%)
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -548,7 +684,7 @@ export function ProductStudioEditorTab({
                   <span>خيارات ومقاسات الصنف</span>
                 </h2>
                 <p className="text-[11px] text-brand-muted mt-0.5">
-                  حدد المقاسات أو الألوان. يمكنك تخصيص صورة لكل لون مباشرة بالضغط على مصغرة صورته.
+                  حدد مقاسات أو ألوان الصنف. يمكنك ربط كل لون بصورته المخصصة مباشرة من معرض الصور (الخطوة 2 بالأعلى).
                 </p>
               </div>
 
@@ -1089,7 +1225,8 @@ export function ProductStudioEditorTab({
                           </span>
                         ) : (
                           opt.values.map((val) => {
-                            const boundImg = isColor ? colorImageMap[val] || images[0] : null;
+                            const boundImg = isColor ? colorImageMap[val] : null;
+                            const swatch = isColor ? COLOR_SWATCHES[val] : null;
 
                             return (
                               <div
@@ -1097,109 +1234,26 @@ export function ProductStudioEditorTab({
                                 className="inline-flex items-center gap-1.5 bg-brand-surface/70 hover:bg-brand-surface text-brand-dark pr-2 pl-2.5 py-1 rounded-xl border border-brand-border/70 text-xs font-bold transition-all shadow-2xs group"
                               >
                                 {isColor && (
-                                  <div className="relative inline-flex items-center" data-popover>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setActiveColorPhotoPopover(
-                                          activeColorPhotoPopover === val ? null : val
-                                        );
-                                        setIsAddOptionOpen(false);
-                                        setActiveValuePopoverIdx(null);
-                                      }}
-                                      className="relative w-5 h-5 rounded-md overflow-hidden border border-brand-border/80 shrink-0 hover:scale-110 transition-transform cursor-pointer shadow-2xs group/thumb"
-                                      title={`تغيير صورة هذا اللون: ${val}`}
-                                    >
-                                      <img
-                                        src={boundImg || primaryImage}
-                                        alt={val}
-                                        className="w-full h-full object-cover"
+                                  <>
+                                    {swatch ? (
+                                      <span
+                                        className="w-3.5 h-3.5 rounded-full shrink-0 border border-black/15 shadow-2xs"
+                                        style={{ backgroundColor: swatch.hex }}
+                                        title={val}
                                       />
-                                      <div className="absolute inset-0 bg-black/25 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center">
-                                        <IconPhoto className="w-3 h-3 text-white" />
-                                      </div>
-                                    </button>
-
-                                    {activeColorPhotoPopover === val && (
-                                      <div className="absolute right-0 top-full mt-2 w-64 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-2.5">
-                                        <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
-                                          <span className="flex items-center gap-1">
-                                            <IconPhoto className="w-3.5 h-3.5 text-brand-primary" />
-                                            <span>صورة لون «{val}»</span>
-                                          </span>
-                                          <button
-                                            type="button"
-                                            onClick={() => setActiveColorPhotoPopover(null)}
-                                            className="text-brand-muted hover:text-brand-dark cursor-pointer"
-                                          >
-                                            <IconX className="w-3.5 h-3.5" />
-                                          </button>
-                                        </div>
-
-                                        {images.length === 0 ? (
-                                          <div className="py-4 text-center text-[11px] text-brand-muted">
-                                            لا توجد صور في المعرض بعد. أضف صوراً في الخطوة 2 أولاً.
-                                          </div>
-                                        ) : (
-                                          <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto no-scrollbar py-1">
-                                            {images.map((imgUrl, imgI) => {
-                                              const isAssigned =
-                                                colorImageMap[val] === imgUrl ||
-                                                (!colorImageMap[val] && imgI === 0);
-                                              return (
-                                                <button
-                                                  key={imgI}
-                                                  type="button"
-                                                  onClick={() => {
-                                                    handleBindColorImage(val, imgUrl);
-                                                    setActiveColorPhotoPopover(null);
-                                                  }}
-                                                  className={`relative aspect-square rounded-xl overflow-hidden border-2 transition-all cursor-pointer group/item ${
-                                                    isAssigned
-                                                      ? 'border-brand-primary ring-2 ring-brand-primary/20 shadow-xs'
-                                                      : 'border-brand-border/70 hover:border-brand-primary/50'
-                                                  }`}
-                                                >
-                                                  <img
-                                                    src={imgUrl}
-                                                    alt={`صورة ${imgI + 1}`}
-                                                    className="w-full h-full object-cover"
-                                                  />
-                                                  {isAssigned && (
-                                                    <div className="absolute inset-0 bg-brand-primary/25 flex items-center justify-center">
-                                                      <span className="w-5 h-5 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-xs">
-                                                        <IconCheck className="w-3 h-3" />
-                                                      </span>
-                                                    </div>
-                                                  )}
-                                                  <span className="absolute bottom-1 right-1 bg-black/70 text-white text-[8px] font-bold px-1 rounded">
-                                                    {imgI === 0 ? 'الغلاف' : `#${imgI + 1}`}
-                                                  </span>
-                                                </button>
-                                              );
-                                            })}
-                                          </div>
-                                        )}
-
-                                        {colorImageMap[val] && (
-                                          <div className="pt-1.5 border-t border-brand-border/40">
-                                            <button
-                                              type="button"
-                                              onClick={() => {
-                                                const nextMap = { ...colorImageMap };
-                                                delete nextMap[val];
-                                                setColorImageMap(nextMap);
-                                                setActiveColorPhotoPopover(null);
-                                              }}
-                                              className="w-full py-1 text-[10px] font-bold text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-center"
-                                            >
-                                              إلغاء التخصيص (استخدام الغلاف)
-                                            </button>
-                                          </div>
-                                        )}
-                                      </div>
+                                    ) : (
+                                      <span className="w-2.5 h-2.5 rounded-full bg-brand-primary/60 shrink-0" />
                                     )}
-                                  </div>
+
+                                    {boundImg && (
+                                      <img
+                                        src={boundImg}
+                                        alt={val}
+                                        className="w-4 h-4 rounded-md object-cover border border-brand-border/80 shrink-0 shadow-2xs"
+                                        title={`صورة مخصصة لهذا اللون (مربوطة من معرض الصور)`}
+                                      />
+                                    )}
+                                  </>
                                 )}
 
                                 <span>{val}</span>
@@ -1266,10 +1320,10 @@ export function ProductStudioEditorTab({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                   {/* Bulk Price Capsule */}
                   <div className="flex items-center gap-2 bg-brand-card p-1.5 pr-3 rounded-xl border border-brand-border/80 shadow-2xs">
-                    <span className="text-xs font-black text-brand-muted shrink-0">السعر الموحد:</span>
+                    <span className="text-xs font-black text-brand-muted shrink-0">سعر البيع:</span>
                     <div className="flex items-center gap-1 flex-1 min-w-0">
                       <span className="text-xs font-bold text-brand-primary">₪</span>
                       <input
@@ -1288,7 +1342,32 @@ export function ProductStudioEditorTab({
                       disabled={!bulkPriceInput}
                       className="px-3.5 py-1.5 bg-brand-primary text-white text-xs font-bold rounded-lg hover:bg-brand-primary-hover active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0 shadow-2xs"
                     >
-                      تطبيق على الكل
+                      تطبيق
+                    </button>
+                  </div>
+
+                  {/* Bulk Compare At Price Capsule */}
+                  <div className="flex items-center gap-2 bg-brand-card p-1.5 pr-3 rounded-xl border border-brand-border/80 shadow-2xs">
+                    <span className="text-xs font-black text-brand-muted shrink-0">قبل الخصم:</span>
+                    <div className="flex items-center gap-1 flex-1 min-w-0">
+                      <span className="text-xs font-bold text-brand-muted">₪</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        placeholder="مثال: 60"
+                        value={bulkCompareAtPriceInput}
+                        onChange={(e) => setBulkCompareAtPriceInput(e.target.value)}
+                        className="w-full h-8 text-xs font-bold text-brand-dark bg-transparent focus:outline-none"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleApplyBulkCompareAtPrice}
+                      disabled={!bulkCompareAtPriceInput}
+                      className="px-3 py-1.5 bg-brand-surface hover:bg-brand-border/40 text-brand-dark text-xs font-bold rounded-lg active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0 border border-brand-border/80"
+                    >
+                      تطبيق
                     </button>
                   </div>
 
@@ -1312,7 +1391,7 @@ export function ProductStudioEditorTab({
                       disabled={!bulkStockInput}
                       className="px-3.5 py-1.5 bg-brand-trust text-white text-xs font-bold rounded-lg hover:bg-brand-trust/90 active:scale-95 transition-all disabled:opacity-40 cursor-pointer shrink-0 shadow-2xs"
                     >
-                      تطبيق على الكل
+                      تطبيق
                     </button>
                   </div>
                 </div>
@@ -1328,9 +1407,10 @@ export function ProductStudioEditorTab({
               <div className="space-y-2">
                 {/* Table Header (Desktop Only) */}
                 <div className="hidden md:grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-black text-brand-muted border-b border-brand-border/40">
-                  <div className="col-span-4">الصنف والتوليفة</div>
-                  <div className="col-span-3">رمز SKU</div>
+                  <div className="col-span-3">الصنف والتوليفة</div>
+                  <div className="col-span-2">رمز SKU</div>
                   <div className="col-span-2">سعر البيع</div>
+                  <div className="col-span-2">قبل الخصم</div>
                   <div className="col-span-2">المخزون بالمستودع</div>
                   <div className="col-span-1 text-center">الإجراء</div>
                 </div>
@@ -1353,8 +1433,8 @@ export function ProductStudioEditorTab({
                       >
                         {/* Desktop Grid Row */}
                         <div className="hidden md:grid grid-cols-12 items-center gap-3">
-                          {/* Col 1-4: Thumbnail & Attributes */}
-                          <div className="col-span-4 flex items-center gap-2.5">
+                          {/* Col 1-3: Thumbnail & Attributes */}
+                          <div className="col-span-3 flex items-center gap-2.5">
                             <img
                               src={variantPhoto}
                               alt={attrSummary}
@@ -1375,14 +1455,14 @@ export function ProductStudioEditorTab({
                             </div>
                           </div>
 
-                          {/* Col 5-7: SKU */}
-                          <div className="col-span-3">
+                          {/* Col 4-5: SKU */}
+                          <div className="col-span-2">
                             <span className="font-mono text-[10px] text-brand-muted bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border/60">
                               {v.sku}
                             </span>
                           </div>
 
-                          {/* Col 8-9: Price */}
+                          {/* Col 6-7: Price */}
                           <div className="col-span-2">
                             <div className="relative inline-flex items-center">
                               <input
@@ -1401,6 +1481,44 @@ export function ProductStudioEditorTab({
                                 ₪
                               </span>
                             </div>
+                          </div>
+
+                          {/* Col 8-9: Compare At Price */}
+                          <div className="col-span-2">
+                            <div className="relative inline-flex items-center">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.5"
+                                value={v.compareAtPrice ?? ''}
+                                onChange={(e) => {
+                                  const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                  const updated = [...variants];
+                                  updated[vIdx] = { ...v, compareAtPrice: val };
+                                  setVariants(updated);
+                                }}
+                                placeholder="اختياري"
+                                className={`w-20 h-8 pr-2 pl-4 text-xs font-bold rounded-lg border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary ${
+                                  v.compareAtPrice != null && Number(v.compareAtPrice) > 0 && Number(v.compareAtPrice) <= Number(v.price)
+                                    ? 'border-red-400 bg-red-50/30'
+                                    : 'border-brand-border/70'
+                                }`}
+                              />
+                              <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-brand-muted pointer-events-none">
+                                ₪
+                              </span>
+                            </div>
+                            {v.compareAtPrice != null && Number(v.compareAtPrice) > 0 && (
+                              <div className="mt-1">
+                                {Number(v.compareAtPrice) <= Number(v.price) ? (
+                                  <span className="text-[9px] font-bold text-red-600 block leading-tight">يجب أن يكون أكبر</span>
+                                ) : (
+                                  <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.5 rounded border border-emerald-200/80">
+                                    خصم {Math.round(((Number(v.compareAtPrice) - Number(v.price)) / Number(v.compareAtPrice)) * 100)}%
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           {/* Col 10-11: Stepper */}
@@ -1534,28 +1652,57 @@ export function ProductStudioEditorTab({
                           </div>
 
                           <div className="flex items-center justify-between gap-2 pt-1 border-t border-brand-border/30">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] text-brand-muted font-bold">السعر:</span>
-                              <div className="relative inline-flex items-center">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  step="0.5"
-                                  value={v.price}
-                                  onChange={(e) => {
-                                    const updated = [...variants];
-                                    updated[vIdx] = { ...v, price: Number(e.target.value) || 0 };
-                                    setVariants(updated);
-                                  }}
-                                  className="w-20 h-8 pr-2 pl-4 text-xs font-black rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
-                                />
-                                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] text-brand-muted pointer-events-none">
-                                  ₪
-                                </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-brand-muted font-bold">السعر:</span>
+                                <div className="relative inline-flex items-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={v.price}
+                                    onChange={(e) => {
+                                      const updated = [...variants];
+                                      updated[vIdx] = { ...v, price: Number(e.target.value) || 0 };
+                                      setVariants(updated);
+                                    }}
+                                    className="w-16 h-8 pr-1.5 pl-3.5 text-xs font-black rounded-lg border border-brand-border/70 bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary"
+                                  />
+                                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-brand-muted pointer-events-none">
+                                    ₪
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-1">
+                                <span className="text-[10px] text-brand-muted font-bold">قبل الخصم:</span>
+                                <div className="relative inline-flex items-center">
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.5"
+                                    value={v.compareAtPrice ?? ''}
+                                    onChange={(e) => {
+                                      const val = e.target.value === '' ? undefined : Number(e.target.value);
+                                      const updated = [...variants];
+                                      updated[vIdx] = { ...v, compareAtPrice: val };
+                                      setVariants(updated);
+                                    }}
+                                    placeholder="اختياري"
+                                    className={`w-16 h-8 pr-1.5 pl-3.5 text-xs font-bold rounded-lg border bg-brand-card text-brand-dark focus:outline-none focus:border-brand-primary ${
+                                      v.compareAtPrice != null && Number(v.compareAtPrice) > 0 && Number(v.compareAtPrice) <= Number(v.price)
+                                        ? 'border-red-400 bg-red-50/30'
+                                        : 'border-brand-border/70'
+                                    }`}
+                                  />
+                                  <span className="absolute left-1 top-1/2 -translate-y-1/2 text-[9px] text-brand-muted pointer-events-none">
+                                    ₪
+                                  </span>
+                                </div>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <span className="text-[10px] text-brand-muted font-bold">المخزون:</span>
                               <div className="inline-flex items-center h-8 bg-brand-card rounded-lg border border-brand-border/70 px-1 shadow-2xs">
                                 <button
@@ -1597,6 +1744,20 @@ export function ProductStudioEditorTab({
                               </div>
                             </div>
                           </div>
+
+                          {v.compareAtPrice != null && Number(v.compareAtPrice) > 0 && (
+                            <div className="pt-0.5">
+                              {Number(v.compareAtPrice) <= Number(v.price) ? (
+                                <div className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                                  ⚠️ السعر قبل الخصم ({v.compareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع ({v.price} ₪).
+                                </div>
+                              ) : (
+                                <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                                  🏷️ وفر {Number(v.compareAtPrice) - Number(v.price)} ₪ (خصم {Math.round(((Number(v.compareAtPrice) - Number(v.price)) / Number(v.compareAtPrice)) * 100)}%)
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

@@ -49,10 +49,11 @@ export function useMerchantProducts() {
     try {
       const res = await merchantService.createProduct(formData);
       if (res.success && res.data) {
-        setProducts((prev) => [res.data, ...prev]);
+        const createdProduct: ProductItem = res.data;
+        setProducts((prev) => [createdProduct, ...prev]);
         setFeedbackMessage({
           type: 'success',
-          text: `تم حفظ وإضافة منتج «${res.data.name}» بنجاح!`,
+          text: `تم حفظ وإضافة منتج «${createdProduct.name}» بنجاح!`,
         });
         return true;
       }

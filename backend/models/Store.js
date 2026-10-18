@@ -2,18 +2,21 @@ const mongoose = require('mongoose');
 const { STATUS, STATUS_VALUES, APPROVE_STATUS_VALUES, APPROVE_STATUS } = require('../constants/enums');
 const { createAddressSchema } = require('./address');
 
-const addressSchema = createAddressSchema({ detailedAddressRequired: true, coordinatesRequired: true });
+const addressSchema = createAddressSchema();
 
 const storeSchema = new mongoose.Schema(
     {
         ownerId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
+            required: true,
             unique: true,
             index: true,
         },
         name: {
             type: String,
+            required: true,
+            trim: true,
         },
         logo: {
             type: String,

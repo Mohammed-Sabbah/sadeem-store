@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
+import { merchantKeys } from '../queries/merchant.keys';
 import { merchantService } from '@/features/merchant/services/merchant.service';
 import { taxonomyService, type CategoryItem } from '@/features/store/services/taxonomy.service';
 import type {
@@ -25,6 +27,7 @@ export interface VariantItemState {
 
 export function useProductStudio(productId: string) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Active Hub Tab
   const [activeTab, setActiveTab] = useState<StudioTab>('overview');
@@ -59,11 +62,27 @@ export function useProductStudio(productId: string) {
   // Mode: Simple vs Configurable
   const [isSimple, setIsSimple] = useState(false);
 
+  const handleSetIsSimple = (val: boolean) => {
+    if (val) {
+      const hasActiveVariants =
+        options.some((o) => o.values && o.values.length > 0) || variants.length > 0;
+      if (hasActiveVariants) {
+        setErrorMessage(
+          'لا يمكن تحويل الصنف إلى (صنف موحد) طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات بالأسفل أولاً لتتمكن من تحويله.'
+        );
+        return;
+      }
+    }
+    setErrorMessage(null);
+    setIsSimple(val);
+  };
+
   // Simple Product Fields
   const [simplePrice, setSimplePrice] = useState<number | string>(50);
   const [simpleCompareAtPrice, setSimpleCompareAtPrice] = useState<number | string>('');
   const [simpleStock, setSimpleStock] = useState<number | string>(10);
   const [simpleSku, setSimpleSku] = useState('');
+  const [simpleVariantId, setSimpleVariantId] = useState<string | null>(null);
 
   // Configurable Options & Visual Color-Image Map
   const [options, setOptions] = useState<ProductOption[]>([]);
@@ -74,6 +93,7 @@ export function useProductStudio(productId: string) {
 
   // Bulk Values Tool
   const [bulkPriceInput, setBulkPriceInput] = useState('');
+  const [bulkCompareAtPriceInput, setBulkCompareAtPriceInput] = useState('');
   const [bulkStockInput, setBulkStockInput] = useState('');
 
   // Generated Variants Matrix
@@ -156,11 +176,22 @@ export function useProductStudio(productId: string) {
           }));
           setVariants(mappedVariants);
 
+          const initialColorMap: Record<string, string> = {};
+          mappedVariants.forEach((v) => {
+            const colorVal = v.attributes['اللون'] || v.attributes['color'];
+            const variantImg = v.images?.[0];
+            if (colorVal && variantImg && !initialColorMap[colorVal]) {
+              initialColorMap[colorVal] = variantImg;
+            }
+          });
+          setColorImageMap(initialColorMap);
+
           if (!hasOptions && mappedVariants.length > 0) {
             setSimplePrice(mappedVariants[0].price);
             setSimpleCompareAtPrice(mappedVariants[0].compareAtPrice ?? '');
             setSimpleStock(mappedVariants[0].stock);
             setSimpleSku(mappedVariants[0].sku);
+            setSimpleVariantId(mappedVariants[0]._id || null);
           }
         } else {
           setErrorMessage(prodRes.message || 'تعذر تحميل بيانات المنتج');
@@ -183,16 +214,20 @@ export function useProductStudio(productId: string) {
     };
   }, [productId]);
 
-  // Category Change with Guard against active variants
+  // Category Change with strict intentional guard
   const handleCategoryChange = (newCatId: string) => {
+    if (newCatId === categoryId) return;
+
     const hasActiveVariants =
       !isSimple && (options.some((o) => o.values && o.values.length > 0) || variants.length > 0);
-    if (hasActiveVariants && newCatId !== categoryId) {
+
+    if (hasActiveVariants) {
       setErrorMessage(
         'لا يمكن تغيير قسم الصنف طالما توجد خيارات ومقاسات محددة. يرجى حذف الخيارات الحالية أولاً أو تحويل الصنف إلى (صنف موحد) لتتمكن من تغيير القسم.'
       );
       return;
     }
+
     setErrorMessage(null);
     setCategoryId(newCatId);
   };
@@ -200,12 +235,97 @@ export function useProductStudio(productId: string) {
   // Load category options on category switch
   useEffect(() => {
     if (!categoryId) return;
+
+    const activeCat = categories.find((c) => c._id === categoryId);
+    if (activeCat?.variantAttributes && activeCat.variantAttributes.length > 0) {
+      const mappedDefs: OptionDefinition[] = activeCat.variantAttributes.map((attr) => {
+        const lower = attr.name.toLowerCase();
+        const isColor = lower === 'color' || attr.name.includes('لون');
+        const isSize = lower === 'size' || lower.includes('size_') || attr.name.includes('مقاس');
+        const isVolume =
+          lower === 'volume' ||
+          attr.name.includes('حجم') ||
+          attr.name.includes('مل') ||
+          attr.name.includes('لتر');
+        const isBattery =
+          lower.includes('battery') ||
+          attr.name.includes('بطارية') ||
+          attr.name.includes('أمبير') ||
+          attr.name.includes('واط');
+        const isWeight =
+          lower === 'weight' ||
+          attr.name.includes('وزن') ||
+          attr.name.includes('كغم') ||
+          attr.name.includes('جرام');
+        const isStorage =
+          !isVolume &&
+          !isBattery &&
+          (lower === 'storage' ||
+            attr.name.includes('تخزين') ||
+            attr.name.includes('ذاكرة') ||
+            attr.name.includes('جيجا'));
+
+        let label = attr.name;
+        let type: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC' = 'TEXT';
+        let unit: string | null = null;
+
+        if (isColor) {
+          label = 'اللون';
+          type = 'COLOR';
+        } else if (isSize) {
+          label = 'المقاس';
+          type = 'SIZE';
+        } else if (isVolume) {
+          label = attr.name;
+          type = 'NUMERIC';
+          unit = 'ml';
+        } else if (isBattery) {
+          label = attr.name;
+          type = 'NUMERIC';
+          unit = 'mah';
+        } else if (isStorage) {
+          label = attr.name;
+          type = 'NUMERIC';
+          unit = 'gb';
+        } else if (isWeight) {
+          label = attr.name;
+          type = 'NUMERIC';
+          unit = 'kg';
+        }
+
+        return {
+          key: attr.name,
+          label,
+          type,
+          unit,
+          values: attr.values.map((v) => ({
+            key: v,
+            label: v,
+            isActive: true,
+          })),
+          isActive: true,
+        };
+      });
+      setAllowedDefinitions(mappedDefs);
+      return;
+    }
+
     merchantService.fetchOptionsByCategory(categoryId).then((res) => {
       if (res.success && res.data?.definitions) {
-        setAllowedDefinitions(res.data.definitions);
+        const catTitle = activeCat?.title || '';
+        const catSlug = activeCat?.slug || '';
+        const isShoes = catTitle.includes('حذاء') || catTitle.includes('أحذية') || catSlug.includes('shoe');
+        const isKids = catTitle.includes('أطفال') || catSlug.includes('kid');
+
+        const refinedDefs = res.data.definitions.filter((def) => {
+          if (def.key === 'size_shoes' && !isShoes) return false;
+          if (def.key === 'size_kids' && !isKids) return false;
+          return true;
+        });
+        setAllowedDefinitions(refinedDefs);
       }
     });
-  }, [categoryId]);
+  }, [categoryId, categories]);
 
   // Calculated Metrics
   const variantsCount = isSimple ? 1 : variants.length;
@@ -325,7 +445,8 @@ export function useProductStudio(productId: string) {
 
   const handleRemoveImage = (imgIdx: number) => {
     const targetUrl = images[imgIdx];
-    setImages((prev) => prev.filter((_, idx) => idx !== imgIdx));
+    const nextImages = images.filter((_, idx) => idx !== imgIdx);
+    setImages(nextImages);
 
     const updatedMap = { ...colorImageMap };
     for (const color in updatedMap) {
@@ -334,6 +455,22 @@ export function useProductStudio(productId: string) {
       }
     }
     setColorImageMap(updatedMap);
+
+    const colorOpt = options.find(
+      (o) => o.type === 'COLOR' || o.name === 'اللون' || o.label === 'اللون'
+    );
+    const colorKey = colorOpt ? colorOpt.name || colorOpt.label || 'اللون' : 'اللون';
+
+    setVariants((prev) =>
+      prev.map((v) => {
+        const vColor = v.attributes[colorKey];
+        const assignedImg = updatedMap[vColor] || nextImages[0] || '';
+        return {
+          ...v,
+          images: assignedImg ? [assignedImg] : [],
+        };
+      })
+    );
   };
 
   // Options Helpers
@@ -404,6 +541,10 @@ export function useProductStudio(productId: string) {
   const handleRemoveOption = (indexToRemove: number) => {
     const remaining = options.filter((_, idx) => idx !== indexToRemove);
     setOptions(remaining);
+    const validRemaining = remaining.filter((o) => o.values && o.values.length > 0);
+    if (validRemaining.length === 0) {
+      setVariants([]);
+    }
     if (
       !remaining.some((o) => o.values && o.values.length > 0) &&
       errorMessage?.includes('لا يمكن تغيير قسم الصنف')
@@ -438,6 +579,10 @@ export function useProductStudio(productId: string) {
         ...opt,
         values: opt.values.filter((v) => v !== valToRemove),
       };
+      const valid = copy.filter((o) => o.values && o.values.length > 0);
+      if (valid.length === 0) {
+        setVariants([]);
+      }
       const hasAnyValues = copy.some((o) => o.values && o.values.length > 0);
       if (!hasAnyValues && errorMessage?.includes('لا يمكن تغيير قسم الصنف')) {
         setErrorMessage(null);
@@ -452,9 +597,27 @@ export function useProductStudio(productId: string) {
     }
   };
 
-  // Visual Color-Image Tap Binding
+  // Visual Color-Image Direct Binding
   const handleBindColorImage = (colorVal: string, imageUrl: string) => {
-    const nextMap = { ...colorImageMap, [colorVal]: imageUrl };
+    const nextMap = { ...colorImageMap };
+
+    if (!colorVal) {
+      // Unbind whatever color was mapped to this image
+      for (const c in nextMap) {
+        if (nextMap[c] === imageUrl) {
+          delete nextMap[c];
+        }
+      }
+    } else {
+      // Remove any previous color this image was assigned to
+      for (const c in nextMap) {
+        if (nextMap[c] === imageUrl && c !== colorVal) {
+          delete nextMap[c];
+        }
+      }
+      nextMap[colorVal] = imageUrl;
+    }
+
     setColorImageMap(nextMap);
 
     const colorOpt = options.find(
@@ -464,19 +627,26 @@ export function useProductStudio(productId: string) {
 
     setVariants((prev) =>
       prev.map((v) => {
-        if (v.attributes[colorKey] === colorVal) {
-          return { ...v, images: [imageUrl] };
-        }
-        return v;
+        const vColor = v.attributes[colorKey];
+        const assignedImg = nextMap[vColor];
+        return {
+          ...v,
+          images: assignedImg ? [assignedImg] : (images[0] ? [images[0]] : []),
+        };
       })
     );
   };
 
   // Automatic Real-Time Live Sync of Variants
   useEffect(() => {
-    if (isSimple) return;
+    if (isSimple) {
+      return;
+    }
     const validOptions = options.filter((o) => o.values && o.values.length > 0);
-    if (validOptions.length === 0) return;
+    if (validOptions.length === 0) {
+      setVariants([]);
+      return;
+    }
 
     const cartesian = (arrays: string[][]): string[][] => {
       return arrays.reduce<string[][]>(
@@ -585,6 +755,21 @@ export function useProductStudio(productId: string) {
     setBulkStockInput('');
   };
 
+  const handleApplyBulkCompareAtPrice = () => {
+    const val = Number(bulkCompareAtPriceInput);
+    if (isNaN(val) || val <= 0) {
+      alert('يرجى إدخال سعر صحيح قبل الخصم');
+      return;
+    }
+    const invalidPrice = variants.find((v) => val <= v.price);
+    if (invalidPrice) {
+      alert(`السعر قبل الخصم (${val} ₪) يجب أن يكون أكبر من أسعار البيع الحالية للأصناف (يوجد صنف بسعر ${invalidPrice.price} ₪).`);
+      return;
+    }
+    setVariants((prev) => prev.map((v) => ({ ...v, compareAtPrice: val })));
+    setBulkCompareAtPriceInput('');
+  };
+
   // Quick Delta Stock
   const handleQuickDeltaStock = async (variantId: string | undefined, delta: number) => {
     if (!productId) return;
@@ -608,14 +793,37 @@ export function useProductStudio(productId: string) {
       return;
     }
 
-    if (!isSimple && variants.length === 0) {
-      setErrorMessage('يجب إضافة خيار واحد على الأقل للمنتج متعدد الخيارات');
-      return;
-    }
-
-    if (!isSimple && variants.length > 100) {
-      setErrorMessage('تجاوزت الحد الأقصى للأصناف (100 صنف كحد أقصى)');
-      return;
+    if (isSimple) {
+      if (!simplePrice || Number(simplePrice) <= 0) {
+        setErrorMessage('يرجى تحديد سعر بيع صحيح للمنتج');
+        return;
+      }
+      if (simpleCompareAtPrice && Number(simpleCompareAtPrice) <= Number(simplePrice)) {
+        setErrorMessage(`السعر قبل الخصم (${simpleCompareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع الحالي (${simplePrice} ₪)`);
+        return;
+      }
+    } else {
+      if (variants.length === 0) {
+        setErrorMessage('يجب إضافة خيار واحد على الأقل للمنتج متعدد الخيارات');
+        return;
+      }
+      if (variants.length > 100) {
+        setErrorMessage('تجاوزت الحد الأقصى للأصناف (100 صنف كحد أقصى)');
+        return;
+      }
+      const hasInvalidPrice = variants.some((v) => !v.price || v.price <= 0);
+      if (hasInvalidPrice) {
+        setErrorMessage('يرجى التأكد من تحديد سعر بيع صحيح لكل صنف');
+        return;
+      }
+      const invalidCompare = variants.find(
+        (v) => v.compareAtPrice && Number(v.compareAtPrice) <= Number(v.price)
+      );
+      if (invalidCompare) {
+        const vSummary = Object.values(invalidCompare.attributes || {}).join(' / ') || 'المتغير';
+        setErrorMessage(`السعر قبل الخصم للصنف «${vSummary}» (${invalidCompare.compareAtPrice} ₪) يجب أن يكون أكبر من سعر البيع (${invalidCompare.price} ₪)`);
+        return;
+      }
     }
 
     setIsSaving(true);
@@ -628,12 +836,16 @@ export function useProductStudio(productId: string) {
       description,
       categoryId,
       images,
+      simplePrice: Number(simplePrice) || 0,
+      simpleCompareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null,
+      simpleStock: Math.max(0, parseInt(String(simpleStock)) || 0),
+      simpleSku: simpleSku.trim(),
       options: isSimple ? [] : options,
       variants: isSimple
         ? [
             {
-              _id: variants[0]?._id,
-              sku: simpleSku.trim() || `SDM-ITM-${Math.floor(1000 + Math.random() * 9000)}`,
+              _id: simpleVariantId || variants[0]?._id || (product?.variants && product.variants[0]?._id) || undefined,
+              sku: simpleSku.trim() || (product?.variants && product.variants[0]?.sku) || `SDM-ITM-${Math.floor(1000 + Math.random() * 9000)}`,
               attributes: {},
               attrKey: 'default',
               price: Number(simplePrice) || 0,
@@ -652,7 +864,16 @@ export function useProductStudio(productId: string) {
     setIsSaving(false);
     if (result.success && result.data) {
       setProduct(result.data);
+      setName(result.data.name || result.data.title || '');
+      setDescription(result.data.description || '');
+      if (result.data.variants && result.data.variants.length > 0) {
+        setSimpleVariantId(result.data.variants[0]._id || null);
+        setSimpleSku(result.data.variants[0].sku || simpleSku);
+      }
       setSaveSuccessMessage('تم حفظ كافة التعديلات بنجاح وتحديث كتالوج المتجر.');
+      // Invalidate merchant queries so product list & metrics are updated in background
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.productDetail(productId) });
       setTimeout(() => setSaveSuccessMessage(null), 4000);
     } else {
       setErrorMessage(result.message || 'فشل حفظ التعديلات');
@@ -664,11 +885,21 @@ export function useProductStudio(productId: string) {
       return;
     }
     setIsSaving(true);
+
+    // 0ms Optimistic UI: Immediately remove product from React Query cache
+    queryClient.setQueryData<ProductItem[]>(merchantKeys.products(), (old) =>
+      old ? old.filter((p) => p._id !== productId) : []
+    );
+
     const res = await merchantService.deleteProduct(productId);
     setIsSaving(false);
     if (res.success) {
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
+      queryClient.removeQueries({ queryKey: merchantKeys.productDetail(productId) });
       router.push('/merchant/dashboard');
     } else {
+      // Rollback cache if deletion failed
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
       setErrorMessage('تعذر حذف المنتج حالياً');
     }
   };
@@ -721,7 +952,7 @@ export function useProductStudio(productId: string) {
     handleSetPrimaryImage,
     handleRemoveImage,
     isSimple,
-    setIsSimple,
+    setIsSimple: handleSetIsSimple,
     simplePrice,
     setSimplePrice,
     simpleCompareAtPrice,
@@ -742,6 +973,8 @@ export function useProductStudio(productId: string) {
     setShowCustomInput,
     bulkPriceInput,
     setBulkPriceInput,
+    bulkCompareAtPriceInput,
+    setBulkCompareAtPriceInput,
     bulkStockInput,
     setBulkStockInput,
     variants,
@@ -769,6 +1002,7 @@ export function useProductStudio(productId: string) {
     handleRemoveOptionValue,
     handleBindColorImage,
     handleApplyBulkPrice,
+    handleApplyBulkCompareAtPrice,
     handleApplyBulkStock,
     handleQuickDeltaStock,
     handleSaveProduct,

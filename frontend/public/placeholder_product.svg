@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F6F3ED" />
+      <stop offset="100%" stop-color="#EFEAE1" />
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#B8621B" />
+      <stop offset="100%" stop-color="#B08D57" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg)" />
+  <g transform="translate(140, 130)" opacity="0.45">
+    <!-- Camera / Product Frame -->
+    <rect x="0" y="20" width="120" height="90" rx="16" fill="none" stroke="#57534E" stroke-width="6" />
+    <path d="M35 20 L45 8 L75 8 L85 20 Z" fill="none" stroke="#57534E" stroke-width="6" stroke-linejoin="round" />
+    <circle cx="60" cy="65" r="26" fill="none" stroke="#57534E" stroke-width="6" />
+    <!-- Sadeem Star Diamond Accent -->
+    <polygon points="60,50 64,61 75,65 64,69 60,80 56,69 45,65 56,61" fill="url(#gold)" />
+  </g>
+  <text x="200" y="265" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="#8C867F" text-anchor="middle">
+    سَدِيم · بانتظار صورة الصنف
+  </text>
+</svg>

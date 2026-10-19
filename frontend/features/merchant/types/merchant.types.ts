@@ -58,11 +58,12 @@ export interface ProductVariant {
   _id?: string;
   productId?: string;
   storeId?: string;
-  sku: string;
+  sku?: string;
   attributes: Record<string, string>; // e.g. { "color": "black", "size": "L" }
   attrKey: string; // e.g. "color:black|size:L" or "default"
   price: number;
   compareAtPrice?: number | null;
+  originalPrice?: number | null;
   stock: number;
   isActive: boolean;
   image?: string;
@@ -85,8 +86,10 @@ export interface ProductItem {
   inStock: boolean;
   isFeatured: boolean;
   isActive: boolean;
+  approveStatus?: 'pending' | 'approved' | 'rejected';
   isAnonymousVendor?: boolean;
   isDeleted?: boolean;
+  rejectReason?: string;
   variants?: ProductVariant[];
   variantsCount?: number;
   totalStock?: number;
@@ -100,22 +103,24 @@ export interface ProductFormData {
   description: string;
   categoryId: string;
   images: string[];
+  imageFiles?: File[];
   isSimple: boolean;
   simplePrice: number;
   simpleCompareAtPrice?: number | null;
   simpleStock: number;
-  simpleSku: string;
   options: ProductOption[];
   variants: Array<{
     _id?: string;
     attributes: Record<string, string>;
     attrKey: string;
-    sku: string;
+    sku?: string;
     price: number;
     compareAtPrice?: number | null;
+    originalPrice?: number | null;
     stock: number;
     isActive: boolean;
     image?: string;
+    imageFile?: File;
     images?: string[];
   }>;
   isFeatured: boolean;

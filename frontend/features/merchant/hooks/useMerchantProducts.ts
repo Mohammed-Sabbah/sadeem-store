@@ -45,7 +45,7 @@ export function useMerchantProducts() {
   }, [feedbackMessage]);
 
   // Handlers
-  const handleCreateProduct = async (formData: ProductFormData): Promise<boolean> => {
+  const handleCreateProduct = async (formData: ProductFormData): Promise<{ success: boolean; message?: string }> => {
     try {
       const res = await merchantService.createProduct(formData);
       if (res.success && res.data) {
@@ -55,15 +55,15 @@ export function useMerchantProducts() {
           type: 'success',
           text: `تم حفظ وإضافة منتج «${createdProduct.name}» بنجاح!`,
         });
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, message: res.message || 'تعذر إضافة المنتج' };
     } catch (err: any) {
       setFeedbackMessage({
         type: 'error',
         text: err.message || 'تعذر إضافة المنتج، يرجى المحاولة لاحقاً',
       });
-      return false;
+      return { success: false, message: err?.message || 'تعذر إضافة المنتج' };
     }
   };
 
@@ -112,7 +112,7 @@ export function useMerchantProducts() {
 
         if (variantId && p.variants) {
           const updatedVars = p.variants.map((v) =>
-            v._id === variantId || v.sku === variantId ? { ...v, stock: cleanStock } : v
+            v._id === variantId ? { ...v, stock: cleanStock } : v
           );
           const total = updatedVars.reduce((sum, v) => sum + (Number(v.stock) || 0), 0);
           return {

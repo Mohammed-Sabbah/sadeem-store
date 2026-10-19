@@ -15,7 +15,7 @@ import type { StudioTab } from '../components/product-studio/ProductStudioTypes'
 
 export interface VariantItemState {
   _id?: string;
-  sku: string;
+  sku?: string;
   attributes: Record<string, string>;
   attrKey: string;
   price: number;
@@ -54,6 +54,7 @@ export function useProductStudio(productId: string) {
   // Gallery (Device Upload & Cloud Readiness)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<string[]>([]);
+  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -81,7 +82,6 @@ export function useProductStudio(productId: string) {
   const [simplePrice, setSimplePrice] = useState<number | string>(50);
   const [simpleCompareAtPrice, setSimpleCompareAtPrice] = useState<number | string>('');
   const [simpleStock, setSimpleStock] = useState<number | string>(10);
-  const [simpleSku, setSimpleSku] = useState('');
   const [simpleVariantId, setSimpleVariantId] = useState<string | null>(null);
 
   // Configurable Options & Visual Color-Image Map
@@ -148,10 +148,13 @@ export function useProductStudio(productId: string) {
           setIsFeatured(p.isFeatured || false);
           setIsAnonymousVendor(p.isAnonymousVendor || false);
 
-          const hasOptions = Array.isArray(p.options) && p.options.length > 0;
+          const hasVariantsWithAttributes =
+            Array.isArray(p.variants) &&
+            p.variants.some((v) => v.attributes && Object.keys(v.attributes).length > 0);
+          const hasOptions = (Array.isArray(p.options) && p.options.length > 0) || hasVariantsWithAttributes;
           setIsSimple(!hasOptions);
 
-          const mappedOptions: ProductOption[] = (p.options || []).map((o) => ({
+          let mappedOptions: ProductOption[] = (p.options || []).map((o) => ({
             key: o.key,
             source: o.source || 'DEFINED',
             label: o.label || o.name,
@@ -160,20 +163,47 @@ export function useProductStudio(productId: string) {
             unit: o.unit || null,
             values: o.values || [],
           }));
+
+          if (mappedOptions.length === 0 && hasVariantsWithAttributes && p.variants) {
+            const attrMap: Record<string, Set<string>> = {};
+            p.variants.forEach((v) => {
+              const attrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
+              Object.entries(attrs).forEach(([k, val]) => {
+                if (val) {
+                  if (!attrMap[k]) attrMap[k] = new Set();
+                  attrMap[k].add(String(val));
+                }
+              });
+            });
+            mappedOptions = Object.entries(attrMap).map(([k, valSet]) => ({
+              key: k,
+              source: 'DEFINED',
+              label: k === 'color' ? 'اللون' : k === 'size' ? 'المقاس' : k,
+              name: k,
+              type: k === 'color' || k.includes('لون') ? 'COLOR' : k === 'size' || k.includes('مقاس') ? 'SIZE' : 'TEXT',
+              unit: null,
+              values: Array.from(valSet),
+            }));
+          }
           setOptions(mappedOptions);
 
-          const mappedVariants: VariantItemState[] = (p.variants || []).map((v) => ({
-            _id: v._id,
-            sku: v.sku,
-            attributes:
-              v.attributes instanceof Map ? Object.fromEntries(v.attributes) : v.attributes || {},
-            attrKey: v.attrKey || 'default',
-            price: Number(v.price) || 0,
-            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-            stock: Number(v.stock) || 0,
-            isActive: v.isActive !== undefined ? v.isActive : true,
-            images: v.images || (v.image ? [v.image] : []),
-          }));
+          const mappedVariants: VariantItemState[] = (p.variants || []).map((v) => {
+            const attrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
+            const sortedEntries = Object.entries(attrs).sort(([a], [b]) => a.localeCompare(b));
+            const attrKey = sortedEntries.length > 0 ? sortedEntries.map(([k, val]) => `${k}:${val}`).join('|') : 'default';
+
+            return {
+              _id: v._id,
+              sku: v.sku || '',
+              attributes: attrs,
+              attrKey,
+              price: Number(v.price) || 0,
+              compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+              stock: Number(v.stock) || 0,
+              isActive: v.isActive !== undefined ? v.isActive : true,
+              images: v.images || (v.image ? [v.image] : []),
+            };
+          });
           setVariants(mappedVariants);
 
           const initialColorMap: Record<string, string> = {};
@@ -190,7 +220,6 @@ export function useProductStudio(productId: string) {
             setSimplePrice(mappedVariants[0].price);
             setSimpleCompareAtPrice(mappedVariants[0].compareAtPrice ?? '');
             setSimpleStock(mappedVariants[0].stock);
-            setSimpleSku(mappedVariants[0].sku);
             setSimpleVariantId(mappedVariants[0]._id || null);
           }
         } else {
@@ -310,21 +339,7 @@ export function useProductStudio(productId: string) {
       return;
     }
 
-    merchantService.fetchOptionsByCategory(categoryId).then((res) => {
-      if (res.success && res.data?.definitions) {
-        const catTitle = activeCat?.title || '';
-        const catSlug = activeCat?.slug || '';
-        const isShoes = catTitle.includes('حذاء') || catTitle.includes('أحذية') || catSlug.includes('shoe');
-        const isKids = catTitle.includes('أطفال') || catSlug.includes('kid');
-
-        const refinedDefs = res.data.definitions.filter((def) => {
-          if (def.key === 'size_shoes' && !isShoes) return false;
-          if (def.key === 'size_kids' && !isKids) return false;
-          return true;
-        });
-        setAllowedDefinitions(refinedDefs);
-      }
-    });
+    setAllowedDefinitions([]);
   }, [categoryId, categories]);
 
   // Calculated Metrics
@@ -408,6 +423,7 @@ export function useProductStudio(productId: string) {
 
     setIsProcessingFiles(true);
     const fileArray = Array.from(files);
+    setNewImageFiles((prev) => [...prev, ...fileArray]);
 
     try {
       const compressedUrls = await Promise.all(fileArray.map((f) => compressImage(f)));
@@ -441,12 +457,20 @@ export function useProductStudio(productId: string) {
       next.unshift(target);
       return next;
     });
+    setNewImageFiles((prev) => {
+      if (imgIdx >= prev.length) return prev;
+      const next = [...prev];
+      const [target] = next.splice(imgIdx, 1);
+      next.unshift(target);
+      return next;
+    });
   };
 
   const handleRemoveImage = (imgIdx: number) => {
     const targetUrl = images[imgIdx];
     const nextImages = images.filter((_, idx) => idx !== imgIdx);
     setImages(nextImages);
+    setNewImageFiles((prev) => prev.filter((_, idx) => idx !== imgIdx));
 
     const updatedMap = { ...colorImageMap };
     for (const color in updatedMap) {
@@ -699,18 +723,11 @@ export function useProductStudio(productId: string) {
             return existing;
           }
 
-          const cleanValues = Object.values(attrs)
-            .map((v) => v.replace(/[^a-zA-Z0-9]/g, '').slice(0, 3).toUpperCase() || 'VAR')
-            .slice(0, 2)
-            .join('-');
-
           const defaultPrice = typeof simplePrice === 'number' && simplePrice > 0 ? simplePrice : 50;
           const defaultStock = typeof simpleStock === 'number' && simpleStock > 0 ? simpleStock : 10;
 
           return {
-            sku: `SDM-${categoryPrefix}-${cleanValues || 'VAR'}-${idx + 1}-${Math.floor(
-              100 + Math.random() * 900
-            )}`,
+            sku: '',
             attributes: attrs,
             attrKey,
             price: Number(defaultPrice),
@@ -772,18 +789,20 @@ export function useProductStudio(productId: string) {
 
   // Quick Delta Stock
   const handleQuickDeltaStock = async (variantId: string | undefined, delta: number) => {
-    if (!productId) return;
-    const targetVariant = variants.find((v) => v._id === variantId || v.sku === variantId);
+    if (!productId || !variantId) return;
+    const targetVariant = variants.find((v) => v._id === variantId);
     if (!targetVariant) return;
 
     const newStock = Math.max(0, targetVariant.stock + delta);
     setVariants((prev) =>
       prev.map((v) =>
-        v._id === variantId || v.sku === variantId ? { ...v, stock: newStock } : v
+        v._id === variantId ? { ...v, stock: newStock } : v
       )
     );
 
-    await merchantService.quickUpdateStock(productId, newStock, targetVariant._id || targetVariant.sku);
+    if (targetVariant._id) {
+      await merchantService.quickUpdateStock(productId, newStock, targetVariant._id);
+    }
   };
 
   // Save changes
@@ -836,16 +855,15 @@ export function useProductStudio(productId: string) {
       description,
       categoryId,
       images,
+      imageFiles: newImageFiles.length > 0 ? newImageFiles : undefined,
       simplePrice: Number(simplePrice) || 0,
       simpleCompareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null,
       simpleStock: Math.max(0, parseInt(String(simpleStock)) || 0),
-      simpleSku: simpleSku.trim(),
       options: isSimple ? [] : options,
       variants: isSimple
         ? [
             {
               _id: simpleVariantId || variants[0]?._id || (product?.variants && product.variants[0]?._id) || undefined,
-              sku: simpleSku.trim() || (product?.variants && product.variants[0]?.sku) || `SDM-ITM-${Math.floor(1000 + Math.random() * 9000)}`,
               attributes: {},
               attrKey: 'default',
               price: Number(simplePrice) || 0,
@@ -855,7 +873,16 @@ export function useProductStudio(productId: string) {
               images: images.slice(0, 1),
             },
           ]
-        : variants,
+        : variants.map((v) => ({
+            _id: v._id,
+            attributes: v.attributes,
+            attrKey: v.attrKey,
+            price: v.price,
+            compareAtPrice: v.compareAtPrice,
+            stock: v.stock,
+            isActive: v.isActive,
+            images: v.images,
+          })),
       isActive,
       isFeatured,
       isAnonymousVendor,
@@ -863,12 +890,30 @@ export function useProductStudio(productId: string) {
 
     setIsSaving(false);
     if (result.success && result.data) {
+      setNewImageFiles([]);
       setProduct(result.data);
       setName(result.data.name || result.data.title || '');
       setDescription(result.data.description || '');
       if (result.data.variants && result.data.variants.length > 0) {
         setSimpleVariantId(result.data.variants[0]._id || null);
-        setSimpleSku(result.data.variants[0].sku || simpleSku);
+        const rehydratedVariants: VariantItemState[] = result.data.variants.map((v) => {
+          const attrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
+          const sortedEntries = Object.entries(attrs).sort(([a], [b]) => a.localeCompare(b));
+          const attrKey = sortedEntries.length > 0 ? sortedEntries.map(([k, val]) => `${k}:${val}`).join('|') : 'default';
+
+          return {
+            _id: v._id,
+            sku: v.sku || '',
+            attributes: attrs,
+            attrKey,
+            price: Number(v.price) || 0,
+            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
+            stock: Number(v.stock) || 0,
+            isActive: v.isActive !== undefined ? v.isActive : true,
+            images: v.images || (v.image ? [v.image] : []),
+          };
+        });
+        setVariants(rehydratedVariants);
       }
       setSaveSuccessMessage('تم حفظ كافة التعديلات بنجاح وتحديث كتالوج المتجر.');
       // Invalidate merchant queries so product list & metrics are updated in background
@@ -959,8 +1004,6 @@ export function useProductStudio(productId: string) {
     setSimpleCompareAtPrice,
     simpleStock,
     setSimpleStock,
-    simpleSku,
-    setSimpleSku,
     options,
     setOptions,
     optionTagInputs,

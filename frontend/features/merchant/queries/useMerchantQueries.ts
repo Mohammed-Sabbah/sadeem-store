@@ -178,7 +178,7 @@ export function useQuickStockMutation() {
 
             if (variantId && p.variants && p.variants.length > 0) {
               const updatedVariants = p.variants.map((v) =>
-                v._id === variantId || v.sku === variantId ? { ...v, stock: clampedStock } : v
+                v._id === variantId ? { ...v, stock: clampedStock } : v
               );
               const newTotalStock = updatedVariants.reduce((sum, v) => sum + (v.stock ?? 0), 0);
               return {

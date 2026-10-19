@@ -1,4 +1,5 @@
 import { getRequest, postRequest, patchRequest, deleteRequest } from '@/shared/lib/coreApi';
+import { taxonomyService } from '@/features/store/services/taxonomy.service';
 import type {
   StoreProfile,
   ProductItem,
@@ -52,44 +53,84 @@ export const merchantService = {
   },
 
   /**
+   * دالة مساعدة لتوحيد نمذجة المنتج للأصناف ومؤشرات الحالة
+   */
+  mapProductItem(p: any): ProductItem {
+    const rawVariants = Array.isArray(p.variants) ? p.variants : [];
+    const variants: ProductVariant[] = rawVariants.map((v: any) => {
+      const attrs = v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {});
+      const sortedEntries = Object.entries(attrs).sort(([a], [b]) => a.localeCompare(b));
+      const computedAttrKey = sortedEntries.length > 0
+        ? sortedEntries.map(([k, val]) => `${k}:${val}`).join('|')
+        : 'default';
+
+      const cmpPrice = v.compareAtPrice ? Number(v.compareAtPrice) : (v.originalPrice ? Number(v.originalPrice) : null);
+
+      return {
+        _id: v._id,
+        productId: v.productId,
+        storeId: v.storeId,
+        sku: v.sku || '',
+        attributes: attrs,
+        attrKey: computedAttrKey,
+        price: Number(v.price) || 0,
+        compareAtPrice: cmpPrice,
+        originalPrice: cmpPrice,
+        stock: Number(v.stock) || 0,
+        isActive: v.status !== undefined ? v.status === 'active' : (v.isActive !== undefined ? v.isActive : true),
+        images: v.images || (v.image ? [v.image] : []),
+      };
+    });
+
+    const activeV = variants.filter((v) => v.isActive !== false);
+    const pool = activeV.length > 0 ? activeV : variants;
+    const prices = pool.map((v) => v.price).filter((pr) => pr > 0);
+
+    const isAct = p.status !== undefined ? p.status === 'active' : (p.isActive !== undefined ? p.isActive : true);
+
+    return {
+      _id: p._id,
+      storeId: typeof p.storeId === 'object' ? p.storeId._id : p.storeId,
+      categoryId: p.categoryId,
+      categoryTitle: typeof p.categoryId === 'object' ? p.categoryId.title : undefined,
+      name: p.title || p.name || 'بدون عنوان',
+      title: p.title || p.name || 'بدون عنوان',
+      slug: p.slug,
+      description: p.description || '',
+      images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
+      options: (p.options || []).map((o: any) => ({
+        key: o.key || o.name?.toLowerCase().trim() || 'opt',
+        source: o.source,
+        label: o.label || o.name,
+        name: o.name || o.label || o.key,
+        type: o.type,
+        unit: o.unit,
+        values: o.values || [],
+      })),
+      minPrice: prices.length > 0 ? Math.min(...prices) : (p.minPrice || 0),
+      maxPrice: prices.length > 0 ? Math.max(...prices) : (p.maxPrice || 0),
+      inStock: (p.totalStock ?? variants.reduce((sum, v) => sum + (v.stock || 0), 0)) > 0,
+      isFeatured: p.isFeatured || false,
+      isActive: isAct,
+      approveStatus: p.approveStatus || 'approved',
+      rejectReason: p.rejectReason || p.rejectionReason || '',
+      isAnonymousVendor: p.isAnonymousVendor || false,
+      variants,
+      variantsCount: variants.length,
+      totalStock: p.totalStock ?? variants.reduce((sum, v) => sum + (v.stock || 0), 0),
+      createdAt: p.createdAt || new Date().toISOString(),
+      updatedAt: p.updatedAt,
+    };
+  },
+
+  /**
    * جلب كافة منتجات متجر التاجر المسجل من قاعدة البيانات
    */
   async getMyProducts(): Promise<{ success: boolean; data: ProductItem[]; message?: string }> {
     try {
       const res = await getRequest<{ products: any[] }>('/api/products/seller');
       if (res.success && Array.isArray(res.data?.products)) {
-        const prods: ProductItem[] = res.data.products.map((p) => {
-          const variants: ProductVariant[] = (p.variants || []).map((v: any) => ({
-            _id: v._id,
-            productId: v.productId,
-            storeId: v.storeId,
-            sku: v.sku,
-            attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
-            attrKey: v.attrKey || 'default',
-            price: Number(v.price) || 0,
-            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-            stock: Number(v.stock) || 0,
-            isActive: v.isActive !== undefined ? v.isActive : true,
-            images: v.images || (v.image ? [v.image] : []),
-          }));
-
-          const activeV = variants.filter((v) => v.isActive !== false);
-          const pool = activeV.length > 0 ? activeV : variants;
-          const prices = pool.map((v) => v.price).filter((pr) => pr > 0);
-
-          return {
-            ...p,
-            name: p.title || p.name || 'بدون عنوان',
-            title: p.title || p.name || 'بدون عنوان',
-            images: p.images || (p.image ? [p.image] : []),
-            variants,
-            variantsCount: variants.length,
-            minPrice: prices.length > 0 ? Math.min(...prices) : (p.minPrice || 0),
-            maxPrice: prices.length > 0 ? Math.max(...prices) : (p.maxPrice || 0),
-            totalStock: p.totalStock ?? variants.reduce((sum, v) => sum + (v.stock || 0), 0),
-            inStock: (p.totalStock ?? variants.reduce((sum, v) => sum + (v.stock || 0), 0)) > 0,
-          };
-        });
+        const prods: ProductItem[] = res.data.products.map((p) => this.mapProductItem(p));
         return { success: true, data: prods };
       }
       return { success: false, data: [], message: res.message || 'تعذر جلب المنتجات' };
@@ -102,88 +143,97 @@ export const merchantService = {
    * إنشاء منتج جديد مع متغيراته وحفظه مباشرة في قاعدة البيانات
    */
   async createProduct(formData: ProductFormData): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
-    const rawVariants = formData.isSimple
-      ? [
-          {
-            sku: formData.simpleSku?.trim() || `SKU-${Date.now().toString().slice(-6)}`,
-            attributes: {},
-            price: Number(formData.simplePrice) || 0,
-            stock: Math.max(0, Math.floor(Number(formData.simpleStock) || 0)),
-            compareAtPrice: formData.simpleCompareAtPrice ? Number(formData.simpleCompareAtPrice) : null,
-            images: formData.images || [],
-            image: formData.images?.[0] || '',
-            isActive: true,
-          },
-        ]
-      : formData.variants.map((v, idx) => {
-          const item: any = {
-            sku: v.sku?.trim() || `SKU-${Date.now().toString().slice(-4)}-${idx + 1}`,
-            attributes: v.attributes || {},
-            price: Number(v.price) || 0,
-            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
-            compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-            isActive: v.isActive !== undefined ? v.isActive : true,
-          };
-          if (v.images && v.images.length > 0) item.images = v.images;
-          if (v.image) item.image = v.image;
-          return item;
-        });
-
-    const payload = {
-      title: formData.name.trim(),
-      name: formData.name.trim(),
-      categoryId: formData.categoryId,
-      description: formData.description?.trim() || '',
-      images: formData.images,
-      image: formData.images?.[0] || '',
-      options: formData.isSimple
-        ? []
-        : (formData.options || []).map((opt) => ({
-            key: opt.key || (opt.name ? opt.name.toLowerCase().trim() : 'opt'),
-            source: opt.source || 'DEFINED',
-            label: opt.label || opt.name,
-            name: opt.name || opt.label || opt.key,
-            type: opt.type || 'TEXT',
-            unit: opt.unit && String(opt.unit).trim() ? String(opt.unit).trim() : null,
-            values: Array.isArray(opt.values) ? opt.values : [],
-          })),
-      isFeatured: Boolean(formData.isFeatured),
-      isActive: formData.isActive !== undefined ? formData.isActive : true,
-      isAnonymousVendor: Boolean(formData.isAnonymousVendor),
-      variants: rawVariants,
-    };
-
     try {
-      const res = await postRequest<{ product: any; message?: string }>('/api/products', payload);
-      if (res.success && res.data?.product) {
-        const p = res.data.product;
-        const variants: ProductVariant[] = (p.variants || []).map((v: any) => ({
-          _id: v._id,
-          productId: v.productId,
-          storeId: v.storeId,
-          sku: v.sku,
-          attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
-          attrKey: v.attrKey || 'default',
-          price: Number(v.price) || 0,
-          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-          stock: Number(v.stock) || 0,
-          isActive: v.isActive !== undefined ? v.isActive : true,
-          images: v.images || (v.image ? [v.image] : []),
-        }));
+      const initialPrice = formData.isSimple ? (Number(formData.simplePrice) || 0) : (Number(formData.variants[0]?.price) || 0);
+      const initialStock = formData.isSimple
+        ? Math.max(0, Math.floor(Number(formData.simpleStock) || 0))
+        : Math.max(0, Math.floor(Number(formData.variants[0]?.stock) || 0));
 
-        const prod: ProductItem = {
-          ...p,
-          name: p.title || p.name,
-          title: p.title || p.name,
-          images: p.images || (p.image ? [p.image] : []),
-          variants,
-          variantsCount: variants.length,
-          totalStock: p.totalStock ?? variants.reduce((s, v) => s + (v.stock || 0), 0),
-          inStock: (p.totalStock ?? variants.reduce((s, v) => s + (v.stock || 0), 0)) > 0,
+      const hasFiles = Array.isArray(formData.imageFiles) && formData.imageFiles.length > 0;
+      let body: FormData | Record<string, any>;
+
+      if (hasFiles) {
+        const fd = new FormData();
+        fd.append('title', (formData.name || formData.title || '').trim());
+        if (formData.description?.trim()) fd.append('description', formData.description.trim());
+        fd.append('categoryId', formData.categoryId);
+        fd.append('price', String(initialPrice));
+        fd.append('stock', String(initialStock));
+        formData.imageFiles!.forEach((file) => fd.append('images', file));
+        body = fd;
+      } else {
+        const validUrls = (formData.images || []).filter(
+          (u) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/'))
+        );
+        body = {
+          title: (formData.name || formData.title || '').trim(),
+          description: formData.description?.trim() || '',
+          categoryId: formData.categoryId,
+          price: initialPrice,
+          stock: initialStock,
+          ...(validUrls.length > 0 ? { images: validUrls } : {}),
         };
-        return { success: true, data: prod, message: res.data.message || res.message || 'تم حفظ ونشر المنتج بنجاح' };
       }
-      return { success: false, message: res.message || 'فشلت عملية إنشاء المنتج' };
+
+      // 1. Create Base Product
+      const res = await postRequest<{ product: any; message?: string }>('/api/products', body, { timeoutMs: 60000 });
+      if (!res.success || !res.data?.product) {
+        const errMsg = res.message || (res.errors ? Object.values(res.errors).flat().join(', ') : '') || 'فشلت عملية إنشاء المنتج';
+        return { success: false, message: errMsg };
+      }
+
+      const p = res.data.product;
+
+      // 2. If multi-variant, configure variants via sub-resource endpoints
+      if (!formData.isSimple && Array.isArray(formData.variants) && formData.variants.length > 0) {
+        const productId = p._id;
+        const defaultVariantId = p.variants?.[0]?._id;
+
+        // A. Update default variant with combo #1 attributes
+        const combo1 = formData.variants[0];
+        if (defaultVariantId && combo1 && Object.keys(combo1.attributes || {}).length > 0) {
+          const patchRes = await patchRequest(`/api/products/${productId}/variants/${defaultVariantId}`, {
+            attributes: combo1.attributes,
+            price: Number(combo1.price) || initialPrice,
+            stock: Number(combo1.stock) || initialStock,
+          });
+          if (!patchRes.success) {
+            return { success: false, message: patchRes.message || 'فشل تحديث الصنف الافتراضي' };
+          }
+          if (combo1.imageFile) {
+            const vFd = new FormData();
+            vFd.append('image', combo1.imageFile);
+            await patchRequest(`/api/products/${productId}/variants/${defaultVariantId}`, vFd);
+          }
+        }
+
+        // B. Add subsequent combos #2..N
+        for (let i = 1; i < formData.variants.length; i++) {
+          const v = formData.variants[i];
+          const vRes = await postRequest<{ variant?: any }>(`/api/products/${productId}/variants`, {
+            attributes: v.attributes || {},
+            price: Number(v.price) || initialPrice,
+            stock: Number(v.stock) || 0,
+          });
+          if (!vRes.success) {
+            return { success: false, message: vRes.message || `فشل إنشاء الصنف رقم ${i + 1}` };
+          }
+
+          const createdVarId = vRes.data?.variant?._id;
+          if (v.imageFile && createdVarId) {
+            const vFd = new FormData();
+            vFd.append('image', v.imageFile);
+            await patchRequest(`/api/products/${productId}/variants/${createdVarId}`, vFd);
+          }
+        }
+
+        const refreshed = await this.getProductById(productId);
+        if (refreshed.success && refreshed.data) {
+          return { success: true, data: refreshed.data, message: 'تم حفظ ونشر المنتج وأصنافه بنجاح' };
+        }
+      }
+
+      return { success: true, data: this.mapProductItem(p), message: 'تم حفظ ونشر المنتج بنجاح' };
     } catch (err: any) {
       return { success: false, message: err?.message || 'خطأ أثناء الاتصال بالخادم لإنشاء المنتج' };
     }
@@ -196,7 +246,6 @@ export const merchantService = {
     const nextState = !currentActive;
     try {
       const res = await patchRequest(`/api/products/${productId}/status`, {
-        isActive: nextState,
         status: nextState ? 'active' : 'inActive',
       });
       return { success: res.success, message: res.message };
@@ -215,13 +264,19 @@ export const merchantService = {
   ): Promise<{ success: boolean; data?: any; message?: string }> {
     const cleanStock = Math.max(0, Math.floor(Number(newStock) || 0));
     try {
-      if (variantId && /^[0-9a-fA-F]{24}$/.test(variantId)) {
-        const res = await patchRequest(`/api/products/${productId}/variants/${variantId}`, { stock: cleanStock });
-        return { success: res.success, data: res.data, message: res.message };
-      } else {
-        const res = await patchRequest(`/api/products/${productId}`, { stock: cleanStock });
+      let resolvedVariantId = variantId;
+      if (!resolvedVariantId || !/^[0-9a-fA-F]{24}$/.test(resolvedVariantId)) {
+        const prodRes = await this.getProductById(productId);
+        if (prodRes.success && prodRes.data?.variants?.[0]?._id) {
+          resolvedVariantId = prodRes.data.variants[0]._id;
+        }
+      }
+
+      if (resolvedVariantId && /^[0-9a-fA-F]{24}$/.test(resolvedVariantId)) {
+        const res = await patchRequest(`/api/products/${productId}/variants/${resolvedVariantId}`, { stock: cleanStock });
         return { success: res.success, data: res.data, message: res.message };
       }
+      return { success: false, message: 'تعذر تحديد الصنف لتحديث المخزون' };
     } catch (err: any) {
       return { success: false, message: err?.message || 'تعذر تحديث المخزون' };
     }
@@ -244,63 +299,19 @@ export const merchantService = {
    */
   async getProductById(productId: string): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
     try {
-      let res = await getRequest<{ product: any }>(`/api/products/seller/${productId}`);
-      if (!res.success || !res.data?.product) {
-        res = await getRequest<{ product: any }>(`/api/products/${productId}`);
+      // 1. فحص قائمة منتجات التاجر أولاً لتفادي خطأ 404 إذا كان المنتج بانتظار الموافقة (pending)
+      const myProds = await this.getMyProducts();
+      if (myProds.success && myProds.data) {
+        const found = myProds.data.find((p) => String(p._id) === String(productId));
+        if (found) {
+          return { success: true, data: found };
+        }
       }
 
+      // 2. المحاولة البديلة عبر المسار العام
+      const res = await getRequest<{ product: any }>(`/api/products/${productId}`);
       if (res.success && res.data?.product) {
-        const prod = res.data.product;
-        const variants: ProductVariant[] = (prod.variants || []).map((v: any) => ({
-          _id: v._id,
-          productId: v.productId,
-          storeId: v.storeId,
-          sku: v.sku,
-          attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
-          attrKey: v.attrKey || 'default',
-          price: Number(v.price) || 0,
-          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-          stock: Number(v.stock) || 0,
-          isActive: v.isActive !== undefined ? v.isActive : true,
-          images: v.images || (v.image ? [v.image] : []),
-        }));
-
-        const activeV = variants.filter((v) => v.isActive !== false);
-        const pool = activeV.length > 0 ? activeV : variants;
-        const prices = pool.map((v) => v.price).filter((pr) => pr > 0);
-
-        const mapped: ProductItem = {
-          _id: prod._id,
-          storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
-          categoryId: prod.categoryId,
-          categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
-          name: prod.title || prod.name || '',
-          title: prod.title || prod.name || '',
-          slug: prod.slug,
-          description: prod.description || '',
-          images: prod.images || (prod.image ? [prod.image] : []),
-          options: (prod.options || []).map((o: any) => ({
-            key: o.key,
-            source: o.source,
-            label: o.label || o.name,
-            name: o.name || o.label || o.key,
-            type: o.type,
-            unit: o.unit,
-            values: o.values || [],
-          })),
-          minPrice: prices.length > 0 ? Math.min(...prices) : (prod.minPrice || 0),
-          maxPrice: prices.length > 0 ? Math.max(...prices) : (prod.maxPrice || 0),
-          inStock: prod.inStock || false,
-          isFeatured: prod.isFeatured || false,
-          isActive: prod.isActive !== undefined ? prod.isActive : true,
-          isAnonymousVendor: prod.isAnonymousVendor || false,
-          variants,
-          variantsCount: variants.length,
-          totalStock: prod.totalStock ?? variants.reduce((s: number, v: any) => s + (v.stock || 0), 0),
-          createdAt: prod.createdAt || new Date().toISOString(),
-          updatedAt: prod.updatedAt,
-        };
-        return { success: true, data: mapped };
+        return { success: true, data: this.mapProductItem(res.data.product) };
       }
       return { success: false, message: res.message || 'المنتج غير موجود' };
     } catch (err: any) {
@@ -310,127 +321,131 @@ export const merchantService = {
 
   /**
    * تحديث تفاصيل منتج وأصنافه في قاعدة البيانات
+   * يراعي عقد الباك إند: PATCH /api/products/:id يقبل فقط [title, description, categoryId, images]
+   * والأصناف يتم تحديثها/إنشاؤها/حذفها عبر مسارات /api/products/:id/variants
    */
   async updateProduct(
     productId: string,
     formData: Partial<ProductFormData>
   ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
     try {
-      const cleanVariants = formData.variants?.map((v) => {
-        const item: any = {
-          sku: v.sku,
-          attributes: v.attributes || {},
-          price: Number(v.price) || 0,
-          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-          stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
-          isActive: v.isActive !== undefined ? v.isActive : true,
-          images: v.images || [],
-        };
-        const rawId = v._id || (v as any).id;
-        if (rawId && /^[0-9a-fA-F]{24}$/.test(String(rawId).trim())) {
-          item._id = String(rawId).trim();
+      // 1. تحديث الحقول الأساسية للمنتج (PATCH /api/products/:id)
+      const hasFiles = Array.isArray(formData.imageFiles) && formData.imageFiles.length > 0;
+      let patchBody: FormData | Record<string, any>;
+
+      if (hasFiles) {
+        const fd = new FormData();
+        const nextTitle = (formData.name || formData.title || '').trim();
+        if (nextTitle) fd.append('title', nextTitle);
+        if (formData.description !== undefined) fd.append('description', formData.description.trim());
+        if (formData.categoryId) fd.append('categoryId', formData.categoryId);
+        formData.imageFiles!.forEach((file) => fd.append('images', file));
+        patchBody = fd;
+      } else {
+        const basePayload: Record<string, any> = {};
+        const nextTitle = (formData.name || formData.title || '').trim();
+        if (nextTitle) basePayload.title = nextTitle;
+        if (formData.description !== undefined) basePayload.description = formData.description.trim();
+        if (formData.categoryId) basePayload.categoryId = formData.categoryId;
+        patchBody = basePayload;
+      }
+
+      // إرسال التحديث الأساسي فقط إذا كان هناك حقل واحد على الأقل للتعديل
+      if (hasFiles || Object.keys(patchBody).length > 0) {
+        const baseRes = await patchRequest(`/api/products/${productId}`, patchBody);
+        if (!baseRes.success) {
+          return { success: false, message: baseRes.message || 'فشل تحديث بيانات المنتج الأساسية' };
         }
-        return item;
-      });
-
-      const payload: any = {};
-      if (formData.name || formData.title) payload.title = formData.name || formData.title;
-      if (formData.description !== undefined) payload.description = formData.description;
-      if (formData.categoryId !== undefined) payload.categoryId = formData.categoryId;
-      if (formData.images !== undefined) payload.images = formData.images;
-      if (formData.isFeatured !== undefined) payload.isFeatured = formData.isFeatured;
-      if (formData.isActive !== undefined) payload.isActive = formData.isActive;
-      if (formData.isAnonymousVendor !== undefined) payload.isAnonymousVendor = formData.isAnonymousVendor;
-
-      if (formData.options !== undefined) {
-        payload.options = formData.options.map((opt) => ({
-          key: opt.key || opt.name.toLowerCase().trim(),
-          source: opt.source || 'DEFINED',
-          label: opt.label || opt.name,
-          type: opt.type || 'TEXT',
-          unit: opt.unit || null,
-          values: opt.values,
-        }));
       }
 
-      if (cleanVariants !== undefined) {
-        payload.variants = cleanVariants;
+      // 2. تحديث الأصناف والمتغيرات (Variants Synchronization)
+      if (Array.isArray(formData.variants) && formData.variants.length > 0) {
+        const currentProdRes = await this.getProductById(productId);
+        const existingVariants = currentProdRes.data?.variants || [];
+
+        for (let i = 0; i < formData.variants.length; i++) {
+          const v = formData.variants[i];
+          const rawId = v._id || (v as any).id;
+          const isExisting = rawId && existingVariants.some((ev) => String(ev._id) === String(rawId));
+
+          const variantPayload: Record<string, any> = {
+            price: Number(v.price) || 0,
+            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+            attributes: v.attributes || {},
+          };
+
+          let varRes;
+          let targetVarId = rawId;
+
+          if (isExisting) {
+            varRes = await patchRequest(`/api/products/${productId}/variants/${rawId}`, variantPayload);
+          } else {
+            varRes = await postRequest<{ variant?: any }>(`/api/products/${productId}/variants`, variantPayload);
+            targetVarId = varRes.data?.variant?._id;
+          }
+
+          if (!varRes.success) {
+            // Abort immediately! Do not delete existing variants if any update failed.
+            return { success: false, message: varRes.message || `فشل حفظ الصنف رقم ${i + 1}` };
+          }
+
+          if (v.imageFile && targetVarId) {
+            const vFd = new FormData();
+            vFd.append('image', v.imageFile);
+            await patchRequest(`/api/products/${productId}/variants/${targetVarId}`, vFd);
+          }
+        }
+
+        // حذف الأصناف التي أزالها التاجر من الواجهة إذا كان متبقياً صنف واحد على الأقل
+        if (formData.variants.length > 0) {
+          const activeNewIds = new Set(formData.variants.map((v) => String(v._id || (v as any).id)).filter(Boolean));
+          for (const ev of existingVariants) {
+            if (!activeNewIds.has(String(ev._id))) {
+              try {
+                await deleteRequest(`/api/products/${productId}/variants/${ev._id}`);
+              } catch (delErr) {
+                console.warn('Could not delete obsolete variant:', ev._id, delErr);
+              }
+            }
+          }
+        }
       }
 
-      const res = await patchRequest<{ product: any; message?: string }>(`/api/products/${productId}`, payload);
-      if (res.success && res.data?.product) {
-        const prod = res.data.product;
-        const variants: ProductVariant[] = (prod.variants || []).map((v: any) => ({
-          _id: v._id,
-          productId: v.productId,
-          storeId: v.storeId,
-          sku: v.sku,
-          attributes: v.attributes instanceof Map ? Object.fromEntries(v.attributes) : (v.attributes || {}),
-          attrKey: v.attrKey || 'default',
-          price: Number(v.price) || 0,
-          compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
-          stock: Number(v.stock) || 0,
-          isActive: v.isActive !== undefined ? v.isActive : true,
-          images: v.images || (v.image ? [v.image] : []),
-        }));
-
-        const activeV = variants.filter((v) => v.isActive !== false);
-        const pool = activeV.length > 0 ? activeV : variants;
-        const prices = pool.map((v) => v.price).filter((p) => p > 0);
-
-        const mapped: ProductItem = {
-          _id: prod._id,
-          storeId: typeof prod.storeId === 'object' ? prod.storeId._id : prod.storeId,
-          categoryId: prod.categoryId,
-          categoryTitle: typeof prod.categoryId === 'object' ? prod.categoryId.title : undefined,
-          name: prod.title || prod.name,
-          title: prod.title || prod.name,
-          slug: prod.slug,
-          description: prod.description || '',
-          images: prod.images || (prod.image ? [prod.image] : []),
-          options: prod.options || [],
-          minPrice: prices.length > 0 ? Math.min(...prices) : (prod.minPrice || 0),
-          maxPrice: prices.length > 0 ? Math.max(...prices) : (prod.maxPrice || 0),
-          inStock: prod.inStock || false,
-          isFeatured: prod.isFeatured || false,
-          isActive: prod.isActive !== undefined ? prod.isActive : true,
-          isAnonymousVendor: formData.isAnonymousVendor !== undefined ? formData.isAnonymousVendor : (prod.isAnonymousVendor || false),
-          variants,
-          variantsCount: variants.length,
-          totalStock: prod.totalStock ?? variants.reduce((s: number, v: any) => s + (v.stock || 0), 0),
-          createdAt: prod.createdAt || new Date().toISOString(),
-          updatedAt: prod.updatedAt,
-        };
-
-        return { success: true, data: mapped, message: res.data?.message || res.message || 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
+      // 3. تحديث حالة التفعيل إذا تم تغييرها
+      if (formData.isActive !== undefined) {
+        await patchRequest(`/api/products/${productId}/status`, {
+          status: formData.isActive ? 'active' : 'inActive',
+        });
       }
-      return { success: false, message: res.message || 'تعذر تحديث المنتج' };
+
+      // 4. جلب النسخة المحدثة وإرجاعها
+      const refreshed = await this.getProductById(productId);
+      if (refreshed.success && refreshed.data) {
+        return { success: true, data: refreshed.data, message: 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
+      }
+
+      return { success: true, message: 'تم تحديث المنتج بنجاح' };
     } catch (err: any) {
       return { success: false, message: err?.message || 'خطأ أثناء الاتصال بالخادم لتحديث المنتج' };
     }
   },
 
   /**
-   * جلب تعريفات الخيارات العامة والوحدات المتاحة من الباك إند
+   * جلب تعريفات الخيارات العامة - متوافق مع بنية السمات الحديثة للفئات
    */
   async fetchOptionDefinitions(): Promise<{
     success: boolean;
     data?: { definitions: any[]; availableUnits: any[] };
     message?: string;
   }> {
-    try {
-      const res = await getRequest<any>('/api/options');
-      if (res.success && res.data) {
-        return { success: true, data: res.data };
-      }
-      return { success: false, message: res.message || 'تعذر جلب خيارات الفئات' };
-    } catch (err: any) {
-      return { success: false, message: err?.message || 'خطأ في جلب خيارات الفئات' };
-    }
+    return {
+      success: true,
+      data: { definitions: [], availableUnits: [] },
+    };
   },
 
   /**
-   * جلب الخيارات المصرحة لتصنيف محدد
+   * جلب الخيارات المصرحة لتصنيف محدد مستخرجة مباشرة من variantAttributes في الفئة
    */
   async fetchOptionsByCategory(categoryId: string): Promise<{
     success: boolean;
@@ -438,13 +453,31 @@ export const merchantService = {
     message?: string;
   }> {
     try {
-      const res = await getRequest<any>(`/api/options/category/${categoryId}`);
-      if (res.success && res.data) {
-        return { success: true, data: res.data };
+      const cats = await taxonomyService.fetchCategories();
+      const activeCat = cats.find((c) => String(c._id) === String(categoryId));
+      if (!activeCat || !activeCat.variantAttributes || activeCat.variantAttributes.length === 0) {
+        return {
+          success: true,
+          data: { definitions: [], availableUnits: [] },
+        };
       }
-      return { success: false, message: res.message || 'تعذر جلب خيارات القسم' };
+      const definitions = activeCat.variantAttributes.map((attr) => ({
+        key: attr.name,
+        name: attr.name,
+        label: attr.name,
+        type: 'TEXT',
+        values: attr.values.map((v) => ({ key: v, label: v, isActive: true })),
+        isActive: true,
+      }));
+      return {
+        success: true,
+        data: { definitions, availableUnits: [] },
+      };
     } catch (err: any) {
-      return { success: false, message: err?.message || 'خطأ في جلب خيارات القسم' };
+      return {
+        success: true,
+        data: { definitions: [], availableUnits: [] },
+      };
     }
   },
 

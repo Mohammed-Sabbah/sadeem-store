@@ -26,7 +26,7 @@ interface MerchantContextValue {
   isModalOpen: boolean;
   setIsModalOpen: (open: boolean) => void;
   feedbackMessage: { type: 'success' | 'error'; text: string } | null;
-  handleCreateProduct: (formData: ProductFormData) => Promise<boolean>;
+  handleCreateProduct: (formData: ProductFormData) => Promise<{ success: boolean; message?: string } | boolean>;
   handleToggleActive: (productId: string, currentActive: boolean) => Promise<void>;
   handleDeleteProduct: (productId: string) => Promise<void>;
   handleQuickStockUpdate: (productId: string, newStock: number, variantId?: string) => Promise<void>;
@@ -80,7 +80,7 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
     };
   }, [products]);
 
-  const handleCreateProduct = async (formData: ProductFormData): Promise<boolean> => {
+  const handleCreateProduct = async (formData: ProductFormData): Promise<{ success: boolean; message?: string }> => {
     try {
       const res = await createProductMutation.mutateAsync(formData);
       if (res.success && res.data) {
@@ -88,15 +88,15 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
           type: 'success',
           text: `تم حفظ وإضافة «${res.data.name}» بنجاح في الكتالوج`,
         });
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, message: res.message || 'تعذر إضافة المنتج' };
     } catch (err: any) {
       setFeedbackMessage({
         type: 'error',
         text: err.message || 'تعذر إضافة المنتج، يرجى المحاولة لاحقاً',
       });
-      return false;
+      return { success: false, message: err?.message || 'تعذر إضافة المنتج' };
     }
   };
 

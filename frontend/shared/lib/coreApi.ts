@@ -95,10 +95,14 @@ export async function sendRequest<T>(path: string, options: RequestOptions = {})
     }
 
     if (!res.ok) {
+      let errorMsg = body?.message || body?.msg;
+      if (!errorMsg && Array.isArray(body?.errors) && body.errors.length > 0) {
+        errorMsg = body.errors.map((e: any) => e.message || e.msg || String(e)).filter(Boolean).join(' · ');
+      }
       return {
         success: false,
         statusCode: res.status,
-        message: body?.message || body?.msg || fallbackMessage(res.status),
+        message: errorMsg || fallbackMessage(res.status),
         errors: body?.errors || null,
       };
     }

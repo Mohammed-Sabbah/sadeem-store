@@ -8,6 +8,7 @@ import { ProductCard } from '@/components/ui/ProductCard';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { catalogService, type CatalogProduct } from '@/features/catalog/catalog.service';
 import type { Product } from '@/types';
+import { products } from '@/data/products';
 
 // Comprehensive palette color mapper for swatch colors
 const COLOR_HEX_MAP: Record<string, string> = {
@@ -110,57 +111,10 @@ export default function ProductDetailPage() {
   // In-app Toast State
   const [toastMsg, setToastMsg] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    let active = true;
-    setIsLoading(true);
-    setErrorMessage(null);
-    catalogService.getProduct(id)
-      .then((result) => {
-        if (!active) return;
-        setProduct(result);
-        setSelectedImage(result.image);
-        const initialVariant = result.variants.find((variant) => variant.stock > 0) || result.variants[0];
-        setSelectedAttributes(initialVariant?.attributes || {});
-        setQuantity(1);
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        setProduct(null);
-        setErrorMessage(error instanceof Error ? error.message : 'تعذر تحميل المنتج');
-      })
-      .finally(() => {
-        if (active) setIsLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [id]);
-
-  useEffect(() => {
-    if (!product?.categoryId) return;
-    let active = true;
-    catalogService.getProducts({ categoryId: product.categoryId, excludeId: product.id })
-      .then((items) => {
-        if (active) setRelatedProducts(items.slice(0, 4));
-      })
-      .catch((error: unknown) => {
-        if (active) setErrorMessage(error instanceof Error ? error.message : 'تعذر تحميل المنتجات المشابهة');
-      });
-    return () => {
-      active = false;
-    };
-  }, [product]);
-
-  const selectedVariant = useMemo(() => {
-    if (!product) return null;
-    return product.variants.find((variant) =>
-      Object.entries(selectedAttributes).every(([name, value]) => variant.attributes[name] === value)
-    ) || product.variants[0] || null;
-  }, [product, selectedAttributes]);
-
-  const showToast = () => {
+  const showToast = (msg?: string) => {
+    if (msg) setToastMsg(msg);
     setToastVisible(true);
     setTimeout(() => setToastVisible(false), 2600);
   };
@@ -746,8 +700,8 @@ export default function ProductDetailPage() {
                   type="button"
                   className="w-8 h-8 text-sm font-bold text-brand-dark disabled:opacity-40"
                   aria-label="زيادة الكمية"
-                  disabled={quantity >= stock}
-                  onClick={() => setQuantity((current) => Math.min(stock, current + 1))}
+                  disabled={quantity >= currentStock}
+                  onClick={() => setQuantity((current) => Math.min(currentStock, current + 1))}
                 >+</button>
               </div>
               <button
@@ -1113,12 +1067,6 @@ export default function ProductDetailPage() {
               {!isOutOfStock ? `متوفر وجاهز للشحن الفوري (${currentStock} قطعة)` : 'غير متوفر حالياً'}
             </strong>
           </div>
-          {selectedVariant?.sku && (
-            <div className="flex justify-between items-center p-2.5 bg-brand-card rounded-lg text-xs">
-              <span className="text-brand-muted">رمز الصنف (SKU):</span>
-              <strong className="text-brand-dark font-mono text-[11px]">{selectedVariant.sku}</strong>
-            </div>
-          )}
           <div className="flex justify-between items-center p-2.5 bg-brand-card rounded-lg text-xs">
             <span className="text-brand-muted">التوصيل الموحد:</span>
             <strong className="text-brand-dark">طرد موحد لكافة الوسطى (8 ₪ ثابت)</strong>

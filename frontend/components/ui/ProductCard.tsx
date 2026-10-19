@@ -10,7 +10,6 @@ interface ProductCardProps {
   isWishlistPage?: boolean;
   showWishlist?: boolean;
   onRemoveFromWishlist?: (productId: string) => void;
-  showWishlist?: boolean;
 }
 
 export function ProductCard({
@@ -114,13 +113,15 @@ export function ProductCard({
           </h3>
 
           {/* Rating Row */}
-          {product.rating !== undefined && <div className="flex items-center gap-1 text-[11px] text-brand-muted">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="#B08D57" stroke="#B08D57" strokeWidth="1">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
-            <span className="font-bold text-brand-dark">{product.rating ?? '4.9'}</span>
-            <span>({product.reviewsCount || 38} طلب موثق)</span>
-          </div>
+          {product.rating !== undefined && (
+            <div className="flex items-center gap-1 text-[11px] text-brand-muted">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#B08D57" stroke="#B08D57" strokeWidth="1">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+              <span className="font-bold text-brand-dark">{product.rating ?? '4.9'}</span>
+              <span>({product.reviewsCount || 38} طلب موثق)</span>
+            </div>
+          )}
 
           {/* Footer Row: Price & Add CTA */}
           <div className="mt-auto pt-2 flex items-center justify-between border-t border-brand-border-subtle/50">

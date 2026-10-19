@@ -7,6 +7,8 @@ import { ProductCard } from '@/components/ui/ProductCard';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { catalogService, type CatalogStore, type CatalogProduct } from '@/features/catalog/catalog.service';
 import type { Store, Product } from '@/types';
+import { stores } from '@/data/stores';
+import { products } from '@/data/products';
 
 export default function StoreDetailPage() {
   const params = useParams();
@@ -109,22 +111,23 @@ export default function StoreDetailPage() {
   }
 
   return (
-    <main className="max-w-[1240px] mx-auto px-4 pt-4 pb-24 md:pb-16 font-almarai">
-      <div className="flex items-center justify-between gap-4 pb-4 mb-4 border-b border-brand-border">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs md:text-sm font-bold text-brand-muted hover:text-brand-primary py-1.5 px-3 rounded-lg border border-brand-border bg-brand-surface"
-        >
-          <span>←</span><span>الرئيسية</span>
-        </Link>
-        <button
-          type="button"
-          onClick={() => navigator.share?.({ title: store.name, url: window.location.href })}
-          className="text-xs md:text-sm font-bold text-brand-muted hover:text-brand-primary py-1.5 px-3 rounded-lg border border-brand-border bg-brand-surface"
-        >
-          مشاركة المتجر
-        </button>
-      </div>
+    <>
+      <main className="max-w-[1240px] mx-auto px-4 pt-4 pb-24 md:pb-16 font-almarai">
+        <div className="flex items-center justify-between gap-4 pb-4 mb-4 border-b border-brand-border">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-xs md:text-sm font-bold text-brand-muted hover:text-brand-primary py-1.5 px-3 rounded-lg border border-brand-border bg-brand-surface"
+          >
+            <span>←</span><span>الرئيسية</span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => navigator.share?.({ title: currentStore.name, url: window.location.href })}
+            className="text-xs md:text-sm font-bold text-brand-muted hover:text-brand-primary py-1.5 px-3 rounded-lg border border-brand-border bg-brand-surface"
+          >
+            مشاركة المتجر
+          </button>
+        </div>
 
         {/* 2. CANONICAL STORE HERO CARD */}
         <section className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-xs mb-5" aria-label={`بيانات متجر ${currentStore.name}`}>

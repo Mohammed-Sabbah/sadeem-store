@@ -1,7 +1,6 @@
 const Store = require('../models/Store');
 const User = require('../models/User');
 const { STATUS, APPROVE_STATUS } = require('../constants/enums');
-const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 
 async function getMyStore(req, res, next) {

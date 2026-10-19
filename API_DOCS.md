@@ -1,7 +1,8 @@
 # سَدِيم (Sadeem) — توثيق واجهات برمجة التطبيقات (API Documentation)
 
 المسار الأساسي (Base Path): `/api`  
-ترسل وتستقبل كافة الطلبات بصيغة `Content-Type: application/json`.  
+ترسل وتستقبل الطلبات عادةً بصيغة `Content-Type: application/json`، باستثناء طلبات رفع الصور التي تستخدم `multipart/form-data`.
+
 المسارات المحددة بـ **Seller** تتطلب حساب تاجر موثق، والمسارات المحددة بـ **Admin** تتطلب صلاحيات مدير المنصة.
 
 ---
@@ -147,6 +148,37 @@
   "compareAtPrice": 210
 }
 ```
+
+### رفع صور المنتجات والأصناف
+
+تستخدم طلبات الصور `multipart/form-data` مع نفس المسارات والصلاحيات:
+
+| المسار | اسم حقل الملف | الحد |
+| :--- | :--- | :--- |
+| `POST /api/products` و`PATCH /api/products/:id` | `images` (يتكرر لكل صورة) | من صورة واحدة إلى 5 صور عند الإنشاء، وبحد أقصى 5 صور في التعديل |
+| `POST /api/products/:id/variants` و`PATCH /api/products/:id/variants/:variantId` | `image` | صورة واحدة اختيارية |
+
+الصيغ المقبولة هي JPEG وPNG وWebP، بحد أقصى 5 ميغابايت لكل صورة. استبدال صور المنتج عبر التعديل يحدّث قائمة الصور كاملة؛ عدم إرسال ملفات جديدة يحافظ على الصور الحالية. صورة الصنف اختيارية عند الإنشاء وفق قواعد التحقق الحالية، وعدم إرسالها عند التعديل يحافظ على الصورة الحالية.
+
+مثال إنشاء منتج باستخدام `FormData`:
+
+```js
+const formData = new FormData();
+formData.append('title', 'فستان السديم الحريري');
+formData.append('categoryId', categoryId);
+formData.append('price', '180');
+formData.append('stock', '10');
+formData.append('images', firstImageFile);
+formData.append('images', secondImageFile);
+
+await fetch('/api/products', {
+  method: 'POST',
+  body: formData,
+  credentials: 'include',
+});
+```
+
+أرسل حقول المنتج أو الصنف النصية ضمن `FormData` أيضاً. لإرفاق صورة صنف، استخدم `formData.append('image', imageFile)`؛ لا تضبط ترويسة `Content-Type` يدوياً حتى يضيف المتصفح حدّ `multipart/form-data` تلقائياً.
 
 ---
 

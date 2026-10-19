@@ -1,6 +1,10 @@
 const express = require('express');
 const { ROLE } = require('../constants/enums');
 const { authenticate, authorize, verifyActiveStore } = require('../middleware/auth');
+
+const upload = require("../middleware/upload")
+const uploadToCloudinary = require("../middleware/uploadToCloudinary")
+
 const {
     addVariant,
     updateVariant,
@@ -23,11 +27,26 @@ const router = express.Router({ mergeParams: true });
 const sellerOnly = [authenticate, authorize(ROLE.SELLER), verifyActiveStore];
 const adminOnly = [authenticate, authorize(ROLE.ADMIN)];
 
+const imageFolder = "variants"
 // Create Variant
-router.post('/', ...sellerOnly, validateProductId, validateCreateVariant, addVariant);
+router.post('/',
+    ...sellerOnly,
+    validateProductId,
+    upload.array("image", 1),
+    validateCreateVariant,
+    uploadToCloudinary(imageFolder),
+    addVariant
+);
 
 // Update Variant
-router.patch('/:variantId', ...sellerOnly, validateVariantIds, validateVariantPatch, updateVariant);
+router.patch('/:variantId',
+    ...sellerOnly,
+    validateVariantIds,
+    upload.array("image", 1),
+    validateVariantPatch,
+    uploadToCloudinary(imageFolder),
+    updateVariant
+);
 
 // Delete Variant
 router.delete('/:variantId', ...sellerOnly, validateVariantIds, deleteVariant);

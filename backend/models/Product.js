@@ -26,11 +26,15 @@ const productSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
-        image: {
-            type: String,
-            required: true,
-            trim: true,
-            maxlength: 2048,
+        images: {
+            type: [
+                {
+                    type: String,
+                    trim: true,
+                    maxlength: 2048,
+                },
+            ],
+            default: [],
         },
         status: {
             type: String,

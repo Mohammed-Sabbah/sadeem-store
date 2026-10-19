@@ -125,12 +125,13 @@ async function createProduct(req, res, next) {
             return error(res, 400, 'Select an active category');
         }
 
+        const images = req.body.images || []
         const product = await Product.create({
             storeId: req.store._id,
             title: req.body.title,
             description: req.body.description || '',
             categoryId: category._id,
-            image: req.body.image,
+            images,
         });
         try {
             await Variant.create({
@@ -138,6 +139,7 @@ async function createProduct(req, res, next) {
                 attributes: {},
                 price: req.body.price,
                 stock: req.body.stock,
+                image: images?.[0] || ""
             });
         } catch (err) {
             await Product.deleteOne({ _id: product._id });
@@ -184,8 +186,16 @@ async function updateProduct(req, res, next) {
             }
         }
 
-        for (const [field, value] of Object.entries(req.body)) {
-            product[field] = value;
+        const { title, description, categoryId, images, image } = req.body;
+        if (title !== undefined) product.title = title;
+        if (description !== undefined) product.description = description;
+        if (categoryId !== undefined) product.categoryId = categoryId;
+        if (Array.isArray(images) && images.length > 0) {
+            product.images = images;
+            product.image = images[0];
+        } else if (image !== undefined) {
+            product.image = image;
+            product.images = [image];
         }
         await product.save();
 

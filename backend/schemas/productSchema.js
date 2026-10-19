@@ -33,13 +33,16 @@ const validatePublicProductQuery = [
 ];
 
 const validateCreateProduct = [
-    body().custom((value) => {
+    body().custom((value, { req }) => {
         if (!value || typeof value !== 'object' || Array.isArray(value)) {
             throw new Error('Product data must be an object');
         }
-        const allowedFields = ['title', 'description', 'categoryId', 'image', 'price', 'stock'];
+        const allowedFields = ['title', 'description', 'categoryId', 'image', 'images', 'price', 'stock'];
         if (Object.keys(value).some((field) => !allowedFields.includes(field))) {
             throw new Error('Product contains unsupported fields');
+        }
+        if ((!req.files || req.files.length === 0) && !value.images && !value.image) {
+            throw new Error('At least one product image is required');
         }
         return true;
     }),
@@ -63,29 +66,40 @@ const validateCreateProduct = [
     body('categoryId')
         .isMongoId()
         .withMessage('A valid product category is required'),
-    body('image')
+    body('images')
+        .optional()
+        .isArray({ min: 1, max: 5 })
+        .withMessage('Provide between 1 and 5 product images')
+        .bail(),
+    body('images.*')
         .isString()
-        .withMessage('Product logo must be a string')
-        .bail()
-        .trim()
-        .notEmpty()
-        .withMessage('Product logo is required')
+        .withMessage('Product image URLs must be strings')
         .bail()
         .custom(isSafeImageReference)
-        .withMessage('Product logo must be an HTTP(S) URL or a local site path')
+        .withMessage('Product image must be an HTTP(S) URL or a local site path')
         .isLength({ max: 2048 })
-        .withMessage('Product logo URL must be at most 2048 characters'),
+        .withMessage('Product image URL must be at most 2048 characters'),
+    body('image')
+        .optional()
+        .isString()
+        .withMessage('Product image must be a string')
+        .bail()
+        .custom(isSafeImageReference)
+        .withMessage('Product image must be an HTTP(S) URL or a local site path')
+        .isLength({ max: 2048 })
+        .withMessage('Product image URL must be at most 2048 characters'),
     ...validateVariantFields(),
 ];
 
 const validateUpdateProduct = [
     body()
-        .custom((value) => {
+        .custom((value, { req }) => {
             if (!value || typeof value !== 'object' || Array.isArray(value)) {
                 throw new Error('Product data must be an object');
             }
-            const editableFields = ['title', 'description', 'categoryId', 'image'];
-            if (!editableFields.some((field) => value[field] !== undefined)) {
+            const editableFields = ['title', 'description', 'categoryId', 'image', 'images'];
+            const hasUploadedImages = req.files && req.files.length > 0;
+            if (!hasUploadedImages && !editableFields.some((field) => value[field] !== undefined)) {
                 throw new Error('Provide at least one product field to update');
             }
             if (Object.keys(value).some((field) => !editableFields.includes(field))) {
@@ -115,6 +129,19 @@ const validateUpdateProduct = [
         .optional()
         .isMongoId()
         .withMessage('Category ID must be a valid Mongo id'),
+    body('images')
+        .optional()
+        .isArray({ min: 1, max: 5 })
+        .withMessage('Provide between 1 and 5 product images')
+        .bail(),
+    body('images.*')
+        .isString()
+        .withMessage('Product image URLs must be strings')
+        .bail()
+        .custom(isSafeImageReference)
+        .withMessage('Product image must be an HTTP(S) URL or a local site path')
+        .isLength({ max: 2048 })
+        .withMessage('Product image URL must be at most 2048 characters'),
     body('image')
         .optional()
         .isString()

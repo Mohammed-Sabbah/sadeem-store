@@ -5,6 +5,8 @@ const { ROLE } = require('../constants/enums');
 const { authenticate, authorize, verifyActiveStore } = require('../middleware/auth');
 const sellerOnly = [authenticate, authorize(ROLE.SELLER), verifyActiveStore];
 const adminOnly = [authenticate, authorize(ROLE.ADMIN)];
+const upload = require("../middleware/upload")
+const uploadToCloudinary = require("../middleware/uploadToCloudinary")
 
 // Controllers
 const {
@@ -30,6 +32,7 @@ const {
 } = require('../schemas/productSchema');
 
 const router = express.Router();
+const imageFolder = "products"
 
 // Product routes
 
@@ -45,13 +48,18 @@ router.get('/admin', ...adminOnly, getAdminProducts);
 
 
 // Create Product
-router.post('/', ...sellerOnly, validateCreateProduct, createProduct);
+router.post('/',
+    ...sellerOnly,
+    upload.array("images", 5),
+    validateCreateProduct,
+    uploadToCloudinary(imageFolder),
+    createProduct);
 
 // Get Public Product - Active and Approved
 router.get('/:id', validateProductId, getPublicProduct);
 
 // Update Product - Seller
-router.patch('/:id', ...sellerOnly, validateProductId, validateUpdateProduct, updateProduct);
+router.patch('/:id', ...sellerOnly, validateProductId, upload.array("images", 5), validateUpdateProduct, uploadToCloudinary(imageFolder), updateProduct);
 
 // Change Product Approve Status - Admin
 router.patch(

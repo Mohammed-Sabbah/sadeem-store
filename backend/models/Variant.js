@@ -24,6 +24,11 @@ const variantSchema = new mongoose.Schema(
             min: 0,
             validate: Number.isInteger,
         },
+        image: {
+            type: String,
+            trim: true,
+            maxlength: 2048,
+        },
         status: {
             type: String,
             enum: STATUS_VALUES,

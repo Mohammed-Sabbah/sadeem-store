@@ -23,7 +23,6 @@ require('./models/Store');
 require('./models/Category');
 require('./models/Product');
 require('./models/Variant');
-require('./models/OptionDefinition');
 require('./models/Region');
 
 const authRoutes = require('./routes/authRoutes');
@@ -32,8 +31,6 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const variantRoutes = require('./routes/variantRoutes');
 const storeRoutes = require('./routes/storeRoutes');
-const productRoutes = require('./routes/productRoutes');
-const optionRoutes = require('./routes/optionRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const regionRoutes = require('./routes/regionRoutes');
 
@@ -43,8 +40,6 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/products/:id/variants', variantRoutes);
 app.use('/api/stores', storeRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/options', optionRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/regions', regionRoutes);
 

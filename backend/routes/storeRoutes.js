@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { approveStore, getPublicStore } = require('../controllers/storeController');
+const { approveStore, getPublicStore, getMyStore } = require('../controllers/storeController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLE } = require('../constants/enums');
 const { validateStoreId } = require('../schemas/storeSchema');

@@ -114,27 +114,7 @@ const validateCategory = (partial = false) => [
             : []
     ),
 
-    validateRequest,
-        .withMessage('Variant attribute values must be strings')
-        .bail()
-        .trim()
-        .isLength({ max: 80 })
-        .withMessage('Variant attribute values must be at most 80 characters'),
-
-    body('variantAttributes').customSanitizer((attributes = []) =>
-        Array.isArray(attributes)
-            ? attributes
-                .filter((attribute) => attribute && typeof attribute === 'object')
-                .map(({ name, values }) => ({
-                    name: typeof name === 'string' ? name.trim() : '',
-                    values: Array.isArray(values)
-                        ? values.map((value) => typeof value === 'string' ? value.trim() : value)
-                        : [],
-                }))
-            : []
-    ),
-
-    validateRequest,
+    validateRequest
 ];
 
 const validateCategorySlug = [
@@ -159,25 +139,10 @@ const validateCategoryVariantAttribute = [
         .withMessage('Variant attribute name is required'),
     validateRequest,
 ];
-const validateCategoryId = [
-    param('id').isMongoId().withMessage('Category ID must be a valid Mongo id'),
-    validateRequest,
-];
-
-const validateCategoryVariantAttribute = [
-    param('id').isMongoId().withMessage('Category ID must be a valid Mongo id'),
-    param('attributeName')
-        .trim()
-        .notEmpty()
-        .withMessage('Variant attribute name is required'),
-    validateRequest,
-];
 
 module.exports = {
     validateCategory,
     validateCategorySlug,
-    validateCategoryId,
-    validateCategoryVariantAttribute,
     validateCategoryId,
     validateCategoryVariantAttribute,
 };

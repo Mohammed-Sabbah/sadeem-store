@@ -4,6 +4,15 @@ const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
 
+async function getMyStore(req, res, next) {
+    try {
+        const store = req.store
+        if (!store) return error(res, 404, "Store Not Found")
+        return success(res, 200, { store })
+    } catch (err) {
+        next(err)
+    }
+}
 async function getPublicStore(req, res, next) {
     try {
         const store = await Store.findOne({
@@ -72,4 +81,5 @@ async function approveStore(req, res, next) {
 module.exports = {
     getPublicStore,
     approveStore,
+    getMyStore
 };

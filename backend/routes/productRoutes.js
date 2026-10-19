@@ -59,7 +59,14 @@ router.post('/',
 router.get('/:id', validateProductId, getPublicProduct);
 
 // Update Product - Seller
-router.patch('/:id', ...sellerOnly, validateProductId, upload.array("images", 5), validateUpdateProduct, uploadToCloudinary(imageFolder), updateProduct);
+router.patch('/:id',
+    ...sellerOnly,
+    validateProductId,
+    upload.array("images", 5),
+    validateUpdateProduct,
+    uploadToCloudinary(imageFolder),
+    updateProduct
+);
 
 // Change Product Approve Status - Admin
 router.patch(

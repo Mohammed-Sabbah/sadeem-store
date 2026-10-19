@@ -97,7 +97,7 @@ const validateUpdateProduct = [
             if (!value || typeof value !== 'object' || Array.isArray(value)) {
                 throw new Error('Product data must be an object');
             }
-            const editableFields = ['title', 'description', 'categoryId', 'image', 'images'];
+            const editableFields = ['title', 'description', 'categoryId', 'images'];
             const hasUploadedImages = req.files && req.files.length > 0;
             if (!hasUploadedImages && !editableFields.some((field) => value[field] !== undefined)) {
                 throw new Error('Provide at least one product field to update');
@@ -142,19 +142,6 @@ const validateUpdateProduct = [
         .withMessage('Product image must be an HTTP(S) URL or a local site path')
         .isLength({ max: 2048 })
         .withMessage('Product image URL must be at most 2048 characters'),
-    body('image')
-        .optional()
-        .isString()
-        .withMessage('Product logo must be a string')
-        .bail()
-        .trim()
-        .notEmpty()
-        .withMessage('Product logo cannot be empty')
-        .bail()
-        .custom(isSafeImageReference)
-        .withMessage('Product logo must be an HTTP(S) URL or a local site path')
-        .isLength({ max: 2048 })
-        .withMessage('Product logo URL must be at most 2048 characters'),
     validateRequest,
 ];
 
@@ -169,7 +156,7 @@ const validateProductApproval = [
     body('approveStatus')
         .isIn(APPROVE_STATUS_VALUES)
         .withMessage('Product approval status is invalid'),
-    body('reason')
+    body('rejectReason')
         .if((_, { req }) => req.body && req.body.approveStatus === APPROVE_STATUS.REJECTED)
         .isString()
         .withMessage('Rejection reason must be a string')

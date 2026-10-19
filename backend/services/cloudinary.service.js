@@ -30,8 +30,12 @@ const getPublicId = (imageUrl) => {
     }
 }
 
-const deleteImage = async () => {
-
+const deleteImage = async (publicId) => {
+    const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
+    if (result.result !== 'ok' && result.result !== 'not found') {
+        throw new Error(`Cloudinary failed to delete image ${publicId}: ${result.result}`);
+    }
+    return result;
 }
 
 const deleteImages = async (imageUrls) => {
@@ -48,14 +52,11 @@ const deleteImages = async (imageUrls) => {
             continue;
         }
 
-        const result = await cloudinary.uploader.destroy(publicId, { resource_type: 'image' });
-        if (result.result !== 'ok' && result.result !== 'not found') {
-            throw new Error(`Cloudinary failed to delete image ${publicId}: ${result.result}`);
-        }
+        await deleteImage(publicId);
     }
 }
 
-const deleteProductImages = async (product, variants) => {
+const deleteProductWithVariantsImages = async (product, variants) => {
     const productImages = product?.images || [];
     const productVariants = variants || await Variant.find({
         productId: product._id,
@@ -66,5 +67,6 @@ const deleteProductImages = async (product, variants) => {
 }
 
 module.exports = {
-    deleteProductImages
+    deleteProductWithVariantsImages,
+    deleteImages
 }

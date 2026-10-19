@@ -8,7 +8,7 @@ const {
     getProductsWithVariants,
 } = require('../utils/product');
 const { hasActiveVariants, hasVariantAttributes } = require('../utils/variant');
-const { deleteProductWithVariants } = require("../services/product.service")
+const productService = require("../services/product.service")
 // Public Filters
 const publicProductFilter = {
     isDeleted: false,
@@ -186,24 +186,11 @@ async function updateProduct(req, res, next) {
             }
         }
 
-        const { title, description, categoryId, images, image } = req.body;
-        const previousImages = Array.isArray(product.images) ? [...product.images] : [];
-        if (title !== undefined) product.title = title;
-        if (description !== undefined) product.description = description;
-        if (categoryId !== undefined) product.categoryId = categoryId;
-        if (Array.isArray(images) && images.length > 0) {
-            product.images = images;
-        } else if (image !== undefined) {
-            product.images = [image];
-        }
-        await product.save();
-        // await deleteUnusedImages(
-        //     previousImages.filter((previousImage) => !product.images.includes(previousImage))
-        // );
+        const updatedProduct = await productService.updateProduct(product, req.body);
 
         return success(res, 200, {
             message: 'Product updated successfully',
-            product: await getProductResponse(product),
+            product: await getProductResponse(updatedProduct),
         });
     } catch (err) {
         return next(err);
@@ -253,8 +240,8 @@ async function updateProductApproval(req, res, next) {
             {
                 $set: {
                     approveStatus: req.body.approveStatus,
-                    rejectionReason: req.body.approveStatus === APPROVE_STATUS.REJECTED
-                        ? req.body.reason.trim()
+                    rejectReason: req.body.approveStatus === APPROVE_STATUS.REJECTED
+                        ? req.body.rejectionReason.trim()
                         : '',
                 },
             },
@@ -273,7 +260,7 @@ async function updateProductApproval(req, res, next) {
 
 async function deleteProduct(req, res, next) {
     try {
-        const deletedProduct = await deleteProductWithVariants(req.params.id);
+        const deletedProduct = await productService.deleteProductWithVariants(req.params.id);
         if (!deletedProduct) {
             return error(res, 404, 'Product not found');
         }

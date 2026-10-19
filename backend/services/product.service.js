@@ -1,47 +1,71 @@
 const Product = require("../models/Product")
 const Variant = require("../models/Variant")
 const { withMongoTransaction } = require("../config/db")
-const { deleteProductImages } = require("./cloudinary.service")
-
+const { deleteProductWithVariantsImages, deleteImages } = require("./cloudinary.service")
 
 const deleteProductWithVariants = async (productId) => {
-    const deletedData = await withMongoTransaction(async (session) => {
-        const options = session ? { session } : {};
-        const product = await Product.findOne({
-            _id: productId,
-            isDeleted: { $ne: true },
-        }).setOptions(options);
+    const deletedData = await withMongoTransaction(
+        async (session) => {
+            const options = session ? { session } : {};
+            const product = await Product.findOne({
+                _id: productId,
+                isDeleted: { $ne: true },
+            }).setOptions(options);
 
-        if (!product) {
-            return null;
-        }
+            if (!product) {
+                return null;
+            }
 
-        const variants = await Variant.find({
-            productId,
-            isDeleted: { $ne: true },
-        }).select("image").setOptions(options).lean();
+            const variants = await Variant.find({
+                productId,
+                isDeleted: { $ne: true },
+            }).select("image").setOptions(options).lean();
 
-        await Product.updateOne(
-            { _id: productId, isDeleted: { $ne: true } },
-            { $set: { isDeleted: true, images: [] } },
-            options
-        );
+            await Product.updateOne(
+                { _id: productId, isDeleted: { $ne: true } },
+                { $set: { isDeleted: true, images: [] } },
+                options
+            );
 
-        await Variant.updateMany(
-            { productId },
-            { $set: { isDeleted: true, image: "" } },
-            options
-        );
+            await Variant.updateMany(
+                { productId },
+                { $set: { isDeleted: true, image: "" } },
+                options
+            );
 
-        return { product, variants };
-    });
+            return { product, variants };
+        });
 
     if (!deletedData) {
         return null;
     }
 
-    await deleteProductImages(deletedData.product, deletedData.variants);
+    await deleteProductWithVariantsImages(deletedData.product, deletedData.variants);
     return deletedData.product;
 }
 
-module.exports = { deleteProductWithVariants };
+const updateProduct = async (product, updates) => {
+    const { title, description, categoryId, images } = updates;
+
+    const previousImages = Array.isArray(product.images) ? [...product.images] : [];
+    
+    if (title !== undefined) product.title = title;
+    if (description !== undefined) product.description = description;
+    if (categoryId !== undefined) product.categoryId = categoryId;
+    
+    if (Array.isArray(images) && images.length > 0) {
+        product.images = images;
+    }
+    
+    await product.save();
+
+    try {
+        await deleteImages(previousImages);
+    } catch (error) {
+        console.error("Failed to delete previous images:", error);
+    }
+
+    return product
+}
+
+module.exports = { deleteProductWithVariants, updateProduct };

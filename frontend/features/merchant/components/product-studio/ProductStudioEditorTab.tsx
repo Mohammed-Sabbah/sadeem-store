@@ -55,8 +55,6 @@ interface ProductStudioEditorTabProps {
   setSimpleCompareAtPrice: (val: number | string) => void;
   simpleStock: number | string;
   setSimpleStock: (val: number | string) => void;
-  simpleSku: string;
-  setSimpleSku: (val: string) => void;
   options: ProductOption[];
   isAddOptionOpen: boolean;
   setIsAddOptionOpen: (val: boolean) => void;
@@ -122,8 +120,6 @@ export function ProductStudioEditorTab({
   setSimpleCompareAtPrice,
   simpleStock,
   setSimpleStock,
-  simpleSku,
-  setSimpleSku,
   options,
   isAddOptionOpen,
   setIsAddOptionOpen,
@@ -240,7 +236,7 @@ export function ProductStudioEditorTab({
 
               {hasActiveVariants && (
                 <p className="mt-1.5 text-[11px] text-amber-900 bg-amber-50/80 p-2.5 rounded-xl border border-amber-200/70 leading-relaxed font-normal">
-                  لحماية مصفوفة المقاسات ورموز التتبع (SKU) من الحذف غير المقصود، يجب حذف خيارات الصنف الحالية بالأسفل أولاً (أو تحويل الصنف إلى مفرد) لتتمكن من تغيير القسم.
+                  لحماية مصفوفة المقاسات والخيارات من الحذف غير المقصود، يجب حذف خيارات الصنف الحالية بالأسفل أولاً (أو تحويل الصنف إلى مفرد) لتتمكن من تغيير القسم.
                 </p>
               )}
 
@@ -588,7 +584,7 @@ export function ProductStudioEditorTab({
 
         {/* If Simple Product: Instant Clean Form */}
         {isSimple && (
-          <div className="mt-4 p-4 rounded-xl bg-brand-surface/40 border border-brand-border/60 grid grid-cols-2 sm:grid-cols-4 gap-3 animate-fadeIn">
+          <div className="mt-4 p-4 rounded-xl bg-brand-surface/40 border border-brand-border/60 grid grid-cols-1 sm:grid-cols-3 gap-3 animate-fadeIn">
             <div>
               <label className="block text-[10px] font-bold text-brand-muted mb-1">
                 سعر البيع (₪) *
@@ -631,26 +627,9 @@ export function ProductStudioEditorTab({
               />
             </div>
 
-            <div>
-              <label className="block text-[10px] font-bold text-brand-muted mb-1">
-                رمز SKU (معرف التتبع المخزني)
-              </label>
-              <div
-                className="w-full h-10 px-2.5 rounded-xl border border-brand-border/60 bg-brand-surface/60 flex items-center justify-between select-none"
-                title="رمز تتبع المستودع والباركود يولّد تلقائياً من النظام لضمان دقة فرز الشحنة الموحدة"
-              >
-                <span className="font-mono text-xs font-bold text-brand-dark truncate">
-                  {simpleSku || 'SDM-PROD-AUTO'}
-                </span>
-                <span className="text-[9px] font-bold text-brand-muted bg-brand-card px-1.5 py-0.5 rounded border border-brand-border/60 shrink-0">
-                  توليد آلي
-                </span>
-              </div>
-            </div>
-
             {/* Live Discount / Validation Feedback */}
             {Number(simpleCompareAtPrice) > 0 && Number(simplePrice) > 0 && (
-              <div className="col-span-2 sm:col-span-4 -mt-1">
+              <div className="col-span-1 sm:col-span-3 -mt-1">
                 {Number(simpleCompareAtPrice) <= Number(simplePrice) ? (
                   <div className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200/80 rounded-lg px-2.5 py-1.5 flex items-center gap-1.5">
                     <span>⚠️</span>
@@ -1407,8 +1386,7 @@ export function ProductStudioEditorTab({
               <div className="space-y-2">
                 {/* Table Header (Desktop Only) */}
                 <div className="hidden md:grid grid-cols-12 gap-3 px-3 py-2 text-[11px] font-black text-brand-muted border-b border-brand-border/40">
-                  <div className="col-span-3">الصنف والتوليفة</div>
-                  <div className="col-span-2">رمز SKU</div>
+                  <div className="col-span-5">الصنف والتوليفة</div>
                   <div className="col-span-2">سعر البيع</div>
                   <div className="col-span-2">قبل الخصم</div>
                   <div className="col-span-2">المخزون بالمستودع</div>
@@ -1433,8 +1411,8 @@ export function ProductStudioEditorTab({
                       >
                         {/* Desktop Grid Row */}
                         <div className="hidden md:grid grid-cols-12 items-center gap-3">
-                          {/* Col 1-3: Thumbnail & Attributes */}
-                          <div className="col-span-3 flex items-center gap-2.5">
+                          {/* Col 1-5: Thumbnail & Attributes */}
+                          <div className="col-span-5 flex items-center gap-2.5">
                             <img
                               src={variantPhoto}
                               alt={attrSummary}
@@ -1453,13 +1431,6 @@ export function ProductStudioEditorTab({
                                 ))}
                               </div>
                             </div>
-                          </div>
-
-                          {/* Col 4-5: SKU */}
-                          <div className="col-span-2">
-                            <span className="font-mono text-[10px] text-brand-muted bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border/60">
-                              {v.sku}
-                            </span>
                           </div>
 
                           {/* Col 6-7: Price */}
@@ -1611,7 +1582,6 @@ export function ProductStudioEditorTab({
                               />
                               <div>
                                 <div className="text-xs font-black text-brand-dark">{attrSummary}</div>
-                                <div className="text-[10px] text-brand-muted font-mono">{v.sku}</div>
                               </div>
                             </div>
 

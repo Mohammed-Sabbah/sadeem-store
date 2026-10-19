@@ -39,8 +39,7 @@ export default function MerchantProductList({
     return products.filter((p) => {
       const matchesSearch =
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        p.variants?.some((v) => v.sku.toLowerCase().includes(searchQuery.toLowerCase()));
+        Boolean(p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
       if (!matchesSearch) return false;
 
@@ -72,7 +71,7 @@ export default function MerchantProductList({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="بحث بالاسم، الباركود، أو الـ SKU..."
+              placeholder="بحث باسم الصنف أو القسم..."
               className="w-full h-10 pr-9 pl-8 text-xs font-medium rounded-xl border border-brand-border bg-brand-card text-brand-dark placeholder:text-brand-muted/60 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
             />
             <svg
@@ -163,7 +162,7 @@ export default function MerchantProductList({
           <h3 className="text-sm font-black text-brand-dark mb-1">لا توجد أصناف مطابقة</h3>
           <p className="text-xs text-brand-muted mb-5 max-w-sm mx-auto leading-relaxed">
             {searchQuery
-              ? 'لم يتم العثور على أي منتج يتطابق مع كلمة البحث أو الـ SKU.'
+              ? 'لم يتم العثور على أي منتج يتطابق مع كلمة البحث.'
               : 'لم تقم بإضافة أي أصناف ضمن هذا التصنيف حتى الآن.'}
           </p>
           <button
@@ -182,7 +181,7 @@ export default function MerchantProductList({
               <thead className="bg-brand-surface/80 border-b border-brand-border text-brand-muted font-bold select-none">
                 <tr>
                   <th className="py-3 px-5 w-20">الصورة</th>
-                  <th className="py-3 px-4 min-w-[280px]">اسم الصنف / القسم / الـ SKU</th>
+                  <th className="py-3 px-4 min-w-[280px]">اسم الصنف / القسم</th>
                   <th className="py-3 px-4 w-36">السعر بالـ (₪)</th>
                   <th className="py-3 px-6 w-52">المخزون المتوفر</th>
                   <th className="py-3 px-4 w-32">حالة العرض</th>
@@ -226,7 +225,7 @@ export default function MerchantProductList({
                           </div>
                         </td>
 
-                        {/* Title, Category & SKU */}
+                        {/* Title & Category */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-[11px] font-bold text-brand-muted">
@@ -249,10 +248,10 @@ export default function MerchantProductList({
                           >
                             {p.name}
                           </Link>
-                          <span className="text-[11px] font-mono text-brand-muted">
+                          <span className="text-[11px] font-bold text-brand-muted">
                             {hasVariants
                               ? `${p.variants?.length} متغيرات مختلفة`
-                              : `SKU: ${p.variants?.[0]?.sku || 'SDM-001'}`}
+                              : 'صنف موحد'}
                           </span>
                         </td>
 
@@ -400,11 +399,8 @@ export default function MerchantProductList({
                                           {attrText}
                                         </strong>
                                         <div className="flex items-center gap-1.5 mt-0.5">
-                                          <span className="text-[10px] font-mono text-brand-muted">
-                                            {v.sku}
-                                          </span>
                                           <span className="text-[10px] font-black text-brand-dark">
-                                            · {v.price} ₪
+                                            {v.price} ₪
                                           </span>
                                         </div>
                                       </div>
@@ -416,7 +412,7 @@ export default function MerchantProductList({
                                           onClick={() => {
                                             const current = v.stock ?? 0;
                                             if (current > 0) {
-                                              onQuickStockChange?.(p._id, current - 1, v._id || v.sku);
+                                              onQuickStockChange?.(p._id, current - 1, v._id);
                                             }
                                           }}
                                           disabled={(v.stock ?? 0) <= 0}
@@ -433,7 +429,7 @@ export default function MerchantProductList({
                                           type="button"
                                           onClick={() => {
                                             const current = v.stock ?? 0;
-                                            onQuickStockChange?.(p._id, current + 1, v._id || v.sku);
+                                            onQuickStockChange?.(p._id, current + 1, v._id);
                                           }}
                                           className="w-5 h-5 rounded-md bg-brand-card text-brand-dark flex items-center justify-center font-bold text-xs hover:bg-brand-surface active:scale-90 transition-all cursor-pointer"
                                         >
@@ -615,7 +611,7 @@ export default function MerchantProductList({
                               type="button"
                               onClick={() => {
                                 const current = v.stock ?? 0;
-                                if (current > 0) onQuickStockChange?.(p._id, current - 1, v._id || v.sku);
+                                if (current > 0) onQuickStockChange?.(p._id, current - 1, v._id);
                               }}
                               disabled={(v.stock ?? 0) <= 0}
                               className="w-7 h-7 rounded-md bg-brand-surface text-brand-dark font-bold text-xs flex items-center justify-center active:scale-90 transition-transform disabled:opacity-30"
@@ -629,7 +625,7 @@ export default function MerchantProductList({
                               type="button"
                               onClick={() => {
                                 const current = v.stock ?? 0;
-                                onQuickStockChange?.(p._id, current + 1, v._id || v.sku);
+                                onQuickStockChange?.(p._id, current + 1, v._id);
                               }}
                               className="w-7 h-7 rounded-md bg-brand-surface text-brand-dark font-bold text-xs flex items-center justify-center active:scale-90 transition-transform"
                             >

@@ -63,7 +63,6 @@ export default function MerchantProductStudioPage() {
           isSimple={studio.isSimple}
           simplePrice={studio.simplePrice}
           simpleStock={studio.simpleStock}
-          simpleSku={studio.simpleSku}
           setSimpleStock={studio.setSimpleStock}
           variants={studio.variants}
           handleQuickDeltaStock={studio.handleQuickDeltaStock}
@@ -104,8 +103,6 @@ export default function MerchantProductStudioPage() {
           setSimpleCompareAtPrice={studio.setSimpleCompareAtPrice}
           simpleStock={studio.simpleStock}
           setSimpleStock={studio.setSimpleStock}
-          simpleSku={studio.simpleSku}
-          setSimpleSku={studio.setSimpleSku}
           options={studio.options}
           isAddOptionOpen={studio.isAddOptionOpen}
           setIsAddOptionOpen={studio.setIsAddOptionOpen}

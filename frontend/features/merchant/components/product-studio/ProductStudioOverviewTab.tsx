@@ -21,7 +21,6 @@ interface ProductStudioOverviewTabProps {
   isSimple: boolean;
   simplePrice: number | string;
   simpleStock: number | string;
-  simpleSku: string;
   setSimpleStock: (val: number | string) => void;
   variants: VariantItemState[];
   handleQuickDeltaStock: (variantId: string | undefined, delta: number) => void;
@@ -38,7 +37,6 @@ export function ProductStudioOverviewTab({
   isSimple,
   simplePrice,
   simpleStock,
-  simpleSku,
   setSimpleStock,
   variants,
   handleQuickDeltaStock,
@@ -126,9 +124,8 @@ export function ProductStudioOverviewTab({
               />
               <div>
                 <div className="text-xs font-black text-brand-dark">{name}</div>
-                <div className="text-[11px] text-brand-muted mt-0.5">
-                  صنف مفرد بسعر {simplePrice} ₪ · كود:{' '}
-                  <span className="font-mono">{simpleSku || 'SDM-DEFAULT'}</span>
+                <div className="text-[11px] text-brand-muted mt-0.5 font-bold">
+                  صنف مفرد بسعر {simplePrice} ₪
                 </div>
               </div>
             </div>
@@ -185,8 +182,8 @@ export function ProductStudioOverviewTab({
                     />
                     <div>
                       <div className="text-xs font-black text-brand-dark">{attrSummary}</div>
-                      <div className="text-[10px] text-brand-muted mt-0.5">
-                        {v.price} ₪ · <span className="font-mono">{v.sku}</span>
+                      <div className="text-[10px] text-brand-dark font-black mt-0.5">
+                        {v.price} ₪
                       </div>
                     </div>
                   </div>
@@ -194,7 +191,7 @@ export function ProductStudioOverviewTab({
                   <div className="flex items-center gap-1.5 bg-brand-card p-1 rounded-xl border border-brand-border/60 shadow-2xs shrink-0">
                     <button
                       type="button"
-                      onClick={() => handleQuickDeltaStock(v._id || v.sku, -1)}
+                      onClick={() => handleQuickDeltaStock(v._id, -1)}
                       className="w-7 h-7 rounded-lg bg-brand-surface hover:bg-brand-border/40 font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-transform duration-100"
                       title="إنقاص المخزون قطعة واحدة"
                     >
@@ -209,7 +206,7 @@ export function ProductStudioOverviewTab({
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleQuickDeltaStock(v._id || v.sku, 1)}
+                      onClick={() => handleQuickDeltaStock(v._id, 1)}
                       className="w-7 h-7 rounded-lg bg-brand-surface hover:bg-brand-border/40 font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 transition-transform duration-100"
                       title="زيادة المخزون قطعة واحدة"
                     >

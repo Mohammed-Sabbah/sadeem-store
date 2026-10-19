@@ -8,13 +8,13 @@ import type { ProductFormData, ProductOption, OptionDefinition } from '../types/
 interface AddProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: ProductFormData) => Promise<boolean>;
+  onSubmit: (data: ProductFormData) => Promise<boolean | { success: boolean; message?: string }>;
 }
 
 interface VariantRow {
   attributes: Record<string, string>;
   attrKey: string;
-  sku: string;
+  sku?: string;
   price: number;
   compareAtPrice?: number;
   stock: number;
@@ -157,6 +157,7 @@ export default function AddProductModal({
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
   const [newUrlInput, setNewUrlInput] = useState('');
@@ -171,7 +172,6 @@ export default function AddProductModal({
   const [simplePrice, setSimplePrice] = useState<number | ''>('');
   const [simpleCompareAtPrice, setSimpleCompareAtPrice] = useState<number | ''>('');
   const [simpleStock, setSimpleStock] = useState<number | ''>(10);
-  const [simpleSku] = useState('');
 
   // Variants Product Fields
   const [options, setOptions] = useState<ProductOption[]>([
@@ -271,22 +271,11 @@ export default function AddProductModal({
       return;
     }
 
-    merchantService.fetchOptionsByCategory(categoryId).then((res) => {
-      if (res.success && res.data?.definitions) {
-        const catTitle = activeCat?.title || '';
-        const catSlug = activeCat?.slug || '';
-        const isShoes = catTitle.includes('حذاء') || catTitle.includes('أحذية') || catSlug.includes('shoe');
-        const isKids = catTitle.includes('أطفال') || catSlug.includes('kid');
-
-        const refinedDefs = res.data.definitions.filter((def) => {
-          if (def.key === 'size_shoes' && !isShoes) return false;
-          if (def.key === 'size_kids' && !isKids) return false;
-          return true;
-        });
-        setCategoryOptionDefinitions(refinedDefs);
-      }
-    });
-  }, [categoryId, categories]);
+    setCategoryOptionDefinitions([]);
+    if (!isSimple) {
+      setIsSimple(true);
+    }
+  }, [categoryId, categories, isSimple]);
 
   // Category Change with Guard against active variants
   const handleCategoryChange = (newCatId: string) => {
@@ -333,7 +322,7 @@ export default function AddProductModal({
       return combinations.map((combo) => {
         const attributes: Record<string, string> = {};
         validOptions.forEach((opt, idx) => {
-          attributes[opt.name] = combo[idx];
+          attributes[opt.name || opt.key || `opt_${idx}`] = combo[idx];
         });
 
         const sortedEntries = Object.entries(attributes).sort(([a], [b]) => a.localeCompare(b));
@@ -344,12 +333,9 @@ export default function AddProductModal({
           return existing;
         }
 
-        const cleanSkuPart = combo.map((v) => v.slice(0, 3).toUpperCase()).join('-');
-        const randomNum = Math.floor(100 + Math.random() * 900);
         return {
           attributes,
           attrKey,
-          sku: `SDM-${cleanSkuPart}-${randomNum}`,
           price: typeof bulkPrice === 'number' && bulkPrice > 0 ? bulkPrice : 50,
           compareAtPrice:
             typeof bulkCompareAtPrice === 'number' && bulkCompareAtPrice > 0
@@ -369,6 +355,7 @@ export default function AddProductModal({
 
     setIsProcessingFiles(true);
     const fileArray = Array.from(files);
+    setImageFiles((prev) => [...prev, ...fileArray]);
 
     try {
       const compressedUrls = await Promise.all(fileArray.map((f) => compressImage(f)));
@@ -392,11 +379,19 @@ export default function AddProductModal({
       next.unshift(target);
       return next;
     });
+    setImageFiles((prev) => {
+      if (idx >= prev.length) return prev;
+      const next = [...prev];
+      const [target] = next.splice(idx, 1);
+      next.unshift(target);
+      return next;
+    });
   };
 
   const handleRemoveImage = (idx: number) => {
     const removedUrl = images[idx];
     setImages((prev) => prev.filter((_, i) => i !== idx));
+    setImageFiles((prev) => prev.filter((_, i) => i !== idx));
 
     // Clear from colorImageMap if assigned
     setColorImageMap((prev) => {
@@ -424,23 +419,29 @@ export default function AddProductModal({
       return;
     }
 
-    let defaultName = def?.label || optionName;
-    if (!defaultName) {
-      defaultName = `خيار ${options.length + 1}`;
-    }
+    const defaultLabel = def?.label || optionName || `خيار ${options.length + 1}`;
+    const canonicalKey = def?.key || optionName || `opt_${Date.now()}`;
 
-    if (options.some((o) => o.name === defaultName)) {
-      alert(`الخيار «${defaultName}» مضاف بالفعل.`);
+    if (
+      options.some(
+        (o) =>
+          o.key === canonicalKey ||
+          o.name === canonicalKey ||
+          o.name === defaultLabel ||
+          o.label === defaultLabel
+      )
+    ) {
+      alert(`الخيار «${defaultLabel}» مضاف بالفعل.`);
       return;
     }
 
     setOptions((prev) => [
       ...prev,
       {
-        key: def?.key || `opt_${Date.now()}`,
+        key: canonicalKey,
         source: def ? 'DEFINED' : 'CUSTOM',
-        label: def?.label || defaultName,
-        name: defaultName,
+        label: defaultLabel,
+        name: canonicalKey,
         type: def?.type || (presetType === 'COLOR' ? 'COLOR' : 'TEXT'),
         unit: def?.unit || null,
         values: [],
@@ -569,11 +570,11 @@ export default function AddProductModal({
         description: description.trim(),
         categoryId,
         images: images.length > 0 ? images : [],
+        imageFiles: imageFiles.length > 0 ? imageFiles : undefined,
         isSimple,
         simplePrice: Number(simplePrice) || 0,
         simpleCompareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : undefined,
         simpleStock: Number(simpleStock) || 0,
-        simpleSku: simpleSku.trim(),
         options: isSimple ? [] : options.filter((o) => o.name.trim() && o.values.length > 0),
         variants: isSimple
           ? []
@@ -592,7 +593,6 @@ export default function AddProductModal({
               return {
                 attributes: r.attributes,
                 attrKey: r.attrKey,
-                sku: r.sku,
                 price: Number(r.price),
                 compareAtPrice: r.compareAtPrice ? Number(r.compareAtPrice) : undefined,
                 stock: Number(r.stock) || 0,
@@ -604,11 +604,13 @@ export default function AddProductModal({
         isActive,
       };
 
-      const ok = await onSubmit(payload);
-      if (ok) {
+      const res = await onSubmit(payload);
+      const isSuccess = typeof res === 'boolean' ? res : res?.success;
+      if (isSuccess) {
         setName('');
         setDescription('');
         setImages([]);
+        setImageFiles([]);
         setColorImageMap({});
         setSimplePrice('');
         setSimpleCompareAtPrice('');
@@ -617,6 +619,9 @@ export default function AddProductModal({
         setOptions([]);
         setVariantsRows([]);
         onClose();
+      } else {
+        const msg = typeof res === 'object' && res?.message ? res.message : 'فشلت عملية حفظ ونشر الصنف';
+        setErrorMessage(msg);
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'حدث خطأ أثناء حفظ الصنف، يرجى المحاولة ثانية.');
@@ -902,7 +907,7 @@ export default function AddProductModal({
                 تسعير ومخزون الصنف الموحد
               </h3>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs font-bold text-brand-dark block mb-1">
                     سعر البيع (₪) <span className="text-red-500">*</span>
@@ -967,23 +972,6 @@ export default function AddProductModal({
                     placeholder="15"
                     className="w-full h-11 px-3 text-sm font-black rounded-xl border border-brand-border bg-white text-brand-dark focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary"
                   />
-                </div>
-
-                <div>
-                  <label className="text-xs font-bold text-brand-muted block mb-1">
-                    الباركود / SKU
-                  </label>
-                  <div
-                    className="w-full h-11 px-3 rounded-xl border border-brand-border bg-brand-surface/40 flex items-center justify-between select-none"
-                    title="رمز تتبع المستودع والباركود يولّد تلقائياً من النظام"
-                  >
-                    <span className="font-mono text-xs font-bold text-brand-dark truncate">
-                      {simpleSku || 'SDM-PROD-AUTO'}
-                    </span>
-                    <span className="text-[10px] font-bold text-brand-muted bg-white px-2 py-0.5 rounded-md border border-brand-border shrink-0">
-                      توليد آلي
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -1051,14 +1039,16 @@ export default function AddProductModal({
                     </>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={() => addOption('', 'CUSTOM')}
-                    disabled={options.length >= 3}
-                    className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs disabled:opacity-40"
-                  >
-                    + مخصص
-                  </button>
+                  {(!categoryOptionDefinitions || categoryOptionDefinitions.length === 0) && (
+                    <button
+                      type="button"
+                      onClick={() => addOption('', 'CUSTOM')}
+                      disabled={options.length >= 3}
+                      className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-brand-primary/10 text-brand-primary hover:bg-brand-primary hover:text-white transition-all duration-150 active:scale-95 cursor-pointer shadow-2xs disabled:opacity-40"
+                    >
+                      + مخصص
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -1651,7 +1641,6 @@ export default function AddProductModal({
                       <thead className="bg-brand-surface/70 border-b border-brand-border/60">
                         <tr className="font-bold text-brand-muted">
                           <th className="p-3">المتغير</th>
-                          <th className="p-3">رمز SKU</th>
                           <th className="p-3 w-22">السعر (₪) *</th>
                           <th className="p-3 w-24">قبل الخصم (₪)</th>
                           <th className="p-3 w-20">المخزون *</th>
@@ -1667,11 +1656,6 @@ export default function AddProductModal({
                           return (
                             <tr key={v.attrKey || vIdx} className="hover:bg-brand-surface/40">
                               <td className="p-3 font-black text-brand-dark">{label}</td>
-                              <td className="p-3 font-mono text-[11px] text-brand-muted">
-                                <span className="inline-block px-2 py-0.5 rounded-md bg-brand-surface border border-brand-border text-brand-dark font-mono text-[11px]">
-                                  {v.sku || 'SDM-VAR-AUTO'}
-                                </span>
-                              </td>
                               <td className="p-3">
                                 <input
                                   type="number"
@@ -1765,7 +1749,6 @@ export default function AddProductModal({
                           <div className="flex items-center justify-between gap-2">
                             <div>
                               <span className="text-xs font-black text-brand-dark block">{label}</span>
-                              <span className="font-mono text-[10px] text-brand-muted">{v.sku}</span>
                             </div>
                             <label className="flex items-center gap-1.5 cursor-pointer select-none">
                               <span className="text-[11px] font-bold text-brand-muted">

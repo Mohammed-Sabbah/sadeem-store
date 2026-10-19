@@ -8,7 +8,7 @@ const {
     getProductsWithVariants,
 } = require('../utils/product');
 const { hasActiveVariants, hasVariantAttributes } = require('../utils/variant');
-
+const { deleteProductWithVariants } = require("../services/product.service")
 // Public Filters
 const publicProductFilter = {
     isDeleted: false,
@@ -187,17 +187,19 @@ async function updateProduct(req, res, next) {
         }
 
         const { title, description, categoryId, images, image } = req.body;
+        const previousImages = Array.isArray(product.images) ? [...product.images] : [];
         if (title !== undefined) product.title = title;
         if (description !== undefined) product.description = description;
         if (categoryId !== undefined) product.categoryId = categoryId;
         if (Array.isArray(images) && images.length > 0) {
             product.images = images;
-            product.image = images[0];
         } else if (image !== undefined) {
-            product.image = image;
             product.images = [image];
         }
         await product.save();
+        // await deleteUnusedImages(
+        //     previousImages.filter((previousImage) => !product.images.includes(previousImage))
+        // );
 
         return success(res, 200, {
             message: 'Product updated successfully',
@@ -271,21 +273,11 @@ async function updateProductApproval(req, res, next) {
 
 async function deleteProduct(req, res, next) {
     try {
-        const product = await Product.findOneAndUpdate(
-            { _id: req.params.id, isDeleted: { $ne: true } },
-            { $set: { isDeleted: true } },
-            { new: true }
-        );
-
-        if (!product) {
+        const deletedProduct = await deleteProductWithVariants(req.params.id);
+        if (!deletedProduct) {
             return error(res, 404, 'Product not found');
         }
-
-        await Variant.updateMany({ productId: product._id }, { isDeleted: true })
-
-        return success(res, 200, {
-            message: 'Product deleted successfully',
-        });
+        return success(res, 200, { msg: 'Product deleted successfully' });
     } catch (err) {
         return next(err);
     }

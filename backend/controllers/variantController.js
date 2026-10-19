@@ -110,10 +110,14 @@ async function updateVariant(req, res, next) {
             variant.attributes = new Map(Object.entries(updatedAttributes));
         }
 
+        const previousImage = variant.image;
         if (Array.isArray(req.body.images) && req.body.images.length > 0) {
             variant.image = req.body.images[0];
         }
         await variant.save();
+        // if (previousImage && previousImage !== variant.image) {
+        //     await deleteUnusedImages([previousImage]);
+        // }
 
         return success(res, 200, {
             message: 'Variant updated successfully',
@@ -212,8 +216,13 @@ async function deleteVariant(req, res, next) {
             return error(res, 404, 'Variant not found');
         }
 
+        const image = variant.image;
+        variant.image = '';
         variant.isDeleted = true;
         await variant.save();
+        // if (image) {
+        //     await deleteUnusedImages([image]);
+        // }
         await deactivateProductWithNoActiveVariants(product);
 
         return success(res, 200, {

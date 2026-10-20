@@ -37,7 +37,7 @@ const validateCreateProduct = [
         if (!value || typeof value !== 'object' || Array.isArray(value)) {
             throw new Error('Product data must be an object');
         }
-        const allowedFields = ['title', 'description', 'categoryId', 'image', 'images', 'price', 'stock'];
+        const allowedFields = ['title', 'description', 'categoryId', 'images', 'price', 'stock'];
         if (Object.keys(value).some((field) => !allowedFields.includes(field))) {
             throw new Error('Product contains unsupported fields');
         }
@@ -79,15 +79,6 @@ const validateCreateProduct = [
         .withMessage('Product image must be an HTTP(S) URL or a local site path')
         .isLength({ max: 2048 })
         .withMessage('Product image URL must be at most 2048 characters'),
-    body('image')
-        .optional()
-        .isString()
-        .withMessage('Product image must be a string')
-        .bail()
-        .custom(isSafeImageReference)
-        .withMessage('Product image must be an HTTP(S) URL or a local site path')
-        .isLength({ max: 2048 })
-        .withMessage('Product image URL must be at most 2048 characters'),
     ...validateVariantFields(),
 ];
 
@@ -97,7 +88,7 @@ const validateUpdateProduct = [
             if (!value || typeof value !== 'object' || Array.isArray(value)) {
                 throw new Error('Product data must be an object');
             }
-            const editableFields = ['title', 'description', 'categoryId', 'images', 'existingImages', 'imageOrder'];
+            const editableFields = ['title', 'description', 'categoryId', 'images', 'existingImages'];
             const hasUploadedImages = req.files && req.files.length > 0;
             if (!hasUploadedImages && !editableFields.some((field) => value[field] !== undefined)) {
                 throw new Error('Provide at least one product field to update');
@@ -165,20 +156,6 @@ const validateUpdateProduct = [
         .withMessage('Existing image must be an HTTP(S) URL or local path')
         .isLength({ max: 2048 })
         .withMessage('Image URL must be at most 2048 characters'),
-    body('imageOrder')
-        .optional()
-        .customSanitizer((val) => {
-            if (typeof val === 'string') {
-                try {
-                    return JSON.parse(val);
-                } catch {
-                    return val;
-                }
-            }
-            return val;
-        })
-        .isArray({ max: 5 })
-        .withMessage('Image order must be an array of at most 5 items'),
     validateRequest,
 ];
 

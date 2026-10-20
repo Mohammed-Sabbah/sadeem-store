@@ -186,7 +186,7 @@ async function updateProduct(req, res, next) {
             }
         }
 
-        const updatedProduct = await productService.updateProduct(product, { ...req.body, uploadedImages: req.uploadedImages });
+        const updatedProduct = await productService.updateProduct(product, req.body);
 
         return success(res, 200, {
             message: 'Product updated successfully',

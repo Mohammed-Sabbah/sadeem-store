@@ -856,11 +856,12 @@ export function useProductStudio(productId: string) {
       .filter((f): f is File => f instanceof File);
 
     // Smart Dirty Tracking (Base Product vs Variants)
+    const productCatId = typeof product?.categoryId === 'object' ? (product.categoryId as any)._id : product?.categoryId;
     const baseChanged =
       !product ||
       name.trim() !== (product.name || product.title || '').trim() ||
       description.trim() !== (product.description || '').trim() ||
-      categoryId !== product.categoryId ||
+      String(categoryId) !== String(productCatId) ||
       filesToUpload.length > 0 ||
       images.length !== (product.images || []).length ||
       images.some((img, idx) => img !== product.images?.[idx]);
@@ -868,13 +869,39 @@ export function useProductStudio(productId: string) {
     const variantsChanged =
       !product ||
       isSimple !== (product.variants?.length === 1 && Object.keys(product.variants[0]?.attributes || {}).length === 0) ||
-      variants.some((v) => {
-        const orig = product.variants?.find((pv) => pv._id === v._id);
-        if (!orig) return true;
-        return Number(orig.price) !== Number(v.price) || Number(orig.stock) !== Number(v.stock);
-      });
+      (isSimple
+        ? (
+            Number(simplePrice) !== Number(product.variants?.[0]?.price || 0) ||
+            Number(simpleStock) !== Number(product.variants?.[0]?.stock || 0) ||
+            (simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null) !== (product.variants?.[0]?.compareAtPrice ?? null)
+          )
+        : (
+            deletedVariantKeys.length > 0 ||
+            variants.length !== (product.variants?.length || 0) ||
+            variants.some((v) => {
+              const orig = product.variants?.find((pv) => pv._id === v._id);
+              if (!orig) return true;
+              return (
+                Number(orig.price) !== Number(v.price) ||
+                Number(orig.stock) !== Number(v.stock) ||
+                (v.compareAtPrice ? Number(v.compareAtPrice) : null) !== (orig.compareAtPrice ?? null)
+              );
+            })
+          ));
 
     const statusChanged = !product || isActive !== (product.isActive !== undefined ? product.isActive : true);
+
+    if (!baseChanged && !variantsChanged && !statusChanged) {
+      setIsSaving(false);
+      setSaveSuccessMessage('لم يتم إجراء أي تعديلات جديدة للحفظ');
+      return;
+    }
+
+    if (keptUrls.length === 0 && filesToUpload.length === 0) {
+      setIsSaving(false);
+      setErrorMessage('يجب الإبقاء على صورة واحدة على الأقل للمنتج');
+      return;
+    }
 
     const updatePayload: any = {
       ...(baseChanged
@@ -887,9 +914,7 @@ export function useProductStudio(productId: string) {
             existingImages: keptUrls,
             imageFiles: filesToUpload.length > 0 ? filesToUpload : undefined,
           }
-        : {
-            existingImages: keptUrls,
-          }),
+        : {}),
       ...(variantsChanged
         ? {
             options: isSimple ? [] : options,

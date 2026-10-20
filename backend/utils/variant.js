@@ -43,13 +43,6 @@ function normalizeAttributes(attributes, definitions) {
         normalized[definition.name] = allowedValue;
     }
 
-    if (Object.keys(normalized).length !== definitions.length) {
-        const missing = definitions
-            .filter((definition) => !Object.prototype.hasOwnProperty.call(normalized, definition.name))
-            .map((definition) => definition.name);
-        return { attributes: null, error: `Variant is missing required attributes: ${missing.join(', ')}` };
-    }
-
     return { attributes: normalized, error: null };
 }
 
@@ -100,13 +93,16 @@ const prepareProductVariants = (variants, category, requireAttribute) => {
             return { variantsToCreate: [], err: { code: 400, msg: normalized.error } };
         }
 
+        const shouldRequire = typeof requireAttribute === 'object' && requireAttribute !== null
+            ? Boolean(requireAttribute.requireAttributes)
+            : Boolean(requireAttribute);
+
         if (
-            requireAttribute &&
+            shouldRequire &&
             category.variantAttributes.length > 0 &&
             Object.keys(normalized.attributes).length === 0
         ) {
-            err = { code: 400, msg: 'Variant attributes are required for this category' };
-            return { variantsToCreate: [], err: { code: 400, msg: 'Variant attributes are required for this category' } }
+            return { variantsToCreate: [], err: { code: 400, msg: 'Variant attributes are required for this category' } };
         }
 
         const variant = {
@@ -116,6 +112,14 @@ const prepareProductVariants = (variants, category, requireAttribute) => {
             isDeleted: false,
             ...(submittedVariant.image !== undefined ? { image: submittedVariant.image } : {}),
         };
+
+        if (variantsToCreate.length > 0) {
+            const firstKeys = Object.keys(variantsToCreate[0].attributes).sort().join(',');
+            const currentKeys = Object.keys(variant.attributes).sort().join(',');
+            if (firstKeys !== currentKeys) {
+                return { variantsToCreate: [], err: { code: 400, msg: 'All variants must have the same set of attributes' } };
+            }
+        }
 
         if (findDuplicateVariant(variantsToCreate, variant.attributes)) {
             return { variantsToCreate: [], err: { code: 409, msg: 'A variant with these attributes already exists' } };

@@ -3,12 +3,21 @@ const Product = require('../models/Product');
 const Variant = require('../models/Variant');
 const { APPROVE_STATUS, STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
+
 const {
     getProductResponse,
     getProductsWithVariants,
 } = require('../utils/product');
-const { hasActiveVariants, hasVariantAttributes } = require('../utils/variant');
+
+const {
+    hasActiveVariants,
+    hasVariantAttributes,
+    prepareProductVariants,
+    getDefaultVariant
+} = require('../utils/variant');
+
 const productService = require("../services/product.service")
+
 // Public Filters
 const publicProductFilter = {
     isDeleted: false,
@@ -120,31 +129,34 @@ async function getAdminProducts(req, res, next) {
 
 async function createProduct(req, res, next) {
     try {
+        const { price, stock, image } = req.body || {}
         const category = await Category.findOne({ _id: req.body.categoryId, isActive: true });
         if (!category) {
             return error(res, 400, 'Select an active category');
         }
 
-        const images = req.body.images || []
-        const product = await Product.create({
+        const images = req.body.images || [];
+
+        const hasCustomizedVariants = Array.isArray(req.body.variants) && req.body.variants.length > 0;
+
+        const submittedVariants = hasCustomizedVariants
+            ? req.body.variants
+            : [getDefaultVariant(price, stock, image)];
+
+        const { variantsToCreate, err } = prepareProductVariants(
+            submittedVariants,
+            category,
+            { requireAttributes: hasCustomizedVariants }
+        )
+        if (err) return error(res, err.code, err.msg)
+
+        const product = await productService.createProductWithVariants({
             storeId: req.store._id,
             title: req.body.title,
             description: req.body.description || '',
             categoryId: category._id,
             images,
-        });
-        try {
-            await Variant.create({
-                productId: product._id,
-                attributes: {},
-                price: req.body.price,
-                stock: req.body.stock,
-                image: images?.[0] || ""
-            });
-        } catch (err) {
-            await Product.deleteOne({ _id: product._id });
-            throw err;
-        }
+        }, variantsToCreate);
 
         return success(res, 201, {
             message: 'Product created.',
@@ -193,6 +205,10 @@ async function updateProduct(req, res, next) {
             product: await getProductResponse(updatedProduct),
         });
     } catch (err) {
+        try {
+        } catch (cleanupError) {
+            console.error('Failed to remove unused uploaded product images:', cleanupError);
+        }
         return next(err);
     }
 }
@@ -260,7 +276,10 @@ async function updateProductApproval(req, res, next) {
 
 async function deleteProduct(req, res, next) {
     try {
-        const deletedProduct = await productService.deleteProductWithVariants(req.params.id);
+        const deletedProduct = await productService.deleteProductWithVariants(
+            req.params.id,
+            req.store._id
+        );
         if (!deletedProduct) {
             return error(res, 404, 'Product not found');
         }

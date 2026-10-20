@@ -4,6 +4,58 @@ const { withMongoTransaction } = require("../config/db")
 const { deleteProductWithVariantsImages, deleteImages } = require("./cloudinary.service")
 const { validateNewProductImages } = require("../utils/images")
 
+const createProduct = async (productData, options) => {
+    const product = new Product(productData)
+    await product.save(options)
+    return product
+}
+
+const createProductWithVariants = async (productData, variantsData) => {
+    return withMongoTransaction(async (session) => {
+        const options = session ? { session } : {};
+        const product = await createProduct(productData, options)
+        const variants = variantsData.map((variant) => ({
+            ...variant,
+            attributes: new Map(Object.entries(variant.attributes || {})),
+            productId: product._id,
+        }))
+
+        await Variant.insertMany(variants, options)
+        return product
+    })
+}
+
+const updateProduct = async (product, updates) => {
+    const { title, description, categoryId } = updates
+
+    const result = validateNewProductImages(product, updates)
+
+    if (!result) {
+        return error(res, 400, "Some images do not belong to this product");
+    }
+
+    const { totalImages, deletedImages } = result
+
+    if (title !== undefined) product.title = title;
+    if (description !== undefined) product.description = description;
+    if (categoryId !== undefined) product.categoryId = categoryId;
+
+    if (Array.isArray(totalImages) && totalImages.length > 0) {
+        product.images = totalImages || [];
+    }
+
+    await product.save();
+
+    try {
+        await deleteImages(deletedImages || []);
+    } catch (error) {
+        console.error("Failed to delete previous images:", error);
+    }
+
+    return product
+
+};
+
 const deleteProductWithVariants = async (productId) => {
     const deletedData = await withMongoTransaction(
         async (session) => {
@@ -45,35 +97,8 @@ const deleteProductWithVariants = async (productId) => {
     return deletedData.product;
 }
 
-const updateProduct = async (product, updates) => {
-    const { title, description, categoryId } = updates
-
-    const result = validateNewProductImages(product, updates)
-
-    if (!result) {
-        return error(res, 400, "Some images do not belong to this product");
-    }
-
-    const { totalImages, deletedImages } = result
-
-    if (title !== undefined) product.title = title;
-    if (description !== undefined) product.description = description;
-    if (categoryId !== undefined) product.categoryId = categoryId;
-
-    if (Array.isArray(totalImages) && totalImages.length > 0) {
-        product.images = totalImages || [];
-    }
-
-    await product.save();
-
-    try {
-        await deleteImages(deletedImages || []);
-    } catch (error) {
-        console.error("Failed to delete previous images:", error);
-    }
-
-    return product
-
+module.exports = {
+    createProductWithVariants,
+    deleteProductWithVariants,
+    updateProduct,
 };
-
-module.exports = { deleteProductWithVariants, updateProduct };

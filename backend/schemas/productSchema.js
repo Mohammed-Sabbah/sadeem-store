@@ -37,11 +37,11 @@ const validateCreateProduct = [
         if (!value || typeof value !== 'object' || Array.isArray(value)) {
             throw new Error('Product data must be an object');
         }
-        const allowedFields = ['title', 'description', 'categoryId', 'images', 'price', 'stock'];
+        const allowedFields = ['title', 'description', 'categoryId', 'images', 'price', 'stock', 'variants'];
         if (Object.keys(value).some((field) => !allowedFields.includes(field))) {
             throw new Error('Product contains unsupported fields');
         }
-        if ((!req.files || req.files.length === 0) && !value.images && !value.image) {
+        if ((!req.files || req.files.length === 0) && !value.images) {
             throw new Error('At least one product image is required');
         }
         return true;
@@ -79,7 +79,44 @@ const validateCreateProduct = [
         .withMessage('Product image must be an HTTP(S) URL or a local site path')
         .isLength({ max: 2048 })
         .withMessage('Product image URL must be at most 2048 characters'),
-    ...validateVariantFields(),
+    body('variants')
+        .optional()
+        .customSanitizer((value) => {
+            if (typeof value !== 'string') return value;
+            try {
+                return JSON.parse(value);
+            } catch {
+                return value;
+            }
+        })
+        .isArray()
+        .withMessage('Variants must be an array'),
+    body('variants.*')
+        .custom((value) => {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) {
+                throw new Error('Each variant must be an object');
+            }
+            if (Object.keys(value).some((field) => !['attributes', 'price', 'stock'].includes(field))) {
+                throw new Error('Variant contains unsupported fields');
+            }
+            return true;
+        }),
+    ...validateVariantFields({
+        path: 'variants.*',
+        defaultAttributes: false,
+        includeRequestValidation: false,
+    }),
+    body('price')
+        .if((_, { req }) => !Array.isArray(req.body.variants) || req.body.variants.length === 0)
+        .isFloat({ min: 0.01 })
+        .withMessage('Price must be greater than zero')
+        .toFloat(),
+    body('stock')
+        .if((_, { req }) => !Array.isArray(req.body.variants) || req.body.variants.length === 0)
+        .isInt({ min: 0 })
+        .withMessage('Stock must be a non-negative whole number')
+        .toInt(),
+    validateRequest,
 ];
 
 const validateUpdateProduct = [

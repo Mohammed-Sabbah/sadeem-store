@@ -1,3 +1,4 @@
+const Product = require("../models/Product")
 const Variant = require("../models/Variant")
 const cloudinary = require('../config/cloudinary');
 
@@ -68,5 +69,5 @@ const deleteProductWithVariantsImages = async (product, variants) => {
 
 module.exports = {
     deleteProductWithVariantsImages,
-    deleteImages
+    deleteImages,
 }

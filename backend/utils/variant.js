@@ -1,6 +1,15 @@
 const Variant = require('../models/Variant');
 const { STATUS } = require('../constants/enums');
 
+const getDefaultVariant = (price, stock, image) => {
+    return {
+        attributes: {},
+        price,
+        stock,
+        image
+    }
+}
+
 function normalizeAttributes(attributes, definitions) {
     const entries = attributes instanceof Map
         ? Array.from(attributes.entries())
@@ -78,10 +87,54 @@ async function hasActiveVariants(productId) {
     });
 }
 
+const prepareProductVariants = (variants, category, requireAttribute) => {
+    const variantsToCreate = []
+    let err = null
+    for (const submittedVariant of variants) {
+
+        const normalized = normalizeAttributes(
+            submittedVariant.attributes,
+            category.variantAttributes
+        );
+
+        if (normalized.error) {
+            err = { code: 400, msg: normalized.error };
+            return
+        }
+
+        if (
+            requireAttribute &&
+            category.variantAttributes.length > 0 &&
+            Object.keys(normalized.attributes).length === 0
+        ) {
+            err = { code: 400, msg: 'Variant attributes are required for this category' };
+            return
+        }
+
+        const variant = {
+            attributes: normalized.attributes,
+            price: submittedVariant.price,
+            stock: submittedVariant.stock,
+            isDeleted: false,
+            ...(submittedVariant.image !== undefined ? { image: submittedVariant.image } : {}),
+        };
+
+        if (findDuplicateVariant(variantsToCreate, variant.attributes)) {
+            err = { code: 409, msg: 'A variant with these attributes already exists' };
+            return
+        }
+
+        variantsToCreate.push(variant);
+    }
+    return { variantsToCreate, err }
+}
+
 module.exports = {
+    getDefaultVariant,
     normalizeAttributes,
     getVariantKey,
     findDuplicateVariant,
     hasVariantAttributes,
     hasActiveVariants,
+    prepareProductVariants
 };

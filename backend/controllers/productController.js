@@ -148,7 +148,7 @@ async function createProduct(req, res, next) {
             category,
             { requireAttributes: hasCustomizedVariants }
         )
-        if (err) return error(res, err.code, err.msg)
+        if (err) return error(res, ...err)
 
         const product = await productService.createProductWithVariants({
             storeId: req.store._id,

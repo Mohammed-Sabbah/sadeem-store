@@ -89,17 +89,15 @@ async function hasActiveVariants(productId) {
 
 const prepareProductVariants = (variants, category, requireAttribute) => {
     const variantsToCreate = []
-    let err = null
-    for (const submittedVariant of variants) {
 
+    for (const submittedVariant of variants) {
         const normalized = normalizeAttributes(
             submittedVariant.attributes,
             category.variantAttributes
         );
 
         if (normalized.error) {
-            err = { code: 400, msg: normalized.error };
-            return
+            return { variantsToCreate: [], err: { code: 400, msg: normalized.error } };
         }
 
         if (
@@ -108,7 +106,7 @@ const prepareProductVariants = (variants, category, requireAttribute) => {
             Object.keys(normalized.attributes).length === 0
         ) {
             err = { code: 400, msg: 'Variant attributes are required for this category' };
-            return
+            return { variantsToCreate: [], err: { code: 400, msg: 'Variant attributes are required for this category' } }
         }
 
         const variant = {
@@ -120,13 +118,12 @@ const prepareProductVariants = (variants, category, requireAttribute) => {
         };
 
         if (findDuplicateVariant(variantsToCreate, variant.attributes)) {
-            err = { code: 409, msg: 'A variant with these attributes already exists' };
-            return
+            return { variantsToCreate: [], err: { code: 409, msg: 'A variant with these attributes already exists' } };
         }
 
         variantsToCreate.push(variant);
     }
-    return { variantsToCreate, err }
+    return { variantsToCreate, err: null }
 }
 
 module.exports = {

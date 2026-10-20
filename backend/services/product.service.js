@@ -2,6 +2,7 @@ const Product = require("../models/Product")
 const Variant = require("../models/Variant")
 const { withMongoTransaction } = require("../config/db")
 const { deleteProductWithVariantsImages, deleteImages } = require("./cloudinary.service")
+const { validateNewProductImages } = require("../utils/images")
 
 const deleteProductWithVariants = async (productId) => {
     const deletedData = await withMongoTransaction(
@@ -45,28 +46,28 @@ const deleteProductWithVariants = async (productId) => {
 }
 
 const updateProduct = async (product, updates) => {
-    const { title, description, categoryId, images, existingImages } = updates;
+    const { title, description, categoryId } = updates
 
-    const previousImages = Array.isArray(product.images) ? [...product.images] : [];
+    const result = validateNewProductImages(product, updates)
 
-    const totalImages = Array.isArray(existingImages) ? [...existingImages, ...images] : images
+    if (!result) {
+        return error(res, 400, "Some images do not belong to this product");
+    }
 
-    const deletedImages = previousImages.filter(
-        prevImage => !existingImages.includes(prevImage)
-    );
+    const { totalImages, deletedImages } = result
 
     if (title !== undefined) product.title = title;
     if (description !== undefined) product.description = description;
     if (categoryId !== undefined) product.categoryId = categoryId;
 
-    if (Array.isArray(images) && images.length > 0) {
-        product.images = totalImages;
+    if (Array.isArray(totalImages) && totalImages.length > 0) {
+        product.images = totalImages || [];
     }
 
     await product.save();
 
     try {
-        await deleteImages(deletedImages);
+        await deleteImages(deletedImages || []);
     } catch (error) {
         console.error("Failed to delete previous images:", error);
     }

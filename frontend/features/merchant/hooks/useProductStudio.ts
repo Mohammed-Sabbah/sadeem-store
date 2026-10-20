@@ -855,45 +855,75 @@ export function useProductStudio(productId: string) {
       .map((u) => urlToFileMapRef.current.get(u))
       .filter((f): f is File => f instanceof File);
 
-        const result = await merchantService.updateProduct(productId, {
-      name,
-      title: name,
-      description,
-      categoryId,
-      images: keptUrls,
-      existingImages: keptUrls,
-      imageFiles: filesToUpload.length > 0 ? filesToUpload : undefined,
-      simplePrice: Number(simplePrice) || 0,
-      simpleCompareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null,
-      simpleStock: Math.max(0, parseInt(String(simpleStock)) || 0),
-      options: isSimple ? [] : options,
-      variants: isSimple
-        ? [
-            {
-              _id: simpleVariantId || variants[0]?._id || (product?.variants && product.variants[0]?._id) || undefined,
-              attributes: {},
-              attrKey: 'default',
-              price: Number(simplePrice) || 0,
-              compareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null,
-              stock: Math.max(0, parseInt(String(simpleStock)) || 0),
-              isActive: true,
-              images: images.slice(0, 1),
-            },
-          ]
-        : variants.map((v) => ({
-            _id: v._id,
-            attributes: v.attributes,
-            attrKey: v.attrKey,
-            price: v.price,
-            compareAtPrice: v.compareAtPrice,
-            stock: v.stock,
-            isActive: v.isActive,
-            images: v.images,
-          })),
-      isActive,
+    // Smart Dirty Tracking (Base Product vs Variants)
+    const baseChanged =
+      !product ||
+      name.trim() !== (product.name || product.title || '').trim() ||
+      description.trim() !== (product.description || '').trim() ||
+      categoryId !== product.categoryId ||
+      filesToUpload.length > 0 ||
+      images.length !== (product.images || []).length ||
+      images.some((img, idx) => img !== product.images?.[idx]);
+
+    const variantsChanged =
+      !product ||
+      isSimple !== (product.variants?.length === 1 && Object.keys(product.variants[0]?.attributes || {}).length === 0) ||
+      variants.some((v) => {
+        const orig = product.variants?.find((pv) => pv._id === v._id);
+        if (!orig) return true;
+        return Number(orig.price) !== Number(v.price) || Number(orig.stock) !== Number(v.stock);
+      });
+
+    const statusChanged = !product || isActive !== (product.isActive !== undefined ? product.isActive : true);
+
+    const updatePayload: any = {
+      ...(baseChanged
+        ? {
+            name,
+            title: name,
+            description,
+            categoryId,
+            images: keptUrls,
+            existingImages: keptUrls,
+            imageFiles: filesToUpload.length > 0 ? filesToUpload : undefined,
+          }
+        : {
+            existingImages: keptUrls,
+          }),
+      ...(variantsChanged
+        ? {
+            options: isSimple ? [] : options,
+            variants: isSimple
+              ? [
+                  {
+                    _id: simpleVariantId || variants[0]?._id || (product?.variants && product.variants[0]?._id) || undefined,
+                    attributes: {},
+                    attrKey: 'default',
+                    price: Number(simplePrice) || 0,
+                    compareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null,
+                    stock: Math.max(0, parseInt(String(simpleStock)) || 0),
+                    isActive: true,
+                    images: images.slice(0, 1),
+                  },
+                ]
+              : variants.map((v) => ({
+                  _id: v._id,
+                  attributes: v.attributes,
+                  attrKey: v.attrKey,
+                  price: v.price,
+                  compareAtPrice: v.compareAtPrice,
+                  stock: v.stock,
+                  isActive: v.isActive,
+                  images: v.images,
+                })),
+          }
+        : {}),
+      ...(statusChanged ? { isActive } : {}),
       isFeatured,
       isAnonymousVendor,
-    });
+    };
+
+    const result = await merchantService.updateProduct(productId, updatePayload);
 
     setIsSaving(false);
     if (result.success && result.data) {

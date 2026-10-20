@@ -150,15 +150,33 @@ export const merchantService = {
         : Math.max(0, Math.floor(Number(formData.variants[0]?.stock) || 0));
 
       const hasFiles = Array.isArray(formData.imageFiles) && formData.imageFiles.length > 0;
+      const title = (formData.name || formData.title || '').trim();
+      const description = formData.description?.trim() || '';
+
+      // Clean variants projection strictly conforming to backend schema: ['attributes', 'price', 'stock']
+      const cleanVariants = !formData.isSimple && Array.isArray(formData.variants)
+        ? formData.variants.map((v) => ({
+            attributes: v.attributes || {},
+            price: Number(v.price) || 0,
+            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+          }))
+        : [];
+
       let body: FormData | Record<string, any>;
 
       if (hasFiles) {
         const fd = new FormData();
-        fd.append('title', (formData.name || formData.title || '').trim());
-        if (formData.description?.trim()) fd.append('description', formData.description.trim());
+        fd.append('title', title);
+        if (description) fd.append('description', description);
         fd.append('categoryId', formData.categoryId);
-        fd.append('price', String(initialPrice));
-        fd.append('stock', String(initialStock));
+
+        if (formData.isSimple) {
+          fd.append('price', String(initialPrice));
+          fd.append('stock', String(initialStock));
+        } else {
+          fd.append('variants', JSON.stringify(cleanVariants));
+        }
+
         formData.imageFiles!.forEach((file) => fd.append('images', file));
         body = fd;
       } else {
@@ -166,16 +184,17 @@ export const merchantService = {
           (u) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/'))
         );
         body = {
-          title: (formData.name || formData.title || '').trim(),
-          description: formData.description?.trim() || '',
+          title,
+          description,
           categoryId: formData.categoryId,
-          price: initialPrice,
-          stock: initialStock,
           ...(validUrls.length > 0 ? { images: validUrls } : {}),
+          ...(formData.isSimple
+            ? { price: initialPrice, stock: initialStock }
+            : { variants: cleanVariants }),
         };
       }
 
-      // 1. Create Base Product
+      // 1. Create Base Product & Variants atomically in single transaction
       const res = await postRequest<{ product: any; message?: string }>('/api/products', body, { timeoutMs: 60000 });
       if (!res.success || !res.data?.product) {
         const errMsg = res.message || (res.errors ? Object.values(res.errors).flat().join(', ') : '') || 'فشلت عملية إنشاء المنتج';
@@ -184,53 +203,29 @@ export const merchantService = {
 
       const p = res.data.product;
 
-      // 2. If multi-variant, configure variants via sub-resource endpoints
-      if (!formData.isSimple && Array.isArray(formData.variants) && formData.variants.length > 0) {
-        const productId = p._id;
-        const defaultVariantId = p.variants?.[0]?._id;
+      // 2. If any variant has a specific imageFile, upload it concurrently
+      if (!formData.isSimple && Array.isArray(formData.variants) && Array.isArray(p.variants)) {
+        const variantImageFiles = formData.variants
+          .map((v, idx) => ({ file: v.imageFile, idx }))
+          .filter((item): item is { file: File; idx: number } => item.file instanceof File);
 
-        // A. Update default variant with combo #1 attributes
-        const combo1 = formData.variants[0];
-        if (defaultVariantId && combo1 && Object.keys(combo1.attributes || {}).length > 0) {
-          const patchRes = await patchRequest(`/api/products/${productId}/variants/${defaultVariantId}`, {
-            attributes: combo1.attributes,
-            price: Number(combo1.price) || initialPrice,
-            stock: Number(combo1.stock) || initialStock,
-          });
-          if (!patchRes.success) {
-            return { success: false, message: patchRes.message || 'فشل تحديث الصنف الافتراضي' };
-          }
-          if (combo1.imageFile) {
-            const vFd = new FormData();
-            vFd.append('image', combo1.imageFile);
-            await patchRequest(`/api/products/${productId}/variants/${defaultVariantId}`, vFd);
-          }
+        if (variantImageFiles.length > 0) {
+          await Promise.allSettled(
+            variantImageFiles.map(async ({ file, idx }) => {
+              const targetVarId = p.variants[idx]?._id;
+              if (targetVarId) {
+                const vFd = new FormData();
+                vFd.append('image', file);
+                await patchRequest('/api/products/' + p._id + '/variants/' + targetVarId, vFd);
+              }
+            })
+          );
         }
+      }
 
-        // B. Add subsequent combos #2..N
-        for (let i = 1; i < formData.variants.length; i++) {
-          const v = formData.variants[i];
-          const vRes = await postRequest<{ variant?: any }>(`/api/products/${productId}/variants`, {
-            attributes: v.attributes || {},
-            price: Number(v.price) || initialPrice,
-            stock: Number(v.stock) || 0,
-          });
-          if (!vRes.success) {
-            return { success: false, message: vRes.message || `فشل إنشاء الصنف رقم ${i + 1}` };
-          }
-
-          const createdVarId = vRes.data?.variant?._id;
-          if (v.imageFile && createdVarId) {
-            const vFd = new FormData();
-            vFd.append('image', v.imageFile);
-            await patchRequest(`/api/products/${productId}/variants/${createdVarId}`, vFd);
-          }
-        }
-
-        const refreshed = await this.getProductById(productId);
-        if (refreshed.success && refreshed.data) {
-          return { success: true, data: refreshed.data, message: 'تم حفظ ونشر المنتج وأصنافه بنجاح' };
-        }
+      const refreshed = await this.getProductById(p._id);
+      if (refreshed.success && refreshed.data) {
+        return { success: true, data: refreshed.data, message: 'تم حفظ ونشر المنتج بنجاح' };
       }
 
       return { success: true, data: this.mapProductItem(p), message: 'تم حفظ ونشر المنتج بنجاح' };
@@ -239,9 +234,6 @@ export const merchantService = {
     }
   },
 
-  /**
-   * تبديل تفعيل ظهور المنتج للزبائن
-   */
   async toggleProduct(productId: string, currentActive: boolean): Promise<{ success: boolean; message?: string }> {
     const nextState = !currentActive;
     try {
@@ -324,110 +316,174 @@ export const merchantService = {
    * يراعي عقد الباك إند: PATCH /api/products/:id يقبل فقط [title, description, categoryId, images]
    * والأصناف يتم تحديثها/إنشاؤها/حذفها عبر مسارات /api/products/:id/variants
    */
-  async updateProduct(
+  /**
+   * تحديث الحقول الأساسية للمنتج فقط (PATCH /api/products/:id)
+   */
+  async updateProductBase(
     productId: string,
-    formData: Partial<ProductFormData>
-  ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
+    data: {
+      name?: string;
+      title?: string;
+      description?: string;
+      categoryId?: string;
+      images?: string[];
+      existingImages?: string[];
+      imageFiles?: File[];
+    }
+  ): Promise<{ success: boolean; data?: any; message?: string }> {
     try {
-      // 1. تحديث الحقول الأساسية للمنتج (PATCH /api/products/:id)
-      const hasFiles = Array.isArray(formData.imageFiles) && formData.imageFiles.length > 0;
-      const keptUrls = (formData.existingImages || formData.images || []).filter(
+      const hasFiles = Array.isArray(data.imageFiles) && data.imageFiles.length > 0;
+      const keptUrls = (data.existingImages || data.images || []).filter(
         (url) => typeof url === 'string' && !url.startsWith('blob:') && !url.startsWith('data:') && url.trim().length > 0
       );
       let patchBody: FormData | Record<string, any>;
 
       if (hasFiles) {
         const fd = new FormData();
-        const nextTitle = (formData.name || formData.title || '').trim();
+        const nextTitle = (data.name || data.title || '').trim();
         if (nextTitle) fd.append('title', nextTitle);
-        if (formData.description !== undefined) fd.append('description', formData.description.trim());
-        if (formData.categoryId) fd.append('categoryId', formData.categoryId);
+        if (data.description !== undefined) fd.append('description', data.description.trim());
+        if (data.categoryId) fd.append('categoryId', data.categoryId);
         fd.append('existingImages', JSON.stringify(keptUrls));
-        
-        formData.imageFiles!.forEach((file) => fd.append('images', file));
+        data.imageFiles!.forEach((file) => fd.append('images', file));
         patchBody = fd;
       } else {
         const basePayload: Record<string, any> = {};
-        const nextTitle = (formData.name || formData.title || '').trim();
+        const nextTitle = (data.name || data.title || '').trim();
         if (nextTitle) basePayload.title = nextTitle;
-        if (formData.description !== undefined) basePayload.description = formData.description.trim();
-        if (formData.categoryId) basePayload.categoryId = formData.categoryId;
-        if (formData.images !== undefined || formData.existingImages !== undefined) {
+        if (data.description !== undefined) basePayload.description = data.description.trim();
+        if (data.categoryId) basePayload.categoryId = data.categoryId;
+        if (data.images !== undefined || data.existingImages !== undefined) {
           basePayload.existingImages = keptUrls;
         }
-        
         patchBody = basePayload;
       }
 
-      // إرسال التحديث الأساسي فقط إذا كان هناك حقل واحد على الأقل للتعديل
       if (hasFiles || Object.keys(patchBody).length > 0) {
         const baseRes = await patchRequest(`/api/products/${productId}`, patchBody);
         if (!baseRes.success) {
           return { success: false, message: baseRes.message || 'فشل تحديث بيانات المنتج الأساسية' };
         }
+        return { success: true, data: baseRes.data };
       }
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطأ أثناء تحديث بيانات المنتج الأساسية' };
+    }
+  },
 
-      // 2. تحديث الأصناف والمتغيرات (Variants Synchronization)
-      if (Array.isArray(formData.variants) && formData.variants.length > 0) {
-        const currentProdRes = await this.getProductById(productId);
-        const existingVariants = currentProdRes.data?.variants || [];
+  /**
+   * مزامنة وتحديث الأصناف والمتغيرات عبر مسارات /api/products/:id/variants
+   */
+  async syncProductVariants(
+    productId: string,
+    variants: any[]
+  ): Promise<{ success: boolean; message?: string }> {
+    try {
+      const currentProdRes = await this.getProductById(productId);
+      const existingVariants = currentProdRes.data?.variants || [];
 
-        for (let i = 0; i < formData.variants.length; i++) {
-          const v = formData.variants[i];
-          const rawId = v._id || (v as any).id;
-          const isExisting = rawId && existingVariants.some((ev) => String(ev._id) === String(rawId));
+      for (let i = 0; i < variants.length; i++) {
+        const v = variants[i];
+        const rawId = v._id || v.id;
+        const isExisting = rawId && existingVariants.some((ev) => String(ev._id) === String(rawId));
 
-          const variantPayload: Record<string, any> = {
-            price: Number(v.price) || 0,
-            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
-            attributes: v.attributes || {},
-          };
+        const variantPayload: Record<string, any> = {
+          price: Number(v.price) || 0,
+          stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+          attributes: v.attributes || {},
+        };
 
-          let varRes;
-          let targetVarId = rawId;
+        let varRes;
+        let targetVarId = rawId;
 
-          if (isExisting) {
-            varRes = await patchRequest(`/api/products/${productId}/variants/${rawId}`, variantPayload);
-          } else {
-            varRes = await postRequest<{ variant?: any }>(`/api/products/${productId}/variants`, variantPayload);
-            targetVarId = varRes.data?.variant?._id;
-          }
-
-          if (!varRes.success) {
-            // Abort immediately! Do not delete existing variants if any update failed.
-            return { success: false, message: varRes.message || `فشل حفظ الصنف رقم ${i + 1}` };
-          }
-
-          if (v.imageFile && targetVarId) {
-            const vFd = new FormData();
-            vFd.append('image', v.imageFile);
-            await patchRequest(`/api/products/${productId}/variants/${targetVarId}`, vFd);
-          }
+        if (isExisting) {
+          varRes = await patchRequest(`/api/products/${productId}/variants/${rawId}`, variantPayload);
+        } else {
+          varRes = await postRequest<{ variant?: any }>(`/api/products/${productId}/variants`, variantPayload);
+          targetVarId = varRes.data?.variant?._id;
         }
 
-        // حذف الأصناف التي أزالها التاجر من الواجهة إذا كان متبقياً صنف واحد على الأقل
-        if (formData.variants.length > 0) {
-          const activeNewIds = new Set(formData.variants.map((v) => String(v._id || (v as any).id)).filter(Boolean));
-          for (const ev of existingVariants) {
-            if (!activeNewIds.has(String(ev._id))) {
-              try {
-                await deleteRequest(`/api/products/${productId}/variants/${ev._id}`);
-              } catch (delErr) {
-                console.warn('Could not delete obsolete variant:', ev._id, delErr);
-              }
+        if (!varRes.success) {
+          return { success: false, message: varRes.message || `فشل حفظ الصنف رقم ${i + 1}` };
+        }
+
+        if (v.imageFile && targetVarId) {
+          const vFd = new FormData();
+          vFd.append('image', v.imageFile);
+          await patchRequest(`/api/products/${productId}/variants/${targetVarId}`, vFd);
+        }
+      }
+
+      // حذف الأصناف التي أزالها التاجر من الواجهة
+      if (variants.length > 0) {
+        const activeNewIds = new Set(variants.map((v) => String(v._id || v.id)).filter(Boolean));
+        for (const ev of existingVariants) {
+          if (!activeNewIds.has(String(ev._id))) {
+            try {
+              await deleteRequest(`/api/products/${productId}/variants/${ev._id}`);
+            } catch (delErr) {
+              console.warn('Could not delete obsolete variant:', ev._id, delErr);
             }
           }
         }
       }
 
-      // 3. تحديث حالة التفعيل إذا تم تغييرها
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'خطأ أثناء مزامنة أصناف المنتج' };
+    }
+  },
+
+  /**
+   * التحديث المنسق والشامل للمنتج
+   */
+  async updateProduct(
+    productId: string,
+    formData: Partial<ProductFormData>
+  ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
+    try {
+      // 1. تحديث الحقول الأساسية إذا تم تمريرها
+      const hasBaseFields =
+        formData.name !== undefined ||
+        formData.title !== undefined ||
+        formData.description !== undefined ||
+        formData.categoryId !== undefined ||
+        formData.images !== undefined ||
+        formData.existingImages !== undefined ||
+        (Array.isArray(formData.imageFiles) && formData.imageFiles.length > 0);
+
+      if (hasBaseFields) {
+        const baseRes = await this.updateProductBase(productId, {
+          name: formData.name,
+          title: formData.title,
+          description: formData.description,
+          categoryId: formData.categoryId,
+          images: formData.images,
+          existingImages: formData.existingImages,
+          imageFiles: formData.imageFiles,
+        });
+        if (!baseRes.success) {
+          return { success: false, message: baseRes.message || 'فشل تحديث بيانات المنتج الأساسية' };
+        }
+      }
+
+      // 2. تحديث ومزامنة الأصناف إذا تم تمريرها
+      if (Array.isArray(formData.variants) && formData.variants.length > 0) {
+        const varRes = await this.syncProductVariants(productId, formData.variants);
+        if (!varRes.success) {
+          return { success: false, message: varRes.message };
+        }
+      }
+
+      // 3. تحديث حالة التفعيل
       if (formData.isActive !== undefined) {
         await patchRequest(`/api/products/${productId}/status`, {
           status: formData.isActive ? 'active' : 'inActive',
         });
       }
 
-      // 4. جلب النسخة المحدثة وإرجاعها
+      // 4. جلب النسخة المحدثة النهائية
       const refreshed = await this.getProductById(productId);
       if (refreshed.success && refreshed.data) {
         return { success: true, data: refreshed.data, message: 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
@@ -439,9 +495,6 @@ export const merchantService = {
     }
   },
 
-  /**
-   * جلب تعريفات الخيارات العامة - متوافق مع بنية السمات الحديثة للفئات
-   */
   async fetchOptionDefinitions(): Promise<{
     success: boolean;
     data?: { definitions: any[]; availableUnits: any[] };

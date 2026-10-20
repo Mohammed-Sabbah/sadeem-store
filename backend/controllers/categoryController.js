@@ -2,7 +2,7 @@ const Category = require('../models/Category');
 const Product = require('../models/Product');
 const Variant = require('../models/Variant');
 const { success, error } = require('../utils/responses');
-const { hasVariantAttributes, normalizeAttributes } = require('../utils/product');
+const { hasVariantAttributes, normalizeAttributes } = require('../utils/variant');
 const {
     slugify,
     hasBreakingVariantAttributeChanges,

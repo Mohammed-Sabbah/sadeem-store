@@ -241,7 +241,7 @@ async function updateProductApproval(req, res, next) {
                 $set: {
                     approveStatus: req.body.approveStatus,
                     rejectReason: req.body.approveStatus === APPROVE_STATUS.REJECTED
-                        ? req.body.rejectionReason.trim()
+                        ? req.body.rejectReason.trim()
                         : '',
                 },
             },

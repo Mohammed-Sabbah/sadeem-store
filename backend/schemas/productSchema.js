@@ -173,13 +173,13 @@ const validateProductApproval = [
     body('rejectReason')
         .if((_, { req }) => req.body && req.body.approveStatus === APPROVE_STATUS.REJECTED)
         .isString()
-        .withMessage('Rejection reason must be a string')
+        .withMessage('Reject reason must be a string')
         .bail()
         .trim()
         .notEmpty()
-        .withMessage('Rejection reason is required')
+        .withMessage('Reject reason is required')
         .isLength({ max: 1000 })
-        .withMessage('Rejection reason must be at most 1000 characters'),
+        .withMessage('Reject reason must be at most 1000 characters'),
     validateRequest,
 ];
 

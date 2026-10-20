@@ -39,7 +39,7 @@ const variantSchema = new mongoose.Schema(
             enum: APPROVE_STATUS_VALUES,
             default: APPROVE_STATUS.APPROVED,
         },
-        rejectionReason: {
+        rejectReason: {
             type: String,
             default: '',
             trim: true,

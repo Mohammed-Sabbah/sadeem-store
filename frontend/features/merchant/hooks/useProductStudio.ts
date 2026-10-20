@@ -54,7 +54,7 @@ export function useProductStudio(productId: string) {
   // Gallery (Device Upload & Cloud Readiness)
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<string[]>([]);
-  const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
+  const urlToFileMapRef = useRef<Map<string, File>>(new Map());
   const [isProcessingFiles, setIsProcessingFiles] = useState(false);
   const [uploadFeedback, setUploadFeedback] = useState<string | null>(null);
   const [showUrlInput, setShowUrlInput] = useState(false);
@@ -423,18 +423,19 @@ export function useProductStudio(productId: string) {
 
     setIsProcessingFiles(true);
     const fileArray = Array.from(files);
-    setNewImageFiles((prev) => [...prev, ...fileArray]);
 
     try {
-      const compressedUrls = await Promise.all(fileArray.map((f) => compressImage(f)));
-      const validUrls = compressedUrls.filter(Boolean);
-      if (validUrls.length > 0) {
-        setImages((prev) => [...prev, ...validUrls]);
-        setUploadFeedback(`تم ضغط وإضافة ${validUrls.length} صور بنجاح`);
-        setTimeout(() => setUploadFeedback(null), 3500);
+      const newUrls: string[] = [];
+      for (const f of fileArray) {
+        const previewUrl = URL.createObjectURL(f);
+        urlToFileMapRef.current.set(previewUrl, f);
+        newUrls.push(previewUrl);
       }
+      setImages((prev) => [...prev, ...newUrls]);
+      setUploadFeedback(`تمت إضافة ${newUrls.length} صور بنجاح`);
+      setTimeout(() => setUploadFeedback(null), 3500);
     } catch (err) {
-      console.error('Image compression error:', err);
+      console.error('Image processing error:', err);
     } finally {
       setIsProcessingFiles(false);
       e.target.value = '';
@@ -457,20 +458,18 @@ export function useProductStudio(productId: string) {
       next.unshift(target);
       return next;
     });
-    setNewImageFiles((prev) => {
-      if (imgIdx >= prev.length) return prev;
-      const next = [...prev];
-      const [target] = next.splice(imgIdx, 1);
-      next.unshift(target);
-      return next;
-    });
   };
 
   const handleRemoveImage = (imgIdx: number) => {
     const targetUrl = images[imgIdx];
+    if (targetUrl && targetUrl.startsWith('blob:')) {
+      try {
+        URL.revokeObjectURL(targetUrl);
+      } catch {}
+      urlToFileMapRef.current.delete(targetUrl);
+    }
     const nextImages = images.filter((_, idx) => idx !== imgIdx);
     setImages(nextImages);
-    setNewImageFiles((prev) => prev.filter((_, idx) => idx !== imgIdx));
 
     const updatedMap = { ...colorImageMap };
     for (const color in updatedMap) {
@@ -849,13 +848,31 @@ export function useProductStudio(productId: string) {
     setErrorMessage(null);
     setSaveSuccessMessage(null);
 
+    const keptUrls = images.filter(
+      (u) => typeof u === 'string' && !u.startsWith('blob:') && !u.startsWith('data:') && u.trim().length > 0
+    );
+    const filesToUpload = images
+      .map((u) => urlToFileMapRef.current.get(u))
+      .filter((f): f is File => f instanceof File);
+
+    const imageOrder = images.map((u) => {
+      if (u.startsWith('blob:') || u.startsWith('data:')) {
+        const file = urlToFileMapRef.current.get(u);
+        const fileIdx = file ? filesToUpload.indexOf(file) : -1;
+        return fileIdx >= 0 ? `new:${fileIdx}` : null;
+      }
+      return u;
+    }).filter((token): token is string => Boolean(token));
+
     const result = await merchantService.updateProduct(productId, {
       name,
       title: name,
       description,
       categoryId,
-      images,
-      imageFiles: newImageFiles.length > 0 ? newImageFiles : undefined,
+      images: keptUrls,
+      existingImages: keptUrls,
+      imageOrder,
+      imageFiles: filesToUpload.length > 0 ? filesToUpload : undefined,
       simplePrice: Number(simplePrice) || 0,
       simpleCompareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null,
       simpleStock: Math.max(0, parseInt(String(simpleStock)) || 0),
@@ -890,8 +907,15 @@ export function useProductStudio(productId: string) {
 
     setIsSaving(false);
     if (result.success && result.data) {
-      setNewImageFiles([]);
+      for (const [blobUrl] of urlToFileMapRef.current) {
+        try { URL.revokeObjectURL(blobUrl); } catch {}
+      }
+      urlToFileMapRef.current.clear();
+      
       setProduct(result.data);
+      if (Array.isArray(result.data.images)) {
+        setImages(result.data.images);
+      }
       setName(result.data.name || result.data.title || '');
       setDescription(result.data.description || '');
       if (result.data.variants && result.data.variants.length > 0) {

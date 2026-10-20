@@ -97,7 +97,7 @@ const validateUpdateProduct = [
             if (!value || typeof value !== 'object' || Array.isArray(value)) {
                 throw new Error('Product data must be an object');
             }
-            const editableFields = ['title', 'description', 'categoryId', 'images'];
+            const editableFields = ['title', 'description', 'categoryId', 'images', 'existingImages', 'imageOrder'];
             const hasUploadedImages = req.files && req.files.length > 0;
             if (!hasUploadedImages && !editableFields.some((field) => value[field] !== undefined)) {
                 throw new Error('Provide at least one product field to update');
@@ -142,6 +142,43 @@ const validateUpdateProduct = [
         .withMessage('Product image must be an HTTP(S) URL or a local site path')
         .isLength({ max: 2048 })
         .withMessage('Product image URL must be at most 2048 characters'),
+    body('existingImages')
+        .optional()
+        .customSanitizer((val) => {
+            if (typeof val === 'string') {
+                try {
+                    return JSON.parse(val);
+                } catch {
+                    return val;
+                }
+            }
+            return val;
+        })
+        .isArray({ max: 5 })
+        .withMessage('Existing images must be an array of at most 5 URLs'),
+    body('existingImages.*')
+        .optional()
+        .isString()
+        .withMessage('Existing image URL must be a string')
+        .bail()
+        .custom(isSafeImageReference)
+        .withMessage('Existing image must be an HTTP(S) URL or local path')
+        .isLength({ max: 2048 })
+        .withMessage('Image URL must be at most 2048 characters'),
+    body('imageOrder')
+        .optional()
+        .customSanitizer((val) => {
+            if (typeof val === 'string') {
+                try {
+                    return JSON.parse(val);
+                } catch {
+                    return val;
+                }
+            }
+            return val;
+        })
+        .isArray({ max: 5 })
+        .withMessage('Image order must be an array of at most 5 items'),
     validateRequest,
 ];
 

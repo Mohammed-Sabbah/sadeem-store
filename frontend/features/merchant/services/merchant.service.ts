@@ -331,6 +331,9 @@ export const merchantService = {
     try {
       // 1. تحديث الحقول الأساسية للمنتج (PATCH /api/products/:id)
       const hasFiles = Array.isArray(formData.imageFiles) && formData.imageFiles.length > 0;
+      const keptUrls = (formData.existingImages || formData.images || []).filter(
+        (url) => typeof url === 'string' && !url.startsWith('blob:') && !url.startsWith('data:') && url.trim().length > 0
+      );
       let patchBody: FormData | Record<string, any>;
 
       if (hasFiles) {
@@ -339,6 +342,10 @@ export const merchantService = {
         if (nextTitle) fd.append('title', nextTitle);
         if (formData.description !== undefined) fd.append('description', formData.description.trim());
         if (formData.categoryId) fd.append('categoryId', formData.categoryId);
+        fd.append('existingImages', JSON.stringify(keptUrls));
+        if (Array.isArray(formData.imageOrder) && formData.imageOrder.length > 0) {
+          fd.append('imageOrder', JSON.stringify(formData.imageOrder));
+        }
         formData.imageFiles!.forEach((file) => fd.append('images', file));
         patchBody = fd;
       } else {
@@ -347,6 +354,12 @@ export const merchantService = {
         if (nextTitle) basePayload.title = nextTitle;
         if (formData.description !== undefined) basePayload.description = formData.description.trim();
         if (formData.categoryId) basePayload.categoryId = formData.categoryId;
+        if (formData.images !== undefined || formData.existingImages !== undefined) {
+          basePayload.existingImages = keptUrls;
+        }
+        if (Array.isArray(formData.imageOrder) && formData.imageOrder.length > 0) {
+          basePayload.imageOrder = formData.imageOrder;
+        }
         patchBody = basePayload;
       }
 

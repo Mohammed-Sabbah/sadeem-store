@@ -37,9 +37,13 @@ const uploadImages = (folder) => {
                 files.map((file) => uploadBuffer(file, folder))
             );
             const urls = uploads.map((image) => image.secure_url);
-            req.body.images = urls;
+            req.uploadedImages = urls;
+            req.body.uploadedImages = urls;
             if (urls.length > 0) {
                 req.body.proofPhoto = urls[0];
+            }
+            if (!req.body.images || !Array.isArray(req.body.images)) {
+                req.body.images = urls;
             }
 
             next();

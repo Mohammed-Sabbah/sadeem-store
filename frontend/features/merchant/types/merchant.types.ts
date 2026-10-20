@@ -80,6 +80,8 @@ export interface ProductItem {
   slug?: string;
   description?: string;
   images: string[];
+  existingImages?: string[];
+  imageOrder?: string[];
   options: ProductOption[];
   minPrice: number;
   maxPrice: number;
@@ -103,6 +105,8 @@ export interface ProductFormData {
   description: string;
   categoryId: string;
   images: string[];
+  existingImages?: string[];
+  imageOrder?: string[];
   imageFiles?: File[];
   isSimple: boolean;
   simplePrice: number;

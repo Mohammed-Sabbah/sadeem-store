@@ -31,7 +31,9 @@ const updateProduct = async (product, updates) => {
     const result = validateNewProductImages(product, updates)
 
     if (!result) {
-        return error(res, 400, "Some images do not belong to this product");
+        const err = new Error("Some images do not belong to this product");
+        err.statusCode = 400;
+        throw err;
     }
 
     const { totalImages, deletedImages } = result

@@ -8,7 +8,7 @@ import { ProductCard } from '@/components/ui/ProductCard';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { catalogService, type CatalogProduct } from '@/features/catalog/catalog.service';
 import type { Product } from '@/types';
-import { products } from '@/data/products';
+
 
 // Comprehensive palette color mapper for swatch colors
 const COLOR_HEX_MAP: Record<string, string> = {
@@ -153,7 +153,9 @@ export default function ProductDetailPage() {
       .catch(() => {
         if (!active) return;
         // Fallback gracefully ONLY if it matches a known mock ID in local products
-        const fallback = products.find((p) => p.id === id);
+        setProduct(null);
+        return;
+        const fallback: any = null;
         if (fallback) {
           setProduct(fallback);
           setSelectedImage(fallback.image);
@@ -186,16 +188,16 @@ export default function ProductDetailPage() {
           if (items.length > 0) {
             setRelatedProducts(items.slice(0, 4));
           } else {
-            setRelatedProducts(products.filter((p) => p.id !== product.id).slice(0, 4));
+            setRelatedProducts([]);
           }
         })
         .catch(() => {
           if (active) {
-            setRelatedProducts(products.filter((p) => p.id !== product.id).slice(0, 4));
+            setRelatedProducts([]);
           }
         });
     } else {
-      setRelatedProducts(products.filter((p) => p.id !== product.id).slice(0, 4));
+      setRelatedProducts([]);
     }
 
     return () => {

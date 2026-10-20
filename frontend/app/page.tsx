@@ -8,7 +8,7 @@ import { ProductCard } from '@/components/ui/ProductCard';
 import { ThreePillarsBanner } from '@/components/home/ThreePillarsBanner';
 import { CuratedStores } from '@/components/home/CuratedStores';
 import { catalogService, type ApiCategory, type CatalogProduct } from '@/features/catalog/catalog.service';
-import { products as fallbackProducts } from '@/data/products';
+
 import type { Product } from '@/types';
 
 export default function HomePage() {
@@ -52,7 +52,7 @@ export default function HomePage() {
   // If backend returns products use them, otherwise use fallback curated products
   const displayProducts: (CatalogProduct | Product)[] = products.length > 0
     ? products
-    : (selectedCategoryId ? [] : fallbackProducts);
+    : [];
 
   const selectedCategoryTitle = categories.find((c) => c._id === selectedCategoryId)?.title;
 

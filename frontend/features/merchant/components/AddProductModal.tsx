@@ -1085,6 +1085,21 @@ export default function AddProductModal({
                       !isClothingSize
                   );
 
+                  const colorValues =
+                    matchingDef?.values && matchingDef.values.length > 0
+                      ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
+                      : Object.keys(COMPREHENSIVE_COLOR_SWATCHES);
+
+                  const sizeValues =
+                    matchingDef?.values && matchingDef.values.length > 0
+                      ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
+                      : CLOTHING_SIZE_PRESETS;
+
+                  const shoeSizeValues =
+                    matchingDef?.values && matchingDef.values.length > 0
+                      ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
+                      : SHOE_SIZE_PRESETS;
+
                   return (
                     <div
                       key={optIdx}
@@ -1161,13 +1176,13 @@ export default function AddProductModal({
                                   {isColorOption && (
                                     <>
                                       <div className="flex items-center justify-between pb-2 border-b border-brand-border/40 text-xs font-black text-brand-dark">
-                                        <span>لوحة الألوان الجاهزة ({Object.keys(COMPREHENSIVE_COLOR_SWATCHES).length} لون)</span>
+                                        <span>ألوان «{opt.name || "اللون"}» المعتمدة ({colorValues.length} لون)</span>
                                         <span className="text-[10px] text-brand-muted font-normal">انقر للتضمين</span>
                                       </div>
 
                                       <div className="grid grid-cols-3 gap-1.5 max-h-56 overflow-y-auto no-scrollbar py-1">
-                                        {Object.entries(COMPREHENSIVE_COLOR_SWATCHES).map(
-                                          ([colName, swatch]) => {
+                                        {colorValues.map((colName) => {
+                                            const swatch = COMPREHENSIVE_COLOR_SWATCHES[colName] || { hex: '#71717A' };
                                             const isSelected = opt.values.includes(colName);
                                             return (
                                               <button
@@ -1213,12 +1228,12 @@ export default function AddProductModal({
                                   {isClothingSize && (
                                     <>
                                       <div className="flex items-center justify-between pb-2 border-b border-brand-border/40 text-xs font-black text-brand-dark">
-                                        <span>مقاسات الملابس القياسية</span>
+                                        <span>مقاسات «{opt.name || "المقاس"}» المعتمدة</span>
                                         <span className="text-[10px] text-brand-muted font-normal">انقر للتضمين</span>
                                       </div>
 
                                       <div className="flex flex-wrap gap-2 max-h-52 overflow-y-auto py-1">
-                                        {CLOTHING_SIZE_PRESETS.map((sz) => {
+                                        {sizeValues.map((sz) => {
                                           const isSelected = opt.values.includes(sz);
                                           return (
                                             <button
@@ -1257,7 +1272,7 @@ export default function AddProductModal({
                                       </div>
 
                                       <div className="flex flex-wrap gap-2 max-h-52 overflow-y-auto py-1">
-                                        {SHOE_SIZE_PRESETS.map((sz) => {
+                                        {shoeSizeValues.map((sz) => {
                                           const isSelected = opt.values.includes(sz);
                                           return (
                                             <button

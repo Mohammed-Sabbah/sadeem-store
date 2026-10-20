@@ -343,9 +343,7 @@ export const merchantService = {
         if (formData.description !== undefined) fd.append('description', formData.description.trim());
         if (formData.categoryId) fd.append('categoryId', formData.categoryId);
         fd.append('existingImages', JSON.stringify(keptUrls));
-        if (Array.isArray(formData.imageOrder) && formData.imageOrder.length > 0) {
-          fd.append('imageOrder', JSON.stringify(formData.imageOrder));
-        }
+        
         formData.imageFiles!.forEach((file) => fd.append('images', file));
         patchBody = fd;
       } else {
@@ -357,9 +355,7 @@ export const merchantService = {
         if (formData.images !== undefined || formData.existingImages !== undefined) {
           basePayload.existingImages = keptUrls;
         }
-        if (Array.isArray(formData.imageOrder) && formData.imageOrder.length > 0) {
-          basePayload.imageOrder = formData.imageOrder;
-        }
+        
         patchBody = basePayload;
       }
 

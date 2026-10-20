@@ -120,6 +120,8 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
     });
   }
   variants.forEach((v) => {
+    const hasColor = Boolean(v.attributes?.['اللون'] || v.attributes?.['color']);
+    if (!hasColor) return;
     if (Array.isArray(v.images)) {
       v.images.forEach((img) => {
         if (img && img.trim()) gallerySet.add(img.trim());

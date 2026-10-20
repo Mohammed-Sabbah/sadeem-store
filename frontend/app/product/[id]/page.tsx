@@ -142,10 +142,10 @@ export default function ProductDetailPage() {
         // Set initial selected image:
         // Priority 1: Variant image
         // Priority 2: Product cover image
-        if (initialVariant?.images && initialVariant.images[0]) {
-          setSelectedImage(initialVariant.images[0]);
-        } else if (item.image) {
+        if (item.image) {
           setSelectedImage(item.image);
+        } else if (initialVariant?.images && initialVariant.images[0]) {
+          setSelectedImage(initialVariant.images[0]);
         } else {
           setSelectedImage('/placeholder_product.svg');
         }

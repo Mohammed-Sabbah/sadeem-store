@@ -855,23 +855,13 @@ export function useProductStudio(productId: string) {
       .map((u) => urlToFileMapRef.current.get(u))
       .filter((f): f is File => f instanceof File);
 
-    const imageOrder = images.map((u) => {
-      if (u.startsWith('blob:') || u.startsWith('data:')) {
-        const file = urlToFileMapRef.current.get(u);
-        const fileIdx = file ? filesToUpload.indexOf(file) : -1;
-        return fileIdx >= 0 ? `new:${fileIdx}` : null;
-      }
-      return u;
-    }).filter((token): token is string => Boolean(token));
-
-    const result = await merchantService.updateProduct(productId, {
+        const result = await merchantService.updateProduct(productId, {
       name,
       title: name,
       description,
       categoryId,
       images: keptUrls,
       existingImages: keptUrls,
-      imageOrder,
       imageFiles: filesToUpload.length > 0 ? filesToUpload : undefined,
       simplePrice: Number(simplePrice) || 0,
       simpleCompareAtPrice: simpleCompareAtPrice ? Number(simpleCompareAtPrice) : null,

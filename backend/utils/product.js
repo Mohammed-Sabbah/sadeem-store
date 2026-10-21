@@ -1,4 +1,5 @@
 const Variant = require('../models/Variant');
+const { getAttributeEntries } = require('./attributes');
 
 function toProductResponse(product, variants = product.variants || []) {
     const result = product.toObject
@@ -16,9 +17,7 @@ function toProductResponse(product, variants = product.variants || []) {
                 delete result.productId;
                 return {
                     ...result,
-                    attributes: result.attributes instanceof Map
-                        ? Object.fromEntries(result.attributes)
-                        : result.attributes || {},
+                    attributes: Object.fromEntries(getAttributeEntries(result.attributes)),
                 };
             }),
     };

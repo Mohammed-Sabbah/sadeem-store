@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "seed:clean": "node scripts/seed-complete-sadeem.js"
+    "seed:clean": "node scripts/seed-complete-sadeem.js",
+    "migrate:drop-legacy-variant-index": "node scripts/drop-legacy-variant-index.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

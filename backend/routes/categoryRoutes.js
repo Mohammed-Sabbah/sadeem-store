@@ -46,7 +46,7 @@ router.patch(
 
 // Delete Category Variant Attribute - Admin
 router.delete(
-    '/:id/variant-attributes/:attributeName',
+    '/:id/variant-attributes/:attributeKey',
     authenticate,
     authorize(ROLE.ADMIN),
     validateCategoryVariantAttribute,

@@ -4,6 +4,11 @@ const Variant = require('../models/Variant');
 const { success, error } = require('../utils/responses');
 const { hasVariantAttributes, normalizeAttributes } = require('../utils/variant');
 const {
+    getAttributeEntries,
+    getNormalizedAttributeDefinitionKey,
+    normalizeAttributeKey,
+} = require('../utils/attributes');
+const {
     slugify,
     hasBreakingVariantAttributeChanges,
     mergeVariantAttributes,
@@ -20,14 +25,11 @@ async function getVariantAttributeCompatibilityError(categoryId, definitions) {
     for (const variant of variants) {
         if (!hasVariantAttributes(variant.attributes)) continue;
 
-        const attributeNames = new Set(
-            (variant.attributes instanceof Map
-                ? Array.from(variant.attributes.keys())
-                : Object.keys(variant.attributes || {})
-            ).map((name) => name.trim().toLowerCase())
+        const attributeKeys = new Set(
+            getAttributeEntries(variant.attributes).map(([key]) => normalizeAttributeKey(key))
         );
         const applicableDefinitions = definitions.filter((definition) =>
-            attributeNames.has(definition.name.trim().toLowerCase())
+            attributeKeys.has(getNormalizedAttributeDefinitionKey(definition))
         );
         const result = normalizeAttributes(variant.attributes, applicableDefinitions);
         if (result.error) return result.error;
@@ -165,7 +167,7 @@ async function updateCategory(req, res, next) {
 
 async function deleteCategoryVariantAttribute(req, res, next) {
     try {
-        const { id, attributeName } = req.params;
+        const { id, attributeKey } = req.params;
         const currentCategory = await Category.findById(id).select('variantAttributes');
         if (!currentCategory) {
             return error(res, 404, 'Category not found');
@@ -173,7 +175,7 @@ async function deleteCategoryVariantAttribute(req, res, next) {
 
         const updatedDefinitions = removeVariantAttribute(
             currentCategory.variantAttributes || [],
-            attributeName
+            attributeKey
         );
         if (updatedDefinitions.length === (currentCategory.variantAttributes || []).length) {
             return error(res, 404, 'Variant attribute not found');

@@ -10,7 +10,7 @@ const variantSchema = new mongoose.Schema(
         },
         attributes: {
             type: Map,
-            of: String,
+            of: mongoose.Schema.Types.Mixed,
             default: {},
         },
         price: {

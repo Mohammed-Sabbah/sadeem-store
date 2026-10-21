@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { ATTRIBUTE_VALUE_TYPE, ATTRIBUTE_VALUE_TYPE_VALUES } = require('../constants/enums');
 
 const variantAttributeSchema = new mongoose.Schema(
     {
@@ -7,10 +8,15 @@ const variantAttributeSchema = new mongoose.Schema(
             required: true,
             trim: true,
         },
-        values: {
-            type: [String],
+        key: {
+            type: String,
             required: true,
-            default: [],
+            trim: true,
+        },
+        type: {
+            type: String,
+            enum: ATTRIBUTE_VALUE_TYPE_VALUES,
+            default: ATTRIBUTE_VALUE_TYPE.STRING,
         },
     },
     { _id: false }

@@ -190,7 +190,7 @@ await fetch('/api/products', {
 | `GET` | `/categories/:slug` | عام (Public) | جلب تفاصيل قسم محدد بالـ Slug |
 | `POST` | `/categories` | مدير (Admin) | إنشاء قسم جديد وتحديد خصائصه المسموحة |
 | `PATCH` | `/categories/:id` | مدير (Admin) | تعديل بيانات القسم وخصائصه مع فحص التوافقية |
-| `DELETE` | `/categories/:id/variant-attributes/:attributeName` | مدير (Admin) | حذف خاصية مسموحة من القسم بعد التأكد من عدم كسر المنتجات |
+| `DELETE` | `/categories/:id/variant-attributes/:attributeKey` | مدير (Admin) | حذف خاصية مسموحة من القسم بعد التأكد من عدم كسر المنتجات |
 | `DELETE` | `/categories/:id` | مدير (Admin) | حذف قسم (يُمنع إذا كان يحتوي على منتجات قائمة) |
 
 ### أمثلة طلبات الأقسام:
@@ -204,16 +204,20 @@ await fetch('/api/products', {
   "icon": "sparkles",
   "variantAttributes": [
     {
-      "name": "color",
-      "values": ["أسود", "أبيض", "عنابي", "كحلي"]
+      "name": "اللون",
+      "key": "color",
+      "type": "String"
     },
     {
-      "name": "size",
-      "values": ["S", "M", "L", "XL"]
+      "name": "المقاس",
+      "key": "size",
+      "type": "String"
     }
   ]
 }
 ```
+
+`key` is the stable identifier used in variant `attributes` objects and must be unique within the category. `name` is the user-facing label. `type` is one of `String`, `Number`, or `Boolean` (default `String`); each variant supplies its own value for that key, and the value must match its declared type. For example, a variant may use `"attributes": { "color": "أسود", "size": "M" }`, while a numeric attribute can use `"attributes": { "weight": 1.5 }`.
 
 ---
 

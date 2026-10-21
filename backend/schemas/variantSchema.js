@@ -28,16 +28,29 @@ function validateVariantFields({
         attributesField
             .isObject({ values: true })
             .withMessage('Variant attributes must be an object')
-            .bail(),
-        body(path ? `${path}.attributes.*` : 'attributes.*')
-            .isString()
-            .withMessage('Variant attribute values must be strings')
             .bail()
-            .trim()
-            .notEmpty()
-            .withMessage('Variant attribute values cannot be empty')
-            .isLength({ max: 80 })
-            .withMessage('Variant attribute values must be at most 80 characters'),
+            .custom((attributes) => {
+                if (Object.keys(attributes).some((key) => !key.trim() || /[.$]/.test(key))) {
+                    throw new Error('Variant attribute keys must be non-empty and cannot contain dots or dollar signs');
+                }
+                return true;
+            }),
+        body(path ? `${path}.attributes.*` : 'attributes.*')
+            .custom((value) => {
+                if (typeof value === 'string') {
+                    if (!value.trim()) {
+                        throw new Error('String variant attribute values cannot be empty');
+                    }
+                    if (value.trim().length > 80) {
+                        throw new Error('String variant attribute values must be at most 80 characters');
+                    }
+                    return true;
+                }
+                if (typeof value === 'number' && Number.isFinite(value)) return true;
+                if (typeof value === 'boolean') return true;
+                throw new Error('Variant attribute values must be strings, finite numbers, or booleans');
+            })
+            .customSanitizer((value) => typeof value === 'string' ? value.trim() : value),
     ];
     if (includeRequestValidation) fields.push(validateRequest);
     return fields;

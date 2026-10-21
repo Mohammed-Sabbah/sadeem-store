@@ -1,6 +1,7 @@
 const { body, param } = require('express-validator');
 const validateRequest = require('./validateRequest');
 const { slugify } = require('../utils/category');
+const { ATTRIBUTE_VALUE_TYPE, ATTRIBUTE_VALUE_TYPE_VALUES } = require('../constants/enums');
 
 const validateCategory = (partial = false) => [
     body().custom((value) => {
@@ -19,10 +20,6 @@ const validateCategory = (partial = false) => [
     }),
 
     body('title')
-        .if((_, { req }) => !partial || (req.body && req.body.title !== undefined))
-        .isString()
-        .withMessage('Category title must be a string')
-        .bail()
         .if((_, { req }) => !partial || (req.body && req.body.title !== undefined))
         .isString()
         .withMessage('Category title must be a string')
@@ -54,14 +51,14 @@ const validateCategory = (partial = false) => [
                 typeof attribute === 'object' &&
                 !Array.isArray(attribute) &&
                 typeof attribute.name === 'string' &&
-                Array.isArray(attribute.values) &&
-                Object.keys(attribute).every((field) => ['name', 'values'].includes(field))
+                typeof attribute.key === 'string' &&
+                Object.keys(attribute).every((field) => ['name', 'key', 'type'].includes(field))
             )) {
-                throw new Error('Each variant attribute must contain only a name and allowed values');
+                throw new Error('Each variant attribute must contain a name and key, and only an optional type');
             }
-            const names = attributes.map((attribute) => attribute.name.trim().toLowerCase());
-            if (new Set(names).size !== names.length) {
-                throw new Error('Variant attribute names must be unique');
+            const keys = attributes.map((attribute) => attribute.key.trim().toLowerCase());
+            if (new Set(keys).size !== keys.length) {
+                throw new Error('Variant attribute keys must be unique');
             }
             return true;
         }),
@@ -78,38 +75,33 @@ const validateCategory = (partial = false) => [
         .custom((name) => !/[.$]/.test(name))
         .withMessage('Variant attribute names cannot contain dots or dollar signs'),
 
-    body('variantAttributes.*.values')
-        .isArray({ min: 1, max: 100 })
-        .withMessage('Each variant attribute must have between 1 and 100 allowed values')
-        .bail()
-        .custom((values) => {
-            if (values.some((value) => typeof value !== 'string' || !value.trim())) {
-                throw new Error('Variant attribute values must be non-empty strings');
-            }
-            const normalizedValues = values.map((value) => value.trim().toLowerCase());
-            if (new Set(normalizedValues).size !== normalizedValues.length) {
-                throw new Error('Variant attribute values must be unique');
-            }
-            return true;
-        }),
-
-    body('variantAttributes.*.values.*')
+    body('variantAttributes.*.key')
         .isString()
-        .withMessage('Variant attribute values must be strings')
+        .withMessage('Variant attribute key must be a string')
         .bail()
         .trim()
-        .isLength({ max: 80 })
-        .withMessage('Variant attribute values must be at most 80 characters'),
+        .notEmpty()
+        .withMessage('Variant attribute key is required')
+        .isLength({ max: 50 })
+        .withMessage('Variant attribute key must be at most 50 characters')
+        .custom((key) => !/[.$]/.test(key))
+        .withMessage('Variant attribute keys cannot contain dots or dollar signs'),
+
+    body('variantAttributes.*.type')
+        .default(ATTRIBUTE_VALUE_TYPE.STRING)
+        .isIn(ATTRIBUTE_VALUE_TYPE_VALUES)
+        .withMessage(`Variant attribute type must be one of: ${ATTRIBUTE_VALUE_TYPE_VALUES.join(', ')}`),
 
     body('variantAttributes').customSanitizer((attributes = []) =>
         Array.isArray(attributes)
             ? attributes
                 .filter((attribute) => attribute && typeof attribute === 'object')
-                .map(({ name, values }) => ({
+                .map(({ name, key, type }) => ({
                     name: typeof name === 'string' ? name.trim() : '',
-                    values: Array.isArray(values)
-                        ? values.map((value) => typeof value === 'string' ? value.trim() : value)
-                        : [],
+                    key: typeof key === 'string' ? key.trim() : '',
+                    type: ATTRIBUTE_VALUE_TYPE_VALUES.includes(type)
+                        ? type
+                        : ATTRIBUTE_VALUE_TYPE.STRING,
                 }))
             : []
     ),
@@ -133,10 +125,10 @@ const validateCategoryId = [
 
 const validateCategoryVariantAttribute = [
     param('id').isMongoId().withMessage('Category ID must be a valid Mongo id'),
-    param('attributeName')
+    param('attributeKey')
         .trim()
         .notEmpty()
-        .withMessage('Variant attribute name is required'),
+        .withMessage('Variant attribute key is required'),
     validateRequest,
 ];
 

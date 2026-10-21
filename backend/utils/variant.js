@@ -1,5 +1,11 @@
 const Variant = require('../models/Variant');
-const { STATUS } = require('../constants/enums');
+const { STATUS, ATTRIBUTE_VALUE_TYPE } = require('../constants/enums');
+const {
+    normalizeAttributeKey,
+    getAttributeDefinitionKey,
+    getNormalizedAttributeDefinitionKey,
+    getAttributeEntries,
+} = require('./attributes');
 
 const getDefaultVariant = (price, stock, image) => {
     return {
@@ -11,49 +17,55 @@ const getDefaultVariant = (price, stock, image) => {
 }
 
 function normalizeAttributes(attributes, definitions) {
-    const entries = attributes instanceof Map
-        ? Array.from(attributes.entries())
-        : Object.entries(attributes || {});
-    const hasValues = entries.some(([, value]) => String(value || '').trim());
+    const entries = getAttributeEntries(attributes);
 
-    if (!hasValues) {
+    if (!entries.length) {
         return { attributes: {}, error: null };
     }
 
-    const definitionByName = new Map(
-        definitions.map((definition) => [definition.name.trim().toLowerCase(), definition])
+    const definitionByKey = new Map(
+        definitions.map((definition) => [
+            getNormalizedAttributeDefinitionKey(definition),
+            definition,
+        ])
     );
     const normalized = Object.create(null);
 
-    for (const [name, value] of entries) {
-        const definition = definitionByName.get(name.trim().toLowerCase());
+    for (const [key, value] of entries) {
+        const definition = definitionByKey.get(normalizeAttributeKey(key));
         if (!definition) {
-            return { attributes: null, error: `Variant attribute "${name}" is not available for this category` };
+            return { attributes: null, error: `Variant attribute key "${key}" is not available for this category` };
         }
 
-        const allowedValue = definition.values.find(
-            (candidate) => candidate.trim().toLowerCase() === String(value).trim().toLowerCase()
-        );
-        if (!allowedValue) {
+        const type = definition.type || ATTRIBUTE_VALUE_TYPE.STRING;
+        const isValidValue =
+            (type === ATTRIBUTE_VALUE_TYPE.STRING &&
+                typeof value === 'string' &&
+                value.trim().length > 0 &&
+                value.trim().length <= 80) ||
+            (type === ATTRIBUTE_VALUE_TYPE.NUMBER &&
+                typeof value === 'number' &&
+                Number.isFinite(value)) ||
+            (type === ATTRIBUTE_VALUE_TYPE.BOOLEAN &&
+                typeof value === 'boolean');
+        if (!isValidValue) {
             return {
                 attributes: null,
-                error: `"${value}" is not an allowed value for "${definition.name}"`,
+                error: `Value for "${definition.name}" must be a valid ${type}`,
             };
         }
-        normalized[definition.name] = allowedValue;
+        normalized[getAttributeDefinitionKey(definition)] =
+            type === ATTRIBUTE_VALUE_TYPE.STRING ? value.trim() : value;
     }
 
     return { attributes: normalized, error: null };
 }
 
 function getVariantKey(attributes) {
-    const entries = attributes instanceof Map
-        ? Array.from(attributes.entries())
-        : Object.entries(attributes || {});
-    return entries
-        .map(([name, value]) => [name.toLowerCase(), String(value).toLowerCase()])
+    return getAttributeEntries(attributes)
+        .map(([name, value]) => [normalizeAttributeKey(name), value])
         .sort(([left], [right]) => left.localeCompare(right))
-        .map(([name, value]) => `${name}:${value}`)
+        .map(([name, value]) => JSON.stringify([name, value]))
         .join('|');
 }
 
@@ -67,9 +79,7 @@ function findDuplicateVariant(variants, attributes, excludeId) {
 }
 
 function hasVariantAttributes(attributes) {
-    return attributes instanceof Map
-        ? attributes.size > 0
-        : Object.keys(attributes || {}).length > 0;
+    return getAttributeEntries(attributes).length > 0;
 }
 
 async function hasActiveVariants(productId) {

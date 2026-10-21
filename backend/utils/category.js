@@ -1,3 +1,9 @@
+const { ATTRIBUTE_VALUE_TYPE } = require('../constants/enums');
+const {
+    normalizeAttributeKey,
+    getNormalizedAttributeDefinitionKey,
+} = require('./attributes');
+
 function slugify(text) {
     return String(text || '')
         .trim()
@@ -8,18 +14,20 @@ function slugify(text) {
 }
 
 function hasBreakingVariantAttributeChanges(currentDefinitions, updatedDefinitions) {
-    const updatedByName = new Map(
-        updatedDefinitions.map((definition) => [definition.name.trim().toLowerCase(), definition])
+    const updatedByKey = new Map(
+        updatedDefinitions.map((definition) => [
+            getNormalizedAttributeDefinitionKey(definition),
+            definition,
+        ])
     );
 
     return currentDefinitions.some((currentDefinition) => {
-        const updatedDefinition = updatedByName.get(currentDefinition.name.trim().toLowerCase());
+        const updatedDefinition = updatedByKey.get(getNormalizedAttributeDefinitionKey(currentDefinition));
         if (!updatedDefinition) return true;
 
-        const updatedValues = new Set(
-            updatedDefinition.values.map((value) => value.trim().toLowerCase())
-        );
-        return currentDefinition.values.some((value) => !updatedValues.has(value.trim().toLowerCase()));
+        const currentType = currentDefinition.type || ATTRIBUTE_VALUE_TYPE.STRING;
+        const updatedType = updatedDefinition.type || ATTRIBUTE_VALUE_TYPE.STRING;
+        return currentType !== updatedType;
     });
 }
 
@@ -27,16 +35,16 @@ function mergeVariantAttributes(currentDefinitions, submittedDefinitions) {
     const mergedDefinitions = [...currentDefinitions];
     const definitionIndexes = new Map(
         mergedDefinitions.map((definition, index) => [
-            definition.name.trim().toLowerCase(),
+            getNormalizedAttributeDefinitionKey(definition),
             index,
         ])
     );
 
     for (const definition of submittedDefinitions) {
-        const key = definition.name.trim().toLowerCase();
-        const existingIndex = definitionIndexes.get(key);
+        const normalizedKey = getNormalizedAttributeDefinitionKey(definition);
+        const existingIndex = definitionIndexes.get(normalizedKey);
         if (existingIndex === undefined) {
-            definitionIndexes.set(key, mergedDefinitions.length);
+            definitionIndexes.set(normalizedKey, mergedDefinitions.length);
             mergedDefinitions.push(definition);
         } else {
             mergedDefinitions[existingIndex] = definition;
@@ -46,10 +54,10 @@ function mergeVariantAttributes(currentDefinitions, submittedDefinitions) {
     return mergedDefinitions;
 }
 
-function removeVariantAttribute(definitions, attributeName) {
-    const normalizedName = attributeName.trim().toLowerCase();
+function removeVariantAttribute(definitions, attributeKey) {
+    const normalizedKey = normalizeAttributeKey(attributeKey);
     return definitions.filter((definition) =>
-        definition.name.trim().toLowerCase() !== normalizedName
+        getNormalizedAttributeDefinitionKey(definition) !== normalizedKey
     );
 }
 

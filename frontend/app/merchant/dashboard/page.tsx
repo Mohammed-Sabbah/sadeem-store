@@ -94,7 +94,7 @@ export default function MerchantDashboardPage() {
       {/* 1. Serene Page Action Bar (Title + Primary Action Button) */}
       <MerchantDashboardHeader
         store={store}
-        onOpenAddModal={() => setIsModalOpen(true)}
+        onOpenAddModal={() => router.push('/merchant/products/new')}
       />
 
       {/* 2. Operations Pulse Strip (Quiet, zero box fatigue) */}
@@ -109,7 +109,7 @@ export default function MerchantDashboardPage() {
         onToggleActive={handleToggleActive}
         onDeleteProduct={handleDeleteProduct}
         onQuickStockChange={handleQuickStockUpdate}
-        onOpenAddModal={() => setIsModalOpen(true)}
+        onOpenAddModal={() => router.push('/merchant/products/new')}
         activeFilterTab={activeFilterTab}
         onTabChange={setActiveFilterTab}
       />

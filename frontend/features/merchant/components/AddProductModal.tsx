@@ -210,7 +210,7 @@ export default function AddProductModal({
           label,
           type,
           unit,
-          values: attr.values.map((v) => ({
+          values: (attr.values || []).map((v) => ({
             key: v,
             label: v,
             isActive: true,

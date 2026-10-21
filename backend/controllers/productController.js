@@ -129,7 +129,7 @@ async function getAdminProducts(req, res, next) {
 
 async function createProduct(req, res, next) {
     try {
-        const { title, description, price, stock, image, variants } = req.body || {}
+        const { title, description, price, stock, variants } = req.body || {}
         const category = await Category.findOne({ _id: req.body.categoryId, isActive: true });
         if (!category) {
             return error(res, 400, 'Select an active category');
@@ -141,7 +141,7 @@ async function createProduct(req, res, next) {
 
         const submittedVariants = hasCustomizedVariants
             ? variants
-            : [getDefaultVariant(price, stock, image)];
+            : [getDefaultVariant(price, stock, images[0])];
 
         const { variantsToCreate, err } = prepareProductVariants(
             submittedVariants,

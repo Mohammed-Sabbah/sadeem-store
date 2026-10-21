@@ -73,20 +73,19 @@
   "variants": [
     {
       "attributes": { "color": "أسود", "size": "S" },
-      "sku": "SDM-DRS-BLK-S-101",
+      "image": "https://example.com/dress-black-s.jpg",
       "price": 180,
-      "compareAtPrice": 220,
       "stock": 10
     },
     {
       "attributes": { "color": "أسود", "size": "M" },
-      "sku": "SDM-DRS-BLK-M-102",
+      "image": "https://example.com/dress-black-m.jpg",
       "price": 180,
       "stock": 15
     },
     {
       "attributes": { "color": "عنابي", "size": "S" },
-      "sku": "SDM-DRS-BUR-S-103",
+      "image": "https://example.com/dress-burgundy-s.jpg",
       "price": 200,
       "stock": 8
     }
@@ -102,10 +101,9 @@
   "title": "عطر الليل السديمي 100 مل",
   "description": "عطر فاخر برائحة العود المعتق والكهرمان",
   "categoryId": "64f000000000000000000002",
-  "image": "https://example.com/perfume.jpg",
+  "images": ["https://example.com/perfume.jpg"],
   "price": 120,
-  "stock": 25,
-  "sku": "SDM-PRF-100ML-001"
+  "stock": 25
 }
 ```
 
@@ -128,13 +126,13 @@
 
 ```json
 {
+  "image": "https://example.com/dress-blue-l.jpg",
   "attributes": {
     "color": "أزرق نيلي",
     "size": "L"
   },
   "price": 195,
-  "stock": 12,
-  "sku": "SDM-DRS-BLU-L-104"
+  "stock": 12
 }
 ```
 
@@ -144,8 +142,7 @@
 ```json
 {
   "price": 185,
-  "stock": 20,
-  "compareAtPrice": 210
+  "stock": 20
 }
 ```
 
@@ -156,9 +153,9 @@
 | المسار | اسم حقل الملف | الحد |
 | :--- | :--- | :--- |
 | `POST /api/products` و`PATCH /api/products/:id` | `images` (يتكرر لكل صورة) | من صورة واحدة إلى 5 صور عند الإنشاء، وبحد أقصى 5 صور في التعديل |
-| `POST /api/products/:id/variants` و`PATCH /api/products/:id/variants/:variantId` | `image` | صورة واحدة اختيارية |
+| `POST /api/products/:id/variants` و`PATCH /api/products/:id/variants/:variantId` | `image` | صورة واحدة مطلوبة عند الإنشاء، واختيارية عند التعديل |
 
-الصيغ المقبولة هي JPEG وPNG وWebP، بحد أقصى 5 ميغابايت لكل صورة. استبدال صور المنتج عبر التعديل يحدّث قائمة الصور كاملة؛ عدم إرسال ملفات جديدة يحافظ على الصور الحالية. صورة الصنف اختيارية عند الإنشاء وفق قواعد التحقق الحالية، وعدم إرسالها عند التعديل يحافظ على الصورة الحالية.
+الصيغ المقبولة هي JPEG وPNG وWebP، بحد أقصى 5 ميغابايت لكل صورة. استبدال صور المنتج عبر التعديل يحدّث قائمة الصور كاملة؛ عدم إرسال ملفات جديدة يحافظ على الصور الحالية. يجب أن يكون لكل صنف صورة واحدة؛ عند إنشاء منتج بصنف بسيط، تُستخدم الصورة الأولى للمنتج كصورة الصنف. عند إنشاء أصناف متعددة، أرسل صورة URL واحدة في حقل `image` لكل صنف. عدم إرسال صورة عند تعديل الصنف يحافظ على صورته الحالية.
 
 مثال إنشاء منتج باستخدام `FormData`:
 

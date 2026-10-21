@@ -96,11 +96,24 @@ const validateCreateProduct = [
             if (!value || typeof value !== 'object' || Array.isArray(value)) {
                 throw new Error('Each variant must be an object');
             }
-            if (Object.keys(value).some((field) => !['attributes', 'price', 'stock'].includes(field))) {
-                throw new Error('Variant contains unsupported fields');
+            const unsupportedFields = Object.keys(value)
+                .filter((field) => !['attributes', 'price', 'stock', 'image'].includes(field));
+            if (unsupportedFields.length) {
+                throw new Error(`Variant contains unsupported fields: ${unsupportedFields.join(', ')}`);
+            }
+            if (typeof value.image !== 'string' || !isSafeImageReference(value.image)) {
+                throw new Error('Each variant must have a valid image URL');
             }
             return true;
         }),
+    body('variants.*.image')
+        .isString()
+        .withMessage('Variant image must be a string')
+        .bail()
+        .custom(isSafeImageReference)
+        .withMessage('Variant image must be an HTTP(S) URL or a local site path')
+        .isLength({ max: 2048 })
+        .withMessage('Variant image URL must be at most 2048 characters'),
     ...validateVariantFields({
         path: 'variants.*',
         defaultAttributes: false,

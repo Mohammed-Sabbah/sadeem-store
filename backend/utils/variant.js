@@ -119,8 +119,8 @@ const prepareProductVariants = (variants, category, requireAttribute) => {
             attributes: normalized.attributes,
             price: submittedVariant.price,
             stock: submittedVariant.stock,
+            image: submittedVariant.image,
             isDeleted: false,
-            ...(submittedVariant.image !== undefined ? { image: submittedVariant.image } : {}),
         };
 
         if (variantsToCreate.length > 0) {

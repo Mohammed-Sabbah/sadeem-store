@@ -26,6 +26,9 @@ const variantSchema = new mongoose.Schema(
         },
         image: {
             type: String,
+            required: function () {
+                return !this.isDeleted;
+            },
             trim: true,
             maxlength: 2048,
         },

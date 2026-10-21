@@ -47,13 +47,13 @@ async function addVariant(req, res, next) {
         if (findDuplicateVariant(variants, attributes.attributes)) {
             return error(res, 409, 'A variant with these attributes already exists');
         }
-        const image = Array.isArray(req.body.images) ? req.body.images[0] : undefined;
+        const image = req.body.image ?? req.uploadedImages?.[0];
         await Variant.create({
             productId: product._id,
             attributes: new Map(Object.entries(attributes.attributes)),
             price: req.body.price,
             stock: req.body.stock,
-            ...(image && { image }),
+            image,
         });
 
         return success(res, 201, {
@@ -111,8 +111,9 @@ async function updateVariant(req, res, next) {
         }
 
         const previousImage = variant.image;
-        if (Array.isArray(req.body.images) && req.body.images.length > 0) {
-            variant.image = req.body.images[0];
+        const image = req.body.image ?? req.uploadedImages?.[0];
+        if (image !== undefined) {
+            variant.image = image;
         }
         await variant.save();
         // if (previousImage && previousImage !== variant.image) {

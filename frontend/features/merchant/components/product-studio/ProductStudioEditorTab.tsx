@@ -845,6 +845,21 @@ export function ProductStudioEditorTab({
                     isKidsSize ||
                     isClothingSize ||
                     matchingDef?.key?.includes('size');
+
+                  const colorValues =
+                    matchingDef?.values && matchingDef.values.length > 0
+                      ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
+                      : Object.keys(COLOR_SWATCHES);
+
+                  const sizeValues =
+                    matchingDef?.values && matchingDef.values.length > 0
+                      ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
+                      : PRESET_CLOTHING_SIZES;
+
+                  const shoeSizeValues =
+                    matchingDef?.values && matchingDef.values.length > 0
+                      ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
+                      : PRESET_SHOE_SIZES;
                   const hasCustomPresets = Boolean(
                     matchingDef?.values && matchingDef.values.length > 0 && !isColor && !isSize
                   );
@@ -901,7 +916,8 @@ export function ProductStudioEditorTab({
                                   </div>
 
                                   <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto no-scrollbar py-0.5">
-                                    {Object.entries(COLOR_SWATCHES).map(([colName, swatch]) => {
+                                    {colorValues.map((colName) => {
+                                      const swatch = COLOR_SWATCHES[colName] || { hex: '#71717A' };
                                       const isSelected = opt.values.includes(colName);
                                       return (
                                         <button
@@ -980,7 +996,7 @@ export function ProductStudioEditorTab({
                                         <span className="text-[10px] text-brand-muted font-normal">S إلى 3XL</span>
                                       </div>
                                       <div className="flex flex-wrap gap-1.5">
-                                        {PRESET_CLOTHING_SIZES.map((sz) => {
+                                        {sizeValues.map((sz) => {
                                           const isSelected = opt.values.includes(sz);
                                           return (
                                             <button
@@ -1015,7 +1031,7 @@ export function ProductStudioEditorTab({
                                         <span className="text-[10px] text-brand-muted font-normal">38 إلى 45</span>
                                       </div>
                                       <div className="flex flex-wrap gap-1.5">
-                                        {['38', ...PRESET_SHOE_SIZES].map((sz) => {
+                                        {shoeSizeValues.map((sz) => {
                                           const isSelected = opt.values.includes(sz);
                                           return (
                                             <button

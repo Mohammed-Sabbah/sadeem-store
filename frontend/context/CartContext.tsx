@@ -3,56 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, Product } from '@/types';
 
-export const DEFAULT_CART_ITEMS: CartItem[] = [
-  {
-    product: {
-      id: 'canaan-wool-hoodie',
-      title: 'كنزة سَدِيم الصوفية بغطاء رأس من القطن الممشط الفاخر',
-      price: 135,
-      originalPrice: 175,
-      currency: '₪',
-      image: '/canaan_product_hoodie_olive.jpg',
-      vendor: {
-        id: 'canaan-threads',
-        name: 'خيوط سَدِيم للأزياء',
-        city: 'دير البلح',
-        verified: true,
-      },
-      category: 'ملابس وأزياء',
-      rating: 4.9,
-      reviewsCount: 142,
-      inStock: true,
-      description: 'كنزة صوفية فاخرة مصنوعة من القطن الفلسطيني الممشط فائق النعومة بوزن 380 GSM.',
-    },
-    quantity: 1,
-    selectedColor: 'أخضر زيتي ملكي',
-    selectedSize: 'L',
-  },
-  {
-    product: {
-      id: 'olive-oil-amphora',
-      title: 'خابية زيت زيتون بكر رومي ممتاز (عصرة أولى على البارد، سعة 1 لتر)',
-      price: 45,
-      originalPrice: 55,
-      currency: '₪',
-      image: '/canaan_olive_amphora_1788773956733.jpg',
-      vendor: {
-        id: 'nuseirat-press',
-        name: 'معاصر النصيرات الحديثة',
-        city: 'مخيم النصيرات',
-        verified: true,
-      },
-      category: 'مؤونة وزيت زيتون',
-      rating: 5.0,
-      reviewsCount: 312,
-      inStock: true,
-      description: 'زيت زيتون فلسطيني بلدي رومي معصور على البارد من حقول المحافظة الوسطى.',
-    },
-    quantity: 1,
-    selectedColor: 'بلدي عصرة أولى 2026',
-    selectedSize: '1 لتر',
-  },
-];
+export const DEFAULT_CART_ITEMS: CartItem[] = [];
 
 function isSameCartItem(
   item: CartItem,

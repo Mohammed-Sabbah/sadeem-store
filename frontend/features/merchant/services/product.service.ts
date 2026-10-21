@@ -5,6 +5,13 @@ import {
   postRequest,
 } from '@/shared/lib/coreApi';
 
+export interface VariantAttributeItem {
+  key?: string;
+  name: string;
+  values?: string[];
+  type?: string;
+}
+
 export interface SellerVariant {
   _id: string;
   attributes: Record<string, string>;
@@ -24,7 +31,7 @@ export interface SellerProduct {
     _id: string;
     title: string;
     slug: string;
-    variantAttributes: { name: string; values: string[] }[];
+    variantAttributes: VariantAttributeItem[];
   };
   status: 'active' | 'inActive';
   approveStatus: 'pending' | 'approved' | 'rejected';
@@ -35,7 +42,7 @@ export interface SellerProduct {
 export interface SellerCategory {
   _id: string;
   title: string;
-  variantAttributes: { name: string; values: string[] }[];
+  variantAttributes: VariantAttributeItem[];
 }
 
 async function unwrap<T>(promise: Promise<{

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import { merchantKeys } from '../queries/merchant.keys';
 import { merchantService } from '@/features/merchant/services/merchant.service';
+import { getAttributeKey, getAttributeDisplayName, isColorAttribute, isSizeAttribute } from '@/shared/lib/attributeUtils';
 import { taxonomyService, type CategoryItem } from '@/features/store/services/taxonomy.service';
 import type {
   ProductItem,
@@ -315,12 +316,13 @@ export function useProductStudio(productId: string) {
           unit = 'kg';
         }
 
+        const key = getAttributeKey(attr);
         return {
-          key: attr.name,
-          label,
+          key,
+          label: attr.name || label,
           type,
           unit,
-          values: attr.values.map((v) => ({
+          values: (attr.values || []).map((v) => ({
             key: v,
             label: v,
             isActive: true,
@@ -655,7 +657,8 @@ export function useProductStudio(productId: string) {
         .map((combo, idx) => {
           const attrs: Record<string, string> = {};
           validOptions.forEach((opt, optIdx) => {
-            attrs[opt.name || opt.label || `opt_${optIdx}`] = combo[optIdx];
+            const optKey = opt.key || getAttributeKey(opt.name || opt.label || '') || `opt_${optIdx}`;
+          attrs[optKey] = combo[optIdx];
           });
 
           const attrKey = Object.entries(attrs)

@@ -1,5 +1,6 @@
 import { getRequest, postRequest, patchRequest, deleteRequest } from '@/shared/lib/coreApi';
 import { taxonomyService } from '@/features/store/services/taxonomy.service';
+import { getAttributeKey } from '@/shared/lib/attributeUtils';
 import type {
   StoreProfile,
   ProductItem,
@@ -153,13 +154,22 @@ export const merchantService = {
       const title = (formData.name || formData.title || '').trim();
       const description = formData.description?.trim() || '';
 
-      // Clean variants projection strictly conforming to backend schema: ['attributes', 'price', 'stock']
+      // Clean variants projection strictly conforming to backend schema: ['attributes', 'price', 'stock', 'image']
       const cleanVariants = !formData.isSimple && Array.isArray(formData.variants)
-        ? formData.variants.map((v) => ({
-            attributes: v.attributes || {},
-            price: Number(v.price) || 0,
-            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
-          }))
+        ? formData.variants.map((v) => {
+            const item: Record<string, any> = {
+              attributes: v.attributes || {},
+              price: Number(v.price) || 0,
+              stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+            };
+            if (
+              typeof v.image === 'string' &&
+              (v.image.startsWith('http://') || v.image.startsWith('https://') || v.image.startsWith('/'))
+            ) {
+              item.image = v.image;
+            }
+            return item;
+          })
         : [];
 
       let body: FormData | Record<string, any>;
@@ -353,9 +363,7 @@ export const merchantService = {
         if (nextTitle) basePayload.title = nextTitle;
         if (data.description !== undefined) basePayload.description = data.description.trim();
         if (data.categoryId) basePayload.categoryId = data.categoryId;
-        if (data.images !== undefined || data.existingImages !== undefined) {
-          basePayload.existingImages = keptUrls;
-        }
+        basePayload.existingImages = keptUrls;
         patchBody = basePayload;
       }
 
@@ -393,6 +401,13 @@ export const merchantService = {
           stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
           attributes: v.attributes || {},
         };
+
+        const fallbackImg = typeof v.image === 'string' && (v.image.startsWith('http://') || v.image.startsWith('https://'))
+          ? v.image
+          : currentProdRes.data?.images?.[0];
+        if (fallbackImg) {
+          variantPayload.image = fallbackImg;
+        }
 
         let varRes;
         let targetVarId = rawId;
@@ -443,6 +458,25 @@ export const merchantService = {
     formData: Partial<ProductFormData>
   ): Promise<{ success: boolean; data?: ProductItem; message?: string }> {
     try {
+      // 0. إذا تغير القسم، نحذف الأصناف القديمة أولاً لكي يسمح الباك إند بتحديث categoryId دون 409 Conflict
+      if (formData.categoryId) {
+        const currentProdRes = await this.getProductById(productId);
+        const currentCatId = typeof currentProdRes.data?.categoryId === 'object'
+          ? (currentProdRes.data?.categoryId as any)?._id
+          : currentProdRes.data?.categoryId;
+
+        if (currentCatId && String(currentCatId) !== String(formData.categoryId)) {
+          const oldVariants = currentProdRes.data?.variants || [];
+          for (const oldVar of oldVariants) {
+            try {
+              await deleteRequest(`/api/products/${productId}/variants/${oldVar._id}`);
+            } catch (delErr) {
+              console.warn('Could not delete old variant before category change:', delErr);
+            }
+          }
+        }
+      }
+
       // 1. تحديث الحقول الأساسية إذا تم تمريرها
       const hasBaseFields =
         formData.name !== undefined ||
@@ -469,10 +503,19 @@ export const merchantService = {
       }
 
       // 2. تحديث ومزامنة الأصناف إذا تم تمريرها
-      if (Array.isArray(formData.variants) && formData.variants.length > 0) {
+      if (!formData.isSimple && Array.isArray(formData.variants) && formData.variants.length > 0) {
         const varRes = await this.syncProductVariants(productId, formData.variants);
         if (!varRes.success) {
           return { success: false, message: varRes.message };
+        }
+      } else if (formData.isSimple && (formData.simplePrice !== undefined || formData.simpleStock !== undefined)) {
+        const prod = await this.getProductById(productId);
+        const defVarId = prod.data?.variants?.[0]?._id;
+        if (defVarId) {
+          await patchRequest(`/api/products/${productId}/variants/${defVarId}`, {
+            price: Number(formData.simplePrice) || 0,
+            stock: Math.max(0, Math.floor(Number(formData.simpleStock) || 0)),
+          });
         }
       }
 
@@ -493,6 +536,45 @@ export const merchantService = {
     } catch (err: any) {
       return { success: false, message: err?.message || 'خطأ أثناء الاتصال بالخادم لتحديث المنتج' };
     }
+  },
+
+  async updateProductVariant(
+    productId: string,
+    variantId: string,
+    data: { price: number; stock: number; attributes?: Record<string, any> }
+  ): Promise<{ success: boolean; message?: string }> {
+    return patchRequest(`/api/products/${productId}/variants/${variantId}`, data);
+  },
+
+  async uploadVariantImage(
+    productId: string,
+    variantId: string,
+    file: File
+  ): Promise<{ success: boolean; message?: string }> {
+    const vFd = new FormData();
+    vFd.append('image', file);
+    return patchRequest(`/api/products/${productId}/variants/${variantId}`, vFd);
+  },
+
+  async addCustomVariant(
+    productId: string,
+    data: { attributes: Record<string, string>; price: number; stock: number; image?: string }
+  ): Promise<{ success: boolean; data?: any; message?: string }> {
+    return postRequest(`/api/products/${productId}/variants`, data);
+  },
+
+  async deleteProductVariant(
+    productId: string,
+    variantId: string
+  ): Promise<{ success: boolean; message?: string }> {
+    return deleteRequest(`/api/products/${productId}/variants/${variantId}`);
+  },
+
+  async updateProductStatus(
+    productId: string,
+    status: 'active' | 'inActive'
+  ): Promise<{ success: boolean; message?: string }> {
+    return patchRequest(`/api/products/${productId}/status`, { status });
   },
 
   async fetchOptionDefinitions(): Promise<{
@@ -524,11 +606,11 @@ export const merchantService = {
         };
       }
       const definitions = activeCat.variantAttributes.map((attr) => ({
-        key: attr.name,
+        key: getAttributeKey(attr),
         name: attr.name,
         label: attr.name,
         type: 'TEXT',
-        values: attr.values.map((v) => ({ key: v, label: v, isActive: true })),
+        values: (attr.values || []).map((v) => ({ key: v, label: v, isActive: true })),
         isActive: true,
       }));
       return {

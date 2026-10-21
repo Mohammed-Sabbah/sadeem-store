@@ -1,5 +1,6 @@
 import { getRequest } from '@/shared/lib/coreApi';
 import type { Product, Store } from '@/types';
+import { getAttributeKey, getAttributeDisplayName } from '@/shared/lib/attributeUtils';
 
 export interface ApiCategory {
   _id: string;
@@ -148,28 +149,40 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
   if (Array.isArray(product.options) && product.options.length > 0) {
     definitions = product.options
       .filter((o) => o.values && o.values.length > 0)
-      .map((o) => ({
-        name: o.name || o.label || o.key || '',
-        values: o.values,
-      }));
+      .map((o) => {
+        const rawName = o.name || o.label || o.key || '';
+        return {
+          key: getAttributeKey(o.key || rawName),
+          name: getAttributeDisplayName(rawName),
+          values: o.values,
+        };
+      });
   }
 
   if (definitions.length === 0) {
-    const attrMap: Record<string, Set<string>> = {};
+    const attrMap: Record<string, { key: string; name: string; values: Set<string> }> = {};
     variants.forEach((v) => {
       if (v.attributes && typeof v.attributes === 'object') {
         Object.entries(v.attributes).forEach(([k, val]) => {
           if (k && val && String(val).trim()) {
-            if (!attrMap[k]) attrMap[k] = new Set();
-            attrMap[k].add(String(val).trim());
+            const attrKey = getAttributeKey(k);
+            if (!attrMap[attrKey]) {
+              attrMap[attrKey] = {
+                key: attrKey,
+                name: getAttributeDisplayName(k),
+                values: new Set(),
+              };
+            }
+            attrMap[attrKey].values.add(String(val).trim());
           }
         });
       }
     });
 
-    definitions = Object.entries(attrMap).map(([name, set]) => ({
-      name,
-      values: Array.from(set),
+    definitions = Object.values(attrMap).map((item) => ({
+      key: item.key,
+      name: item.name,
+      values: Array.from(item.values),
     }));
   }
 

@@ -129,7 +129,7 @@ async function getAdminProducts(req, res, next) {
 
 async function createProduct(req, res, next) {
     try {
-        const { price, stock, image } = req.body || {}
+        const { title, description, price, stock, image, variants } = req.body || {}
         const category = await Category.findOne({ _id: req.body.categoryId, isActive: true });
         if (!category) {
             return error(res, 400, 'Select an active category');
@@ -137,10 +137,10 @@ async function createProduct(req, res, next) {
 
         const images = req.body.images || [];
 
-        const hasCustomizedVariants = Array.isArray(req.body.variants) && req.body.variants.length > 0;
+        const hasCustomizedVariants = Array.isArray(variants) && variants.length > 0;
 
         const submittedVariants = hasCustomizedVariants
-            ? req.body.variants
+            ? variants
             : [getDefaultVariant(price, stock, image)];
 
         const { variantsToCreate, err } = prepareProductVariants(
@@ -152,8 +152,8 @@ async function createProduct(req, res, next) {
 
         const product = await productService.createProductWithVariants({
             storeId: req.store._id,
-            title: req.body.title,
-            description: req.body.description || '',
+            title: title,
+            description: description || '',
             categoryId: category._id,
             images,
         }, variantsToCreate);
@@ -205,10 +205,6 @@ async function updateProduct(req, res, next) {
             product: await getProductResponse(updatedProduct),
         });
     } catch (err) {
-        try {
-        } catch (cleanupError) {
-            console.error('Failed to remove unused uploaded product images:', cleanupError);
-        }
         return next(err);
     }
 }

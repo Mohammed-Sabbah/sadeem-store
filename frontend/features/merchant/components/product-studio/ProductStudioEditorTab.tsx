@@ -2,11 +2,7 @@ import React from 'react';
 import type { CategoryItem } from '@/features/store/services/taxonomy.service';
 import type { ProductOption, OptionDefinition } from '@/features/merchant/types/merchant.types';
 import type { VariantItemState } from '../../hooks/useProductStudio';
-import {
-  COLOR_SWATCHES,
-  PRESET_CLOTHING_SIZES,
-  PRESET_SHOE_SIZES,
-} from './ProductStudioTypes';
+import { COLOR_SWATCHES } from './ProductStudioTypes';
 import {
   IconPackage,
   IconChevronDown,
@@ -62,14 +58,10 @@ interface ProductStudioEditorTabProps {
   setActiveValuePopoverIdx: (val: number | null) => void;
   activeColorPhotoPopover: string | null;
   setActiveColorPhotoPopover: (val: string | null) => void;
-  customColorInput: string;
-  setCustomColorInput: (val: string) => void;
-  customSizeInput: string;
-  setCustomSizeInput: (val: string) => void;
   colorImageMap: Record<string, string>;
   setColorImageMap: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   allowedDefinitions?: OptionDefinition[];
-  handleAddPredefinedOption: (type: 'COLOR' | 'SIZE' | 'CUSTOM' | OptionDefinition) => void;
+  handleAddPredefinedOption: (def: OptionDefinition) => void;
   handleRemoveOption: (idx: number) => void;
   handleAddOptionValue: (optIdx: number, val?: string) => void;
   handleRemoveOptionValue: (optIdx: number, val: string) => void;
@@ -127,10 +119,6 @@ export function ProductStudioEditorTab({
   setActiveValuePopoverIdx,
   activeColorPhotoPopover,
   setActiveColorPhotoPopover,
-  customColorInput,
-  setCustomColorInput,
-  customSizeInput,
-  setCustomSizeInput,
   colorImageMap,
   setColorImageMap,
   allowedDefinitions = [],
@@ -689,19 +677,31 @@ export function ProductStudioEditorTab({
 
                 {isAddOptionOpen && (
                   <div className="absolute right-0 sm:right-auto sm:left-0 top-full mt-2 w-72 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-1.5 z-50 animate-fadeIn space-y-1 max-h-80 overflow-y-auto no-scrollbar">
-                    {allowedDefinitions && allowedDefinitions.length > 0 ? (
-                      allowedDefinitions.map((def) => {
+                    {(() => {
+                      const availableDefs = (allowedDefinitions || []).filter((def) => {
                         const isColor = def.type === 'COLOR' || def.key === 'color';
-                        const isAlreadyAdded = options.some(
+                        return !options.some(
                           (o) =>
                             o.key === def.key ||
                             o.name === def.label ||
+                            o.name === def.key ||
                             o.label === def.label ||
                             (isColor && (o.type === 'COLOR' || o.name === 'اللون'))
                         );
+                      });
 
-                        if (isAlreadyAdded) return null;
+                      if (availableDefs.length === 0) {
+                        return (
+                          <div className="p-4 text-center text-xs text-brand-muted">
+                            {allowedDefinitions && allowedDefinitions.length > 0
+                              ? 'تمت إضافة كافة الخيارات المتاحة لهذا القسم'
+                              : 'لا توجد خيارات معتمدة لهذا القسم في النظام'}
+                          </div>
+                        );
+                      }
 
+                      return availableDefs.map((def) => {
+                        const isColor = def.type === 'COLOR' || def.key === 'color';
                         return (
                           <button
                             key={def.key}
@@ -740,71 +740,17 @@ export function ProductStudioEditorTab({
                               </div>
                               <div className="text-[10px] text-brand-muted truncate">
                                 {def.values && def.values.length > 0
-                                  ? def.values.slice(0, 4).map((v) => (typeof v === 'string' ? v : v.label || v.key)).join('، ')
-                                  : 'إضافة خيارات وقيم مخصصة'}
+                                  ? def.values
+                                      .slice(0, 4)
+                                      .map((v) => (typeof v === 'string' ? v : v.label || v.key))
+                                      .join('، ')
+                                  : 'خيارات معتمدة في القسم'}
                               </div>
                             </div>
                           </button>
                         );
-                      })
-                    ) : (
-                      <>
-                        {!options.some((o) => o.type === 'COLOR' || o.name === 'اللون') && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleAddPredefinedOption('COLOR');
-                              setIsAddOptionOpen(false);
-                            }}
-                            className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-brand-primary/10 text-brand-primary flex items-center justify-center shrink-0 mt-0.5">
-                              <IconPalette className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-brand-dark">الألوان (Colors)</div>
-                              <div className="text-[10px] text-brand-muted">إضافة ألوان مع ربط صور مخصصة لكل لون</div>
-                            </div>
-                          </button>
-                        )}
-
-                        {!options.some((o) => o.type === 'SIZE' || o.name === 'المقاس') && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleAddPredefinedOption('SIZE');
-                              setIsAddOptionOpen(false);
-                            }}
-                            className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-brand-trust/10 text-brand-trust flex items-center justify-center shrink-0 mt-0.5">
-                              <IconRuler className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="text-xs font-bold text-brand-dark">المقاسات (Sizes)</div>
-                              <div className="text-[10px] text-brand-muted">مقاسات ملابس (S, M, L) أو أحذية (38-45)</div>
-                            </div>
-                          </button>
-                        )}
-                      </>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleAddPredefinedOption('CUSTOM');
-                        setIsAddOptionOpen(false);
-                      }}
-                      className="w-full p-2.5 rounded-xl hover:bg-brand-surface flex items-start gap-2.5 text-right transition-colors cursor-pointer border-t border-brand-border/40 mt-1 pt-2"
-                    >
-                      <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center shrink-0 mt-0.5">
-                        <IconSliders className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-brand-dark">خيار مخصص آخر</div>
-                        <div className="text-[10px] text-brand-muted">مثل الحجم، الخامة، أو نوع التغليف</div>
-                      </div>
-                    </button>
+                      });
+                    })()}
                   </div>
                 )}
               </div>
@@ -819,50 +765,23 @@ export function ProductStudioEditorTab({
               <div className="divide-y divide-brand-border/50">
                 {options.map((opt, optIdx) => {
                   const matchingDef = allowedDefinitions?.find(
-                    (d) => d.key === opt.key || d.label === opt.name
+                    (d) =>
+                      d.key === opt.key ||
+                      d.label === opt.name ||
+                      d.key === opt.name ||
+                      d.label === opt.label
                   );
                   const isColor =
                     opt.type === 'COLOR' ||
                     opt.name === 'اللون' ||
+                    opt.label === 'اللون' ||
                     matchingDef?.type === 'COLOR' ||
                     matchingDef?.key === 'color';
-                  const isShoeSize =
-                    matchingDef?.key === 'size_shoes' ||
-                    opt.name.includes('حذاء') ||
-                    opt.name.includes('أحذية');
-                  const isKidsSize =
-                    matchingDef?.key === 'size_kids' || opt.name.includes('أطفال');
-                  const isClothingSize =
-                    matchingDef?.key === 'size_clothing' ||
-                    (!isShoeSize &&
-                      !isKidsSize &&
-                      (opt.name.includes('ملابس') ||
-                        (opt.name.includes('مقاس') && !matchingDef)));
-                  const isSize =
-                    opt.type === 'SIZE' ||
-                    opt.name.includes('مقاس') ||
-                    isShoeSize ||
-                    isKidsSize ||
-                    isClothingSize ||
-                    matchingDef?.key?.includes('size');
 
-                  const colorValues =
+                  const allowedValues =
                     matchingDef?.values && matchingDef.values.length > 0
                       ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
-                      : Object.keys(COLOR_SWATCHES);
-
-                  const sizeValues =
-                    matchingDef?.values && matchingDef.values.length > 0
-                      ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
-                      : PRESET_CLOTHING_SIZES;
-
-                  const shoeSizeValues =
-                    matchingDef?.values && matchingDef.values.length > 0
-                      ? matchingDef.values.map((v) => (typeof v === 'string' ? v : v.label || v.key))
-                      : PRESET_SHOE_SIZES;
-                  const hasCustomPresets = Boolean(
-                    matchingDef?.values && matchingDef.values.length > 0 && !isColor && !isSize
-                  );
+                      : [];
 
                   return (
                     <div
@@ -876,7 +795,7 @@ export function ProductStudioEditorTab({
                             {opt.name || opt.label}
                           </span>
                           <span className="text-[10px] font-bold text-brand-muted bg-brand-surface px-2 py-0.5 rounded-full border border-brand-border/60">
-                            {opt.values.length} {isColor ? 'ألوان' : isSize ? 'مقاسات' : 'قيم'}
+                            {opt.values.length} {isColor ? 'ألوان' : 'قيم'}
                           </span>
                         </div>
 
@@ -894,7 +813,7 @@ export function ProductStudioEditorTab({
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-black rounded-xl border border-brand-primary/40 bg-brand-primary-soft text-brand-primary hover:bg-brand-primary hover:text-white transition-all shadow-2xs active:scale-[0.98] cursor-pointer group"
                           >
                             <IconPlus className="w-3 h-3 text-brand-primary group-hover:text-white transition-colors" />
-                            <span>{isColor ? 'إضافة لون...' : isSize ? 'إضافة مقاس...' : 'إضافة قيمة...'}</span>
+                            <span>{isColor ? 'إضافة لون...' : 'إضافة قيمة...'}</span>
                             <IconChevronDown
                               className={`w-3 h-3 text-brand-primary group-hover:text-white transition-transform duration-200 ${
                                 activeValuePopoverIdx === optIdx ? 'rotate-180' : ''
@@ -905,306 +824,87 @@ export function ProductStudioEditorTab({
                           {/* Popover Content */}
                           {activeValuePopoverIdx === optIdx && (
                             <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 max-w-[calc(100vw-2.5rem)] bg-brand-card/95 backdrop-blur-2xl rounded-2xl border border-brand-border shadow-xl p-3 z-50 animate-fadeIn space-y-3">
-                              {isColor && (
-                                <>
-                                  <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
-                                    <span className="flex items-center gap-1.5">
-                                      <IconPalette className="w-3.5 h-3.5 text-brand-primary" />
-                                      <span>لوحة الألوان الجاهزة</span>
-                                    </span>
-                                    <span className="text-[10px] text-brand-muted font-normal">اختر للتضمين فورياً</span>
-                                  </div>
+                              <div className="flex items-center justify-between pb-1.5 border-b border-brand-border/40 text-[11px] font-bold text-brand-dark">
+                                <span className="flex items-center gap-1.5">
+                                  {isColor ? (
+                                    <IconPalette className="w-3.5 h-3.5 text-brand-primary" />
+                                  ) : (
+                                    <IconSliders className="w-3.5 h-3.5 text-brand-primary" />
+                                  )}
+                                  <span>قيم «{opt.label || opt.name}» المعتمدة</span>
+                                </span>
+                                <span className="text-[10px] text-brand-muted font-normal">انقر للتضمين</span>
+                              </div>
 
-                                  <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto no-scrollbar py-0.5">
-                                    {colorValues.map((colName) => {
-                                      const swatch = COLOR_SWATCHES[colName] || { hex: '#71717A' };
-                                      const isSelected = opt.values.includes(colName);
-                                      return (
-                                        <button
-                                          key={colName}
-                                          type="button"
-                                          onClick={() => {
-                                            if (isSelected) {
-                                              handleRemoveOptionValue(optIdx, colName);
-                                            } else {
-                                              handleAddOptionValue(optIdx, colName);
-                                            }
+                              {allowedValues.length === 0 ? (
+                                <div className="p-3 text-center text-xs text-brand-muted">
+                                  لا توجد قيم مسجلة لهذا الخيار في القسم المختار
+                                </div>
+                              ) : isColor ? (
+                                <div className="grid grid-cols-3 gap-1.5 max-h-48 overflow-y-auto no-scrollbar py-0.5">
+                                  {allowedValues.map((colName) => {
+                                    const swatch = COLOR_SWATCHES[colName] || { hex: '#71717A' };
+                                    const isSelected = opt.values.includes(colName);
+                                    return (
+                                      <button
+                                        key={colName}
+                                        type="button"
+                                        onClick={() => {
+                                          if (isSelected) {
+                                            handleRemoveOptionValue(optIdx, colName);
+                                          } else {
+                                            handleAddOptionValue(optIdx, colName);
+                                          }
+                                        }}
+                                        className={`flex items-center gap-1.5 p-1.5 rounded-xl border text-right transition-all cursor-pointer active:scale-95 ${
+                                          isSelected
+                                            ? 'border-brand-primary bg-brand-primary-soft/50 text-brand-dark font-black shadow-xs'
+                                            : 'border-brand-border/60 hover:bg-brand-surface text-brand-muted hover:text-brand-dark'
+                                        }`}
+                                      >
+                                        <span
+                                          className="w-4 h-4 rounded-full shrink-0 shadow-2xs"
+                                          style={{
+                                            backgroundColor: swatch.hex,
+                                            border: swatch.border ? '1px solid #D1D5DB' : 'none',
                                           }}
-                                          className={`flex items-center gap-1.5 p-1.5 rounded-xl border text-right transition-all cursor-pointer active:scale-95 ${
-                                            isSelected
-                                              ? 'border-brand-primary bg-brand-primary-soft/50 text-brand-dark font-black shadow-xs'
-                                              : 'border-brand-border/60 hover:bg-brand-surface text-brand-muted hover:text-brand-dark'
-                                          }`}
-                                        >
-                                          <span
-                                            className="w-4 h-4 rounded-full shrink-0 shadow-2xs"
-                                            style={{
-                                              backgroundColor: swatch.hex,
-                                              border: swatch.border ? '1px solid #D1D5DB' : 'none',
-                                            }}
-                                          />
-                                          <span className="text-xs truncate flex-1">{colName}</span>
-                                          {isSelected && <IconCheck className="w-3 h-3 text-brand-primary shrink-0" />}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-
-                                  <div className="pt-2 border-t border-brand-border/40 flex items-center gap-1.5">
-                                    <input
-                                      type="text"
-                                      value={customColorInput}
-                                      onChange={(e) => setCustomColorInput(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          e.preventDefault();
-                                          if (customColorInput.trim()) {
-                                            handleAddOptionValue(optIdx, customColorInput.trim());
-                                            setCustomColorInput('');
-                                          }
-                                        }
-                                      }}
-                                      placeholder="أو اكتب لوناً مخصصاً (مثال: بترولي)..."
-                                      className="flex-1 h-8 px-2.5 text-xs rounded-xl border border-brand-border/80 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (customColorInput.trim()) {
-                                          handleAddOptionValue(optIdx, customColorInput.trim());
-                                          setCustomColorInput('');
-                                        }
-                                      }}
-                                      disabled={!customColorInput.trim()}
-                                      className="h-8 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
-                                    >
-                                      إضافة
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-
-                              {isSize && (
-                                <>
-                                  {(isClothingSize || (!isShoeSize && !isKidsSize)) && (
-                                    <div className="space-y-2">
-                                      <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
-                                        <span className="flex items-center gap-1">
-                                          <IconRuler className="w-3.5 h-3.5 text-brand-primary" />
-                                          <span>مقاسات الملابس</span>
-                                        </span>
-                                        <span className="text-[10px] text-brand-muted font-normal">S إلى 3XL</span>
-                                      </div>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {sizeValues.map((sz) => {
-                                          const isSelected = opt.values.includes(sz);
-                                          return (
-                                            <button
-                                              key={sz}
-                                              type="button"
-                                              onClick={() => {
-                                                if (isSelected) {
-                                                  handleRemoveOptionValue(optIdx, sz);
-                                                } else {
-                                                  handleAddOptionValue(optIdx, sz);
-                                                }
-                                              }}
-                                              className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                                isSelected
-                                                  ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
-                                                  : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
-                                              }`}
-                                            >
-                                              <span>{sz}</span>
-                                              {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {(isShoeSize || (!isClothingSize && !isKidsSize)) && (
-                                    <div className="space-y-2 pt-1">
-                                      <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
-                                        <span>مقاسات الأحذية</span>
-                                        <span className="text-[10px] text-brand-muted font-normal">38 إلى 45</span>
-                                      </div>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {shoeSizeValues.map((sz) => {
-                                          const isSelected = opt.values.includes(sz);
-                                          return (
-                                            <button
-                                              key={sz}
-                                              type="button"
-                                              onClick={() => {
-                                                if (isSelected) {
-                                                  handleRemoveOptionValue(optIdx, sz);
-                                                } else {
-                                                  handleAddOptionValue(optIdx, sz);
-                                                }
-                                              }}
-                                              className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                                isSelected
-                                                  ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
-                                                  : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
-                                              }`}
-                                            >
-                                              <span>{sz}</span>
-                                              {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {isKidsSize && (
-                                    <div className="space-y-2 pt-1">
-                                      <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
-                                        <span>مقاسات الأطفال والشهور</span>
-                                        <span className="text-[10px] text-brand-muted font-normal">أعمار وشهور</span>
-                                      </div>
-                                      <div className="flex flex-wrap gap-1.5">
-                                        {['0-3M', '3-6M', '6-12M', '1-2Y', '2-3Y', '3-4Y', '4-5Y', '5-6Y'].map((sz) => {
-                                          const isSelected = opt.values.includes(sz);
-                                          return (
-                                            <button
-                                              key={sz}
-                                              type="button"
-                                              onClick={() => {
-                                                if (isSelected) {
-                                                  handleRemoveOptionValue(optIdx, sz);
-                                                } else {
-                                                  handleAddOptionValue(optIdx, sz);
-                                                }
-                                              }}
-                                              className={`min-w-8 h-8 px-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                                isSelected
-                                                  ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
-                                                  : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
-                                              }`}
-                                            >
-                                              <span>{sz}</span>
-                                              {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  <div className="pt-2 border-t border-brand-border/40 flex items-center gap-1.5">
-                                    <input
-                                      type="text"
-                                      value={customSizeInput}
-                                      onChange={(e) => setCustomSizeInput(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          e.preventDefault();
-                                          if (customSizeInput.trim()) {
-                                            handleAddOptionValue(optIdx, customSizeInput.trim());
-                                            setCustomSizeInput('');
-                                          }
-                                        }
-                                      }}
-                                      placeholder="أو اكتب مقاساً مخصصاً (مثال: 4XL أو 100ml)..."
-                                      className="flex-1 h-8 px-2.5 text-xs rounded-xl border border-brand-border/80 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (customSizeInput.trim()) {
-                                          handleAddOptionValue(optIdx, customSizeInput.trim());
-                                          setCustomSizeInput('');
-                                        }
-                                      }}
-                                      disabled={!customSizeInput.trim()}
-                                      className="h-8 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
-                                    >
-                                      إضافة
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-
-                              {!isColor && !isSize && (
-                                <div className="space-y-2.5">
-                                  {hasCustomPresets && matchingDef?.values && (
-                                    <div className="space-y-1.5">
-                                      <div className="text-[11px] font-bold text-brand-dark flex items-center justify-between pb-1 border-b border-brand-border/40">
-                                        <span>قيم «{matchingDef.label}» الشائعة</span>
-                                        {matchingDef.unit && (
-                                          <span className="text-[10px] text-brand-muted font-normal bg-brand-surface px-1.5 py-0.5 rounded">
-                                            {matchingDef.unit}
-                                          </span>
+                                        />
+                                        <span className="text-xs truncate flex-1">{colName}</span>
+                                        {isSelected && (
+                                          <IconCheck className="w-3 h-3 text-brand-primary shrink-0" />
                                         )}
-                                      </div>
-                                       <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto py-0.5">
-                                        {matchingDef.values.map((valItem) => {
-                                          const val = typeof valItem === 'string' ? valItem : valItem.label || valItem.key;
-                                          const isSelected = opt.values.includes(val);
-                                          return (
-                                            <button
-                                              key={val}
-                                              type="button"
-                                              onClick={() => {
-                                                if (isSelected) {
-                                                  handleRemoveOptionValue(optIdx, val);
-                                                } else {
-                                                  handleAddOptionValue(optIdx, val);
-                                                }
-                                              }}
-                                              className={`min-w-8 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
-                                                isSelected
-                                                  ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
-                                                  : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
-                                              }`}
-                                            >
-                                              <span>{val}</span>
-                                              {isSelected && <IconCheck className="w-2.5 h-2.5 text-brand-primary" />}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  <div className="text-[11px] font-bold text-brand-dark pb-1 border-b border-brand-border/40">
-                                    {hasCustomPresets ? 'أو اكتب قيمة مخصصة' : 'إضافة قيمة لهذا الخيار'}
-                                  </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <input
-                                      type="text"
-                                      autoFocus
-                                      value={customSizeInput}
-                                      onChange={(e) => setCustomSizeInput(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                          e.preventDefault();
-                                          if (customSizeInput.trim()) {
-                                            handleAddOptionValue(optIdx, customSizeInput.trim());
-                                            setCustomSizeInput('');
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <div className="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto py-0.5">
+                                  {allowedValues.map((val) => {
+                                    const isSelected = opt.values.includes(val);
+                                    return (
+                                      <button
+                                        key={val}
+                                        type="button"
+                                        onClick={() => {
+                                          if (isSelected) {
+                                            handleRemoveOptionValue(optIdx, val);
+                                          } else {
+                                            handleAddOptionValue(optIdx, val);
                                           }
-                                        }
-                                      }}
-                                      placeholder="اكتب القيمة..."
-                                      className="flex-1 h-8 px-2.5 text-xs rounded-xl border border-brand-border/80 bg-brand-surface/40 text-brand-dark focus:bg-white focus:outline-none focus:border-brand-primary"
-                                    />
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        if (customSizeInput.trim()) {
-                                          handleAddOptionValue(optIdx, customSizeInput.trim());
-                                          setCustomSizeInput('');
-                                        }
-                                      }}
-                                      disabled={!customSizeInput.trim()}
-                                      className="h-8 px-3 text-[11px] font-bold bg-brand-primary text-white rounded-xl hover:bg-brand-primary-hover active:scale-95 disabled:opacity-40 cursor-pointer"
-                                    >
-                                      إضافة
-                                    </button>
-                                  </div>
+                                        }}
+                                        className={`min-w-8 h-8 px-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-95 ${
+                                          isSelected
+                                            ? 'border-brand-primary bg-brand-primary-soft/60 text-brand-dark font-black shadow-xs'
+                                            : 'border-brand-border/70 hover:bg-brand-surface text-brand-dark'
+                                        }`}
+                                      >
+                                        <span>{val}</span>
+                                        {isSelected && (
+                                          <IconCheck className="w-2.5 h-2.5 text-brand-primary" />
+                                        )}
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
@@ -1216,7 +916,7 @@ export function ProductStudioEditorTab({
                       <div className="flex flex-wrap items-center gap-1.5 flex-1 min-w-0">
                         {opt.values.length === 0 ? (
                           <span className="text-[11px] text-brand-muted/70 italic">
-                            لم يتم تحديد أي {isColor ? 'ألوان' : isSize ? 'مقاسات' : 'قيم'} بعد.
+                            لم يتم تحديد أي {isColor ? 'ألوان' : 'قيم'} بعد.
                           </span>
                         ) : (
                           opt.values.map((val) => {

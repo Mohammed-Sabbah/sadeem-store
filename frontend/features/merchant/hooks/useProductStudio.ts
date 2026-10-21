@@ -103,8 +103,6 @@ export function useProductStudio(productId: string) {
   const [isAddOptionOpen, setIsAddOptionOpen] = useState(false);
   const [activeValuePopoverIdx, setActiveValuePopoverIdx] = useState<number | null>(null);
   const [activeColorPhotoPopover, setActiveColorPhotoPopover] = useState<string | null>(null);
-  const [customColorInput, setCustomColorInput] = useState('');
-  const [customSizeInput, setCustomSizeInput] = useState('');
 
   // Global Click-Outside Listener to dismiss popovers seamlessly
   useEffect(() => {
@@ -130,9 +128,8 @@ export function useProductStudio(productId: string) {
     Promise.all([
       merchantService.getProductById(productId),
       taxonomyService.fetchCategories(),
-      merchantService.fetchOptionDefinitions(),
     ])
-      .then(([prodRes, cats, optRes]) => {
+      .then(([prodRes, cats]) => {
         if (!isMounted) return;
         setCategories(cats);
 
@@ -224,10 +221,6 @@ export function useProductStudio(productId: string) {
           }
         } else {
           setErrorMessage(prodRes.message || 'تعذر تحميل بيانات المنتج');
-        }
-
-        if (optRes.success && optRes.data?.definitions) {
-          setAllowedDefinitions(optRes.data.definitions);
         }
       })
       .catch((err) => {
@@ -497,68 +490,31 @@ export function useProductStudio(productId: string) {
   };
 
   // Options Helpers
-  const handleAddPredefinedOption = (typeOrDef: 'COLOR' | 'SIZE' | 'CUSTOM' | OptionDefinition) => {
-    if (typeof typeOrDef === 'object') {
-      const def = typeOrDef;
-      if (options.some((o) => o.key === def.key || o.name === def.label || o.label === def.label)) return;
-      setOptions((prev) => [
-        ...prev,
-        {
-          key: def.key,
-          source: 'DEFINED',
-          label: def.label,
-          name: def.label,
-          type: def.type || 'TEXT',
-          unit: def.unit || null,
-          values: [],
-        },
-      ]);
+  const handleAddPredefinedOption = (def: OptionDefinition) => {
+    if (!def || typeof def !== 'object') return;
+    if (
+      options.some(
+        (o) =>
+          o.key === def.key ||
+          o.name === def.label ||
+          o.label === def.label ||
+          o.name === def.key
+      )
+    ) {
       return;
     }
-
-    if (typeOrDef === 'COLOR') {
-      if (options.some((o) => o.type === 'COLOR' || o.name === 'اللون')) return;
-      setOptions((prev) => [
-        ...prev,
-        {
-          key: 'opt_color',
-          source: 'DEFINED',
-          label: 'اللون',
-          name: 'اللون',
-          type: 'COLOR',
-          unit: null,
-          values: ['أسود', 'أبيض'],
-        },
-      ]);
-    } else if (typeOrDef === 'SIZE') {
-      if (options.some((o) => o.type === 'SIZE' || o.name === 'المقاس')) return;
-      setOptions((prev) => [
-        ...prev,
-        {
-          key: 'opt_size',
-          source: 'DEFINED',
-          label: 'المقاس',
-          name: 'المقاس',
-          type: 'SIZE',
-          unit: null,
-          values: ['M', 'L', 'XL'],
-        },
-      ]);
-    } else {
-      const idx = options.length + 1;
-      setOptions((prev) => [
-        ...prev,
-        {
-          key: `opt_custom_${Date.now()}`,
-          source: 'CUSTOM',
-          label: `خيار ${idx}`,
-          name: `خيار ${idx}`,
-          type: 'TEXT',
-          unit: null,
-          values: [],
-        },
-      ]);
-    }
+    setOptions((prev) => [
+      ...prev,
+      {
+        key: def.key,
+        source: 'DEFINED',
+        label: def.label,
+        name: def.key,
+        type: def.type || 'TEXT',
+        unit: def.unit || null,
+        values: [],
+      },
+    ]);
   };
 
   const handleRemoveOption = (indexToRemove: number) => {
@@ -1097,10 +1053,6 @@ export function useProductStudio(productId: string) {
     setActiveValuePopoverIdx,
     activeColorPhotoPopover,
     setActiveColorPhotoPopover,
-    customColorInput,
-    setCustomColorInput,
-    customSizeInput,
-    setCustomSizeInput,
     variantsCount,
     totalStock,
     minPrice,

@@ -110,10 +110,6 @@ export default function MerchantProductStudioPage() {
           setActiveValuePopoverIdx={studio.setActiveValuePopoverIdx}
           activeColorPhotoPopover={studio.activeColorPhotoPopover}
           setActiveColorPhotoPopover={studio.setActiveColorPhotoPopover}
-          customColorInput={studio.customColorInput}
-          setCustomColorInput={studio.setCustomColorInput}
-          customSizeInput={studio.customSizeInput}
-          setCustomSizeInput={studio.setCustomSizeInput}
           colorImageMap={studio.colorImageMap}
           setColorImageMap={studio.setColorImageMap}
           handleAddPredefinedOption={studio.handleAddPredefinedOption}

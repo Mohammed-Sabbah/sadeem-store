@@ -231,6 +231,11 @@ export default function MerchantProductList({
                             <span className="text-[11px] font-bold text-brand-muted">
                               {p.categoryTitle || 'صنف عام'}
                             </span>
+                            {p.approveStatus === 'rejected' && (
+                              <span className="text-[9px] font-extrabold text-red-700 bg-red-50 px-1.5 py-0.2 rounded border border-red-200">
+                                موقوف إدارياً
+                              </span>
+                            )}
                             {p.isFeatured && (
                               <span className="text-[9px] font-extrabold text-brand-dark bg-brand-primary-soft px-1.5 py-0.2 rounded border border-brand-primary-border">
                                 مميز
@@ -329,21 +334,41 @@ export default function MerchantProductList({
 
                         {/* Visibility Switch */}
                         <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => onToggleActive(p._id, p.isActive)}
-                              className={`w-11 h-6 inline-flex items-center rounded-full p-0.5 transition-all duration-200 cursor-pointer active:scale-95 ${
-                                p.isActive ? 'bg-brand-trust justify-start' : 'bg-brand-border justify-end'
-                              }`}
-                              title={p.isActive ? 'إخفاء المنتج مؤقتاً' : 'تفعيل ظهور المنتج'}
-                            >
-                              <span className="w-5 h-5 rounded-full bg-brand-card shadow-xs transition-transform duration-200" />
-                            </button>
-                            <span className="text-[11px] font-bold text-brand-muted">
-                              {p.isActive ? 'معروض' : 'مخفي'}
-                            </span>
-                          </div>
+                          {p.approveStatus === 'rejected' ? (
+                            <div className="flex flex-col gap-1 items-start">
+                              <span
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-red-50 text-red-700 border border-red-200 shadow-2xs"
+                                title="تم إيقاف هذا الصنف إدارياً بواسطة إدارة سَدِيم"
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                                <span>موقوف إدارياً</span>
+                              </span>
+                              {p.rejectReason && (
+                                <span
+                                  className="text-[10px] text-red-600 font-medium max-w-[150px] truncate"
+                                  title={`سبب الإيقاف: ${p.rejectReason}`}
+                                >
+                                  السبب: {p.rejectReason}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => onToggleActive(p._id, p.isActive)}
+                                className={`w-11 h-6 inline-flex items-center rounded-full p-0.5 transition-all duration-200 cursor-pointer active:scale-95 ${
+                                  p.isActive ? 'bg-brand-trust justify-start' : 'bg-brand-border justify-end'
+                                }`}
+                                title={p.isActive ? 'إخفاء المنتج مؤقتاً' : 'تفعيل ظهور المنتج'}
+                              >
+                                <span className="w-5 h-5 rounded-full bg-brand-card shadow-xs transition-transform duration-200" />
+                              </button>
+                              <span className="text-[11px] font-bold text-brand-muted">
+                                {p.isActive ? 'معروض' : 'مخفي'}
+                              </span>
+                            </div>
+                          )}
                         </td>
 
                         {/* Actions */}
@@ -501,6 +526,11 @@ export default function MerchantProductList({
                           <span className="text-xs font-black text-brand-dark bg-brand-surface px-2 py-0.5 rounded-md border border-brand-border">
                             {priceLabel}
                           </span>
+                          {p.approveStatus === 'rejected' && (
+                            <span className="text-[9px] font-extrabold text-red-700 bg-red-50 px-1.5 py-0.5 rounded border border-red-200">
+                              موقوف إدارياً
+                            </span>
+                          )}
                           {p.isAnonymousVendor && (
                             <span className="text-[9px] font-extrabold text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
                               توريد مباشر
@@ -574,21 +604,41 @@ export default function MerchantProductList({
                     )}
 
                     {/* Toggle Active */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onToggleActive(p._id, p.isActive)}
-                        className={`w-11 h-6 inline-flex items-center rounded-full p-0.5 transition-colors cursor-pointer active:scale-95 ${
-                          p.isActive ? 'bg-brand-trust justify-start' : 'bg-brand-border justify-end'
-                        }`}
-                        title={p.isActive ? 'تعطيل ظهور المنتج' : 'تفعيل ظهور المنتج'}
-                      >
-                        <span className="w-5 h-5 rounded-full bg-brand-card shadow-2xs transition-transform" />
-                      </button>
-                      <span className="text-[11px] font-bold text-brand-muted">
-                        {p.isActive ? 'معروض' : 'مخفي'}
-                      </span>
-                    </div>
+                    {p.approveStatus === 'rejected' ? (
+                      <div className="flex flex-col items-end gap-1">
+                        <span
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black bg-red-50 text-red-700 border border-red-200 shadow-2xs"
+                          title="تم إيقاف هذا الصنف إدارياً بواسطة إدارة سَدِيم"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                          <span>موقوف إدارياً</span>
+                        </span>
+                        {p.rejectReason && (
+                          <span
+                            className="text-[10px] text-red-600 font-medium max-w-[160px] truncate"
+                            title={`سبب الإيقاف: ${p.rejectReason}`}
+                          >
+                            السبب: {p.rejectReason}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onToggleActive(p._id, p.isActive)}
+                          className={`w-11 h-6 inline-flex items-center rounded-full p-0.5 transition-colors cursor-pointer active:scale-95 ${
+                            p.isActive ? 'bg-brand-trust justify-start' : 'bg-brand-border justify-end'
+                          }`}
+                          title={p.isActive ? 'تعطيل ظهور المنتج' : 'تفعيل ظهور المنتج'}
+                        >
+                          <span className="w-5 h-5 rounded-full bg-brand-card shadow-2xs transition-transform" />
+                        </button>
+                        <span className="text-[11px] font-bold text-brand-muted">
+                          {p.isActive ? 'معروض' : 'مخفي'}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Expanded Variants Drawer on Mobile */}

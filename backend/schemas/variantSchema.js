@@ -128,10 +128,7 @@ const validateCreateVariant = [
         }
         const hasUploadedImage = Array.isArray(req.files) && req.files.length === 1;
         if ((req.files && req.files.length > 1) || (hasUploadedImage && value.image !== undefined)) {
-            throw new Error('Provide exactly one image, either as a URL or an uploaded file');
-        }
-        if (!hasUploadedImage && value.image === undefined) {
-            throw new Error('A variant must have exactly one image');
+            throw new Error('Provide either an image URL or one uploaded image, not both');
         }
         return true;
     }),
@@ -140,8 +137,6 @@ const validateCreateVariant = [
         .isString()
         .withMessage('Variant image must be a URL string')
         .bail()
-        .isURL({ protocols: ['http', 'https'], require_protocol: true })
-        .withMessage('Variant image must be an HTTP(S) URL')
         .isLength({ max: 2048 })
         .withMessage('Variant image URL must be at most 2048 characters'),
     ...validateVariantFields(),

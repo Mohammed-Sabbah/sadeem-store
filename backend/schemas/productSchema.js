@@ -101,12 +101,13 @@ const validateCreateProduct = [
             if (unsupportedFields.length) {
                 throw new Error(`Variant contains unsupported fields: ${unsupportedFields.join(', ')}`);
             }
-            if (typeof value.image !== 'string' || !isSafeImageReference(value.image)) {
-                throw new Error('Each variant must have a valid image URL');
+            if (value.image !== undefined && (typeof value.image !== 'string' || !isSafeImageReference(value.image))) {
+                throw new Error('Variant image must be a valid image URL');
             }
             return true;
         }),
     body('variants.*.image')
+        .optional()
         .isString()
         .withMessage('Variant image must be a string')
         .bail()

@@ -90,7 +90,7 @@ async function hasActiveVariants(productId) {
     });
 }
 
-const prepareProductVariants = (variants, category, requireAttribute) => {
+const prepareProductVariants = (variants, category, requireAttribute, defaultImage) => {
     const variantsToCreate = []
 
     for (const submittedVariant of variants) {
@@ -115,11 +115,16 @@ const prepareProductVariants = (variants, category, requireAttribute) => {
             return { variantsToCreate: [], err: { code: 400, msg: 'Variant attributes are required for this category' } };
         }
 
+        const variantImage = submittedVariant.image || defaultImage;
+        if (!variantImage) {
+            return { variantsToCreate: [], err: { code: 400, msg: 'Product must have at least one image' } };
+        }
+
         const variant = {
             attributes: normalized.attributes,
             price: submittedVariant.price,
             stock: submittedVariant.stock,
-            image: submittedVariant.image,
+            image: variantImage,
             isDeleted: false,
         };
 

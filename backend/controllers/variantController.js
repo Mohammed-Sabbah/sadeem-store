@@ -47,7 +47,10 @@ async function addVariant(req, res, next) {
         if (findDuplicateVariant(variants, attributes.attributes)) {
             return error(res, 409, 'A variant with these attributes already exists');
         }
-        const image = req.body.image ?? req.uploadedImages?.[0];
+        const image = req.body.image ?? req.uploadedImages?.[0] ?? product.images[0];
+        if (!image) {
+            return error(res, 400, 'A variant must have an image or the product must have at least one image');
+        }
         await Variant.create({
             productId: product._id,
             attributes: new Map(Object.entries(attributes.attributes)),

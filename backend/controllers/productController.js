@@ -146,8 +146,9 @@ async function createProduct(req, res, next) {
         const { variantsToCreate, err } = prepareProductVariants(
             submittedVariants,
             category,
-            hasCustomizedVariants
-        )
+            hasCustomizedVariants,
+            images[0]
+        );
         if (err) return error(res, err.code, err.msg);
 
         const product = await productService.createProductWithVariants({

@@ -9,6 +9,7 @@ import { useMerchantContext } from '@/features/merchant/context/MerchantContext'
 import { taxonomyService, type CategoryItem } from '@/features/store/services/taxonomy.service';
 import { merchantService } from '@/features/merchant/services/merchant.service';
 import type { ProductFormData } from '@/features/merchant/types/merchant.types';
+import { useToast } from '@/components/ui/toast';
 import { COLOR_SWATCHES } from '@/features/merchant/components/product-studio/ProductStudioTypes';
 import {
   getAttributeKey,
@@ -75,6 +76,7 @@ export default function NewProductPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { store, isLoading: isAuthLoading } = useMerchantContext();
+  const toast = useToast();
 
   // Categories & Active Category State (from DB)
   const [categories, setCategories] = useState<CategoryItem[]>([]);
@@ -512,15 +514,20 @@ export default function NewProductPage() {
         await queryClient.invalidateQueries({ queryKey: merchantKeys.profile() });
         router.refresh();
         setSuccessMessage('تم إضافة الصنف ونشره بنجاح في متجرك على سَدِيم.');
+        toast.success('تم نشر الصنف بنجاح', `تمت إضافة «${cleanTitle}» إلى متجرك`);
         setTimeout(() => {
           router.push('/merchant/dashboard');
         }, 1000);
       } else {
-        setErrorMessage(res.message || 'تعذر إضافة الصنف، يرجى المحاولة لاحقاً.');
+        const msg = res.message || 'تعذر إضافة الصنف، يرجى المحاولة لاحقاً.';
+        setErrorMessage(msg);
+        toast.error('تعذر إضافة الصنف', msg);
       }
     } catch (err: any) {
       console.error('Submission failed:', err);
-      setErrorMessage(err.message || 'حدث خطأ غير متوقع أثناء إرسال البيانات.');
+      const msg = err.message || 'حدث خطأ غير متوقع أثناء إرسال البيانات.';
+      setErrorMessage(msg);
+      toast.error('حدث خطأ', msg);
     } finally {
       setIsSubmitting(false);
     }

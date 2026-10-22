@@ -51,7 +51,7 @@ async function addVariant(req, res, next) {
         if (!image) {
             return error(res, 400, 'A variant must have an image or the product must have at least one image');
         }
-        await Variant.create({
+        const createdVariant = await Variant.create({
             productId: product._id,
             attributes: new Map(Object.entries(attributes.attributes)),
             price: req.body.price,
@@ -61,6 +61,7 @@ async function addVariant(req, res, next) {
 
         return success(res, 201, {
             message: 'Variant added and submitted for approval',
+            variant: createdVariant,
             product: await getProductResponse(product),
         });
     } catch (err) {

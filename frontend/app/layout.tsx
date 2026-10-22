@@ -4,6 +4,7 @@ import './tokens.css';
 import { CartProvider } from '@/context/CartContext';
 import { AuthProvider } from '@/context/AuthContext';
 import { QueryProvider } from '@/components/providers/QueryProvider';
+import { ToastProvider } from '@/components/ui/toast';
 import { AppShell } from '@/components/layout/AppShell';
 
 export const viewport: Viewport = {
@@ -37,7 +38,9 @@ export default function RootLayout({
         <QueryProvider>
           <AuthProvider>
             <CartProvider>
-              <AppShell>{children}</AppShell>
+              <ToastProvider>
+                <AppShell>{children}</AppShell>
+              </ToastProvider>
             </CartProvider>
           </AuthProvider>
         </QueryProvider>

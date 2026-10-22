@@ -9,6 +9,7 @@ import { useMerchantContext } from '@/features/merchant/context/MerchantContext'
 import { taxonomyService, type CategoryItem } from '@/features/store/services/taxonomy.service';
 import { merchantService } from '@/features/merchant/services/merchant.service';
 import type { ProductItem, ProductVariant } from '@/features/merchant/types/merchant.types';
+import { useToast } from '@/components/ui/toast';
 import { COLOR_SWATCHES } from '@/features/merchant/components/product-studio/ProductStudioTypes';
 import {
   getAttributeKey,
@@ -78,6 +79,7 @@ export default function EditProductPage() {
   const productId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
 
   const { store, isLoading: isAuthLoading } = useMerchantContext();
+  const toast = useToast();
 
   // Loading & Product Data
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
@@ -329,11 +331,24 @@ export default function EditProductPage() {
         }
 
         // 3. New Cartesian combination (not in DB)
+        // Intelligent price inheritance: basePrice -> first existing DB variant price -> prior typed price -> empty
+        const defaultPrice =
+          basePrice !== ''
+            ? basePrice
+            : (rawDbVariants.find((v) => Number(v.price) > 0)?.price ??
+               (prevRows.find((r) => Number(r.price) > 0)?.price ?? ''));
+
+        const defaultStock =
+          baseStock !== ''
+            ? baseStock
+            : (rawDbVariants.find((v) => v.stock !== undefined)?.stock ??
+               (prevRows.find((r) => r.stock !== undefined)?.stock ?? 10));
+
         return {
           id: `cartesian-${idx}-${Date.now()}`,
           attributes,
-          price: basePrice !== '' ? basePrice : 45,
-          stock: baseStock !== '' ? baseStock : 10,
+          price: defaultPrice,
+          stock: defaultStock,
           sku: '',
           isEnabled: true, // Default to true so newly added options/values are enabled by default
           image: undefined,
@@ -566,44 +581,79 @@ export default function EditProductPage() {
         // Simple product: Update default variant
         const defaultVar = rawDbVariants[0];
         if (defaultVar && defaultVar._id) {
-          await merchantService.updateProductVariant(productId, defaultVar._id, {
+          const vRes = await merchantService.updateProductVariant(productId, defaultVar._id, {
             price: Number(basePrice) || 0,
             stock: Math.max(0, Math.floor(Number(baseStock) || 0)),
           });
+          if (!vRes.success) {
+            throw new Error(vRes.message || 'فشل تحديث سعر ومخزون الصنف');
+          }
         }
       } else {
-        // Multi-variant product: Orchestrate PATCH, POST, and DELETE
+        // Multi-variant product: Orchestrate PATCH, POST, STATUS and DELETE
         const fallbackImg = existingKeptUrls[0] || product?.images?.[0] || '';
 
-        // A. Existing enabled variants: PATCH price & stock & image (if imageFile)
+        // A. Enabled variants: Update existing or create new
         for (const row of enabledRows) {
           if (row.dbId) {
-            await merchantService.updateProductVariant(productId, row.dbId, {
+            // Update existing variant price & stock
+            const vRes = await merchantService.updateProductVariant(productId, row.dbId, {
               price: Number(row.price) || 0,
               stock: Math.max(0, Math.floor(Number(row.stock) || 0)),
             });
+            if (!vRes.success) {
+              throw new Error(vRes.message || 'فشل تحديث بيانات أحد الخيارات');
+            }
+
+            // Ensure status is active
+            await merchantService.updateVariantStatus(productId, row.dbId, 'active');
+
             if (row.imageFile) {
-              await merchantService.uploadVariantImage(productId, row.dbId, row.imageFile);
+              const imgRes = await merchantService.uploadVariantImage(productId, row.dbId, row.imageFile);
+              if (!imgRes.success) {
+                console.warn('Variant image upload warning:', imgRes.message);
+              }
             }
           } else {
-            // B. Newly enabled combination: POST to /variants
+            // Newly enabled combination: POST to /variants
+            // IMPORTANT: Never send base64 data URLs in JSON (fails 2048 char validation)
+            const safeImgUrl = (typeof row.image === 'string' && row.image.startsWith('http'))
+              ? row.image
+              : (fallbackImg.startsWith('http') ? fallbackImg : undefined);
+
             const newRes = await merchantService.addCustomVariant(productId, {
               attributes: row.attributes,
               price: Number(row.price) || 0,
               stock: Math.max(0, Math.floor(Number(row.stock) || 0)),
-              image: row.image || fallbackImg,
+              image: safeImgUrl,
             });
+
+            if (!newRes.success) {
+              throw new Error(newRes.message || 'فشل حفظ أحد الخيارات الجديدة');
+            }
+
             const newVarId = newRes?.data?.variant?._id;
             if (row.imageFile && newVarId) {
-              await merchantService.uploadVariantImage(productId, newVarId, row.imageFile);
+              const imgRes = await merchantService.uploadVariantImage(productId, newVarId, row.imageFile);
+              if (!imgRes.success) {
+                console.warn('Variant image upload warning:', imgRes.message);
+              }
             }
           }
         }
 
-        // C. Disabled or removed variants: DELETE from DB
-        const activeDbIds = new Set(enabledRows.map((r) => r.dbId).filter(Boolean));
+        // B. Disabled variants: update status to inActive instead of deleting!
+        const disabledRows = variantsRows.filter((r) => r.isEnabled === false && r.dbId);
+        for (const dRow of disabledRows) {
+          if (dRow.dbId) {
+            await merchantService.updateVariantStatus(productId, dRow.dbId, 'inActive');
+          }
+        }
+
+        // C. Truly deleted variants (attribute combination removed from matrix entirely)
+        const currentMatrixDbIds = new Set(variantsRows.map((r) => r.dbId).filter(Boolean));
         for (const oldVar of rawDbVariants) {
-          if (oldVar._id && !activeDbIds.has(String(oldVar._id))) {
+          if (oldVar._id && !currentMatrixDbIds.has(String(oldVar._id))) {
             try {
               await merchantService.deleteProductVariant(productId, String(oldVar._id));
             } catch (delErr) {
@@ -618,7 +668,9 @@ export default function EditProductPage() {
       await queryClient.invalidateQueries({ queryKey: merchantKeys.productDetail(productId) });
       await queryClient.invalidateQueries({ queryKey: merchantKeys.profile() });
       router.refresh();
+
       setSuccessMessage('تم حفظ وتحديث كافة بيانات الصنف بنجاح على سَدِيم.');
+      toast.success('تم الحفظ بنجاح', 'تم تحديث كافة بيانات الصنف ومتغيراته على سَدِيم');
       setImageFiles([]);
 
       // Reload fresh data from backend
@@ -630,7 +682,9 @@ export default function EditProductPage() {
       }
     } catch (err: any) {
       console.error('Save failed:', err);
-      setErrorMessage(err.message || 'حدث خطأ غير متوقع أثناء حفظ التعديلات.');
+      const msg = err.message || 'حدث خطأ غير متوقع أثناء حفظ التعديلات.';
+      setErrorMessage(msg);
+      toast.error('تعذر حفظ التعديلات', msg);
     } finally {
       setIsSubmitting(false);
     }

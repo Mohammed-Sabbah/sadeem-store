@@ -563,6 +563,14 @@ export const merchantService = {
     return postRequest(`/api/products/${productId}/variants`, data);
   },
 
+  async updateVariantStatus(
+    productId: string,
+    variantId: string,
+    status: 'active' | 'inActive'
+  ): Promise<{ success: boolean; message?: string }> {
+    return patchRequest(`/api/products/${productId}/variants/${variantId}/status`, { status });
+  },
+
   async deleteProductVariant(
     productId: string,
     variantId: string

@@ -70,12 +70,12 @@ export const sellerProductService = {
       .then((result) => result.categories);
   },
 
-  updateProduct(productId: string, values: Partial<Pick<SellerProduct, 'title' | 'description' | 'image' | 'categoryId'>>) {
+  updateProduct(productId: string, values: Partial<Pick<SellerProduct, 'title' | 'description' | 'image' | 'categoryId' | 'status'>>) {
     return unwrap(patchRequest<{ product: SellerProduct }>(`/api/products/${productId}`, values))
       .then((result) => result.product);
   },
 
-  updateVariant(productId: string, variantId: string, values: Partial<Pick<SellerVariant, 'attributes' | 'price' | 'stock'>>) {
+  updateVariant(productId: string, variantId: string, values: Partial<Pick<SellerVariant, 'attributes' | 'price' | 'stock' | 'status'>>) {
     return unwrap(patchRequest<{ product: SellerProduct }>(
       `/api/products/${productId}/variants/${variantId}`,
       values
@@ -92,13 +92,6 @@ export const sellerProductService = {
   deleteVariant(productId: string, variantId: string) {
     return unwrap(deleteRequest<{ product: SellerProduct }>(
       `/api/products/${productId}/variants/${variantId}`
-    )).then((result) => result.product);
-  },
-
-  updateStatus(productId: string, status: SellerProduct['status']) {
-    return unwrap(patchRequest<{ product: SellerProduct }>(
-      `/api/products/${productId}/status`,
-      { status }
     )).then((result) => result.product);
   },
 

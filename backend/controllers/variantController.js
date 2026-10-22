@@ -112,6 +112,9 @@ async function updateVariant(req, res, next) {
         if (req.body.attributes !== undefined) {
             variant.attributes = new Map(Object.entries(updatedAttributes));
         }
+        if (req.body.status !== undefined) {
+            variant.status = req.body.status;
+        }
 
         const previousImage = variant.image;
         const image = req.body.image ?? req.uploadedImages?.[0];
@@ -119,45 +122,15 @@ async function updateVariant(req, res, next) {
             variant.image = image;
         }
         await variant.save();
+        if (req.body.status === STATUS.IN_ACTIVE) {
+            await deactivateProductWithNoActiveVariants(product);
+        }
         // if (previousImage && previousImage !== variant.image) {
         //     await deleteUnusedImages([previousImage]);
         // }
 
         return success(res, 200, {
             message: 'Variant updated successfully',
-            product: await getProductResponse(product),
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function updateVariantStatus(req, res, next) {
-    try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            storeId: req.store._id,
-            isDeleted: false,
-        });
-        if (!product) {
-            return error(res, 404, 'Product not found');
-        }
-        const variant = await Variant.findOne({
-            _id: req.params.variantId,
-            productId: product._id,
-            isDeleted: false,
-        });
-        if (!variant) {
-            return error(res, 404, 'Variant not found');
-        }
-
-        variant.status = req.body.status;
-        await variant.save();
-
-        if (variant.status === STATUS.IN_ACTIVE) {
-            await deactivateProductWithNoActiveVariants(product);
-        }
-        return success(res, 200, {
             product: await getProductResponse(product),
         });
     } catch (err) {
@@ -241,7 +214,6 @@ async function deleteVariant(req, res, next) {
 module.exports = {
     addVariant,
     updateVariant,
-    updateVariantStatus,
     updateVariantApproval,
     deleteVariant,
 };

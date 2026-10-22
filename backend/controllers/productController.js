@@ -179,6 +179,23 @@ async function updateProduct(req, res, next) {
             return error(res, 404, 'Product not found');
         }
 
+        if (
+            req.body.status === STATUS.ACTIVE &&
+            !(await hasActiveVariants(product._id))
+        ) {
+            return error(res, 409, 'Add at least one variant before activating this product');
+        }
+        if (req.body.status !== undefined) {
+            product.status = req.body.status;
+        }
+        if (
+            req.body.status !== undefined &&
+            req.body.existingImages === undefined &&
+            req.body.images === undefined
+        ) {
+            req.body.existingImages = product.images;
+        }
+
         // if Category has Changed.
         if (req.body.categoryId && String(req.body.categoryId) !== String(product.categoryId)) {
             const variants = await Variant.find({ productId: product._id, isDeleted: false });
@@ -205,35 +222,6 @@ async function updateProduct(req, res, next) {
             message: 'Product updated successfully',
             product: await getProductResponse(updatedProduct),
         });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function updateProductStatus(req, res, next) {
-    try {
-        const product = await Product.findOne({
-            _id: req.params.id,
-            storeId: req.store._id,
-            isDeleted: false,
-        });
-        if (!product) {
-            return error(res, 404, 'Product not found');
-        }
-
-        if (
-            req.body.status === STATUS.ACTIVE &&
-            !(await hasActiveVariants(product._id))
-        ) {
-            return error(res, 409, 'Add at least one variant before activating this product');
-        }
-
-        product.status = req.body.status;
-        await product.save();
-        return success(res, 200,
-            {
-                product: await getProductResponse(product)
-            });
     } catch (err) {
         return next(err);
     }
@@ -293,7 +281,6 @@ module.exports = {
     getAdminProducts,
     createProduct,
     updateProduct,
-    updateProductStatus,
     deleteProduct,
     updateProductApproval,
 };

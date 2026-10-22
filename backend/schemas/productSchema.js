@@ -139,16 +139,20 @@ const validateUpdateProduct = [
             if (!value || typeof value !== 'object' || Array.isArray(value)) {
                 throw new Error('Product data must be an object');
             }
-            const editableFields = ['title', 'description', 'categoryId', 'images', 'existingImages'];
+            const editableFields = ['title', 'description', 'categoryId', 'images', 'existingImages', 'status'];
             const hasUploadedImages = req.files && req.files.length > 0;
             if (!hasUploadedImages && !editableFields.some((field) => value[field] !== undefined)) {
                 throw new Error('Provide at least one product field to update');
             }
             if (Object.keys(value).some((field) => !editableFields.includes(field))) {
-                throw new Error('Product status and approval can only be changed through their dedicated routes');
+                throw new Error('Product approval can only be changed through its dedicated route');
             }
             return true;
         }),
+    body('status')
+        .optional()
+        .isIn(STATUS_VALUES)
+        .withMessage('Product status is invalid'),
     body('title')
         .optional()
         .isString()
@@ -210,13 +214,6 @@ const validateUpdateProduct = [
     validateRequest,
 ];
 
-const validateProductStatus = [
-    body('status')
-        .isIn(STATUS_VALUES)
-        .withMessage('Product status is invalid'),
-    validateRequest,
-];
-
 const validateProductApproval = [
     body('approveStatus')
         .isIn(APPROVE_STATUS_VALUES)
@@ -239,6 +236,5 @@ module.exports = {
     validatePublicProductQuery,
     validateCreateProduct,
     validateUpdateProduct,
-    validateProductStatus,
     validateProductApproval,
 };

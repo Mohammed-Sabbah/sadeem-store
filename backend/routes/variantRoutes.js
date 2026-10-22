@@ -8,7 +8,6 @@ const uploadToCloudinary = require("../middleware/uploadToCloudinary")
 const {
     addVariant,
     updateVariant,
-    updateVariantStatus,
     updateVariantApproval,
     deleteVariant,
 } = require('../controllers/variantController');
@@ -20,7 +19,6 @@ const {
     validateCreateVariant,
     validateVariantApproval,
     validateVariantPatch,
-    validateVariantStatus,
 } = require('../schemas/variantSchema');
 
 const router = express.Router({ mergeParams: true });
@@ -51,14 +49,7 @@ router.patch('/:variantId',
 // Delete Variant
 router.delete('/:variantId', ...sellerOnly, validateVariantIds, deleteVariant);
 
-// Update Variant Status and Approval
-router.patch(
-    '/:variantId/status',
-    ...sellerOnly,
-    validateVariantIds,
-    validateVariantStatus,
-    updateVariantStatus
-);
+// Update Variant Approval
 router.patch(
     '/:variantId/approval',
     ...adminOnly,

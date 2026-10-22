@@ -69,17 +69,21 @@ const validateVariantPatch = [
         }
         const hasUploadedImage = Array.isArray(req.files) && req.files.length > 0;
         const hasImage = hasUploadedImage || value.image !== undefined;
-        if (!hasImage && !['price', 'stock', 'attributes'].some((field) => value[field] !== undefined)) {
-            throw new Error('Provide price, stock, or attributes to update');
+        if (!hasImage && !['price', 'stock', 'attributes', 'status'].some((field) => value[field] !== undefined)) {
+            throw new Error('Provide price, stock, attributes, or status to update');
         }
         if (hasUploadedImage && value.image !== undefined) {
             throw new Error('Provide either an image URL or one uploaded image, not both');
         }
-        if (Object.keys(value).some((field) => !['price', 'stock', 'attributes', 'image'].includes(field))) {
-            throw new Error('Variant status and approval can only be changed through their dedicated routes');
+        if (Object.keys(value).some((field) => !['price', 'stock', 'attributes', 'image', 'status'].includes(field))) {
+            throw new Error('Variant approval can only be changed through its dedicated route');
         }
         return true;
     }),
+    body('status')
+        .optional()
+        .isIn(STATUS_VALUES)
+        .withMessage('Variant status is invalid'),
     body('image')
         .if((value) => value !== undefined)
         .isString()
@@ -106,13 +110,6 @@ const validateVariantApproval = [
         .withMessage('Rejection reason is required')
         .isLength({ max: 1000 })
         .withMessage('Rejection reason must be at most 1000 characters'),
-    validateRequest,
-];
-
-const validateVariantStatus = [
-    body('status')
-        .isIn(STATUS_VALUES)
-        .withMessage('Variant status is invalid'),
     validateRequest,
 ];
 
@@ -148,5 +145,4 @@ module.exports = {
     validateCreateVariant,
     validateVariantIds,
     validateVariantFields,
-    validateVariantStatus,
 };

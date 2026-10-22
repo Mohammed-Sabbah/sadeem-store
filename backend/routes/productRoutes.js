@@ -17,7 +17,6 @@ const {
     createProduct,
     updateProduct,
     deleteProduct,
-    updateProductStatus,
     updateProductApproval,
 } = require('../controllers/productController');
 
@@ -27,7 +26,6 @@ const {
     validatePublicProductQuery,
     validateCreateProduct,
     validateUpdateProduct,
-    validateProductStatus,
     validateProductApproval,
 } = require('../schemas/productSchema');
 
@@ -76,9 +74,6 @@ router.patch(
     validateProductApproval,
     updateProductApproval
 );
-
-// Change Product Status - Seller
-router.patch('/:id/status', ...sellerOnly, validateProductId, validateProductStatus, updateProductStatus);
 
 // Delete Product - Seller
 router.delete('/:id', ...sellerOnly, validateProductId, deleteProduct);

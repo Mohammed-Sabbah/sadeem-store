@@ -247,7 +247,7 @@ export const merchantService = {
   async toggleProduct(productId: string, currentActive: boolean): Promise<{ success: boolean; message?: string }> {
     const nextState = !currentActive;
     try {
-      const res = await patchRequest(`/api/products/${productId}/status`, {
+      const res = await patchRequest(`/api/products/${productId}`, {
         status: nextState ? 'active' : 'inActive',
       });
       return { success: res.success, message: res.message };
@@ -339,6 +339,7 @@ export const merchantService = {
       images?: string[];
       existingImages?: string[];
       imageFiles?: File[];
+      status?: 'active' | 'inActive';
     }
   ): Promise<{ success: boolean; data?: any; message?: string }> {
     try {
@@ -354,7 +355,10 @@ export const merchantService = {
         if (nextTitle) fd.append('title', nextTitle);
         if (data.description !== undefined) fd.append('description', data.description.trim());
         if (data.categoryId) fd.append('categoryId', data.categoryId);
-        fd.append('existingImages', JSON.stringify(keptUrls));
+        if (data.existingImages !== undefined || data.images !== undefined) {
+          fd.append('existingImages', JSON.stringify(keptUrls));
+        }
+        if (data.status !== undefined) fd.append('status', data.status);
         data.imageFiles!.forEach((file) => fd.append('images', file));
         patchBody = fd;
       } else {
@@ -363,7 +367,10 @@ export const merchantService = {
         if (nextTitle) basePayload.title = nextTitle;
         if (data.description !== undefined) basePayload.description = data.description.trim();
         if (data.categoryId) basePayload.categoryId = data.categoryId;
-        basePayload.existingImages = keptUrls;
+        if (data.existingImages !== undefined || data.images !== undefined) {
+          basePayload.existingImages = keptUrls;
+        }
+        if (data.status !== undefined) basePayload.status = data.status;
         patchBody = basePayload;
       }
 
@@ -485,6 +492,7 @@ export const merchantService = {
         formData.categoryId !== undefined ||
         formData.images !== undefined ||
         formData.existingImages !== undefined ||
+        formData.isActive !== undefined ||
         (Array.isArray(formData.imageFiles) && formData.imageFiles.length > 0);
 
       if (hasBaseFields) {
@@ -496,6 +504,9 @@ export const merchantService = {
           images: formData.images,
           existingImages: formData.existingImages,
           imageFiles: formData.imageFiles,
+          status: formData.isActive === undefined
+            ? undefined
+            : formData.isActive ? 'active' : 'inActive',
         });
         if (!baseRes.success) {
           return { success: false, message: baseRes.message || 'فشل تحديث بيانات المنتج الأساسية' };
@@ -519,14 +530,7 @@ export const merchantService = {
         }
       }
 
-      // 3. تحديث حالة التفعيل
-      if (formData.isActive !== undefined) {
-        await patchRequest(`/api/products/${productId}/status`, {
-          status: formData.isActive ? 'active' : 'inActive',
-        });
-      }
-
-      // 4. جلب النسخة المحدثة النهائية
+      // 3. جلب النسخة المحدثة النهائية
       const refreshed = await this.getProductById(productId);
       if (refreshed.success && refreshed.data) {
         return { success: true, data: refreshed.data, message: 'تم تحديث المنتج وحفظ التغييرات بنجاح' };
@@ -541,7 +545,12 @@ export const merchantService = {
   async updateProductVariant(
     productId: string,
     variantId: string,
-    data: { price: number; stock: number; attributes?: Record<string, any> }
+    data: {
+      price?: number;
+      stock?: number;
+      attributes?: Record<string, any>;
+      status?: 'active' | 'inActive';
+    }
   ): Promise<{ success: boolean; message?: string }> {
     return patchRequest(`/api/products/${productId}/variants/${variantId}`, data);
   },
@@ -568,13 +577,6 @@ export const merchantService = {
     variantId: string
   ): Promise<{ success: boolean; message?: string }> {
     return deleteRequest(`/api/products/${productId}/variants/${variantId}`);
-  },
-
-  async updateProductStatus(
-    productId: string,
-    status: 'active' | 'inActive'
-  ): Promise<{ success: boolean; message?: string }> {
-    return patchRequest(`/api/products/${productId}/status`, { status });
   },
 
   async fetchOptionDefinitions(): Promise<{

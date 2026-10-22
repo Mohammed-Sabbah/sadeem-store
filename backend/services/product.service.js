@@ -58,12 +58,13 @@ const updateProduct = async (product, updates) => {
 
 };
 
-const deleteProductWithVariants = async (productId) => {
+const deleteProductWithVariants = async (productId, storeId) => {
     const deletedData = await withMongoTransaction(
         async (session) => {
             const options = session ? { session } : {};
             const product = await Product.findOne({
                 _id: productId,
+                storeId,
                 isDeleted: { $ne: true },
             }).setOptions(options);
 
@@ -77,13 +78,13 @@ const deleteProductWithVariants = async (productId) => {
             }).select("image").setOptions(options).lean();
 
             await Product.updateOne(
-                { _id: productId, isDeleted: { $ne: true } },
+                { _id: productId, storeId, isDeleted: { $ne: true } },
                 { $set: { isDeleted: true, images: [] } },
                 options
             );
 
             await Variant.updateMany(
-                { productId },
+                { productId, storeId },
                 { $set: { isDeleted: true, image: "" } },
                 options
             );

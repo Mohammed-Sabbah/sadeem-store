@@ -537,6 +537,10 @@ export default function EditProductPage() {
       const existingKeptUrls = images.filter(
         (u) => typeof u === 'string' && (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/'))
       );
+      const productStatus: 'active' | 'inActive' | undefined =
+        product && product.isActive !== isProductActive
+          ? isProductActive ? 'active' : 'inActive'
+          : undefined;
 
       // 2. Base Product Update (Strictly sending existingImages to protect Cloudinary)
       const baseUpdatePayload = {
@@ -547,6 +551,7 @@ export default function EditProductPage() {
         images: existingKeptUrls,
         existingImages: existingKeptUrls,
         imageFiles: imageFiles.length > 0 ? imageFiles : undefined,
+        status: productStatus,
       };
 
       const baseRes = await merchantService.updateProductBase(productId, baseUpdatePayload);
@@ -608,12 +613,7 @@ export default function EditProductPage() {
         }
       }
 
-      // 4. Update Product Status (Active / Inactive) if changed
-      if (product && product.isActive !== isProductActive) {
-        await merchantService.updateProductStatus(productId, isProductActive ? 'active' : 'inActive');
-      }
-
-      // 5. Success feedback & refresh
+      // 4. Success feedback & refresh
       await queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
       await queryClient.invalidateQueries({ queryKey: merchantKeys.productDetail(productId) });
       await queryClient.invalidateQueries({ queryKey: merchantKeys.profile() });

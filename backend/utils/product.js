@@ -50,8 +50,23 @@ async function getProductsWithVariants(products) {
     );
 }
 
+async function deactivateProductWithNoActiveVariants(product) {
+    const hasActiveVariant = await Variant.exists({
+        productId: product._id,
+        status: STATUS.ACTIVE,
+        isDeleted: false,
+    });
+    if (!hasActiveVariant && product.status !== STATUS.IN_ACTIVE) {
+        product.status = STATUS.IN_ACTIVE;
+        await product.save();
+    }
+}
+
+
+
 module.exports = {
     toProductResponse,
     getProductResponse,
     getProductsWithVariants,
+    deactivateProductWithNoActiveVariants
 };

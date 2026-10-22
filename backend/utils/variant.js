@@ -145,6 +145,28 @@ const prepareProductVariants = (variants, category, requireAttribute, defaultIma
     return { variantsToCreate, err: null }
 }
 
+function getVariantId(variant) {
+    const id = typeof variant === 'string'
+        ? variant
+        : variant?.variantId || variant?._id || variant?.id;
+    return typeof id === 'string' ? id.toLowerCase() : id;
+}
+
+function hasDuplicateIds(variants) {
+    const ids = variants.map(getVariantId);
+    return ids.some((id, index) => ids.indexOf(id) !== index);
+}
+
+function getRequestVariants(req) {
+    return Array.isArray(req.body) ? req.body : [];
+}
+
+async function validateDocuments(documents) {
+    for (const document of documents) {
+        await document.validate();
+    }
+}
+
 module.exports = {
     getDefaultVariant,
     normalizeAttributes,
@@ -152,5 +174,9 @@ module.exports = {
     findDuplicateVariant,
     hasVariantAttributes,
     hasActiveVariants,
-    prepareProductVariants
+    getVariantId,
+    hasDuplicateIds,
+    prepareProductVariants,
+    getRequestVariants,
+    validateDocuments
 };

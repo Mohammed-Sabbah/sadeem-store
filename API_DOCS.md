@@ -113,11 +113,14 @@
 
 | الطريقة | المسار | الصلاحية | الوصف |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/products/:id/variants` | تاجر (Seller) | إضافة صنف جديد مفرد للمنتج واحتساب الملخص آلياً |
+| `POST` | `/products/:id/variants` | تاجر (Seller) | إضافة صنف واحد أو عدة أصناف بعد التحقق من جميعها |
+| `PATCH` | `/products/:id/variants` | تاجر (Seller) | تعديل عدة أصناف دفعة واحدة بعد التحقق من جميعها |
+| `DELETE` | `/products/:id/variants` | تاجر (Seller) | حذف عدة أصناف ناعماً؛ الأصناف المحذوفة مسبقاً يتم تخطيها |
 | `PATCH` | `/products/:id/variants/:variantId` | تاجر (Seller) | تعديل سعر، مخزون، أو خصائص صنف محدد واحتساب الملخص |
 | `DELETE` | `/products/:id/variants/:variantId` | تاجر (Seller) | حذف ناعم (Soft Delete) للصنف واستثناؤه من المخزون |
 | `PATCH` | `/products/:id/variants/:variantId/status` | تاجر (Seller) | تعديل حالة الصنف: `{"status": "inActive"}` |
-| `PATCH` | `/products/admin/:id/variants/:variantId/approval` | مدير (Admin) | مراجعة واعتماد الصنف: `{"approveStatus": "approved"}` |
+| `PATCH` | `/products/:id/variants/approval` | مدير (Admin) | مراجعة واعتماد أو رفض عدة أصناف دفعة واحدة |
+| `PATCH` | `/products/:id/variants/:variantId/approval` | مدير (Admin) | مراجعة واعتماد الصنف: `{"approveStatus": "approved"}` |
 
 ### أمثلة طلبات الأصناف المفردة:
 
@@ -146,6 +149,39 @@
 }
 ```
 
+#### إضافة أو تعديل عدة أصناف:
+أرسل مصفوفة `variants` إلى مسار الإضافة أو التعديل. في التعديل، يتضمن كل عنصر `variantId`. تُفحص جميع الأصناف قبل حفظ أي منها.
+
+```json
+[
+  {
+    "attributes": { "color": "أزرق", "size": "M" },
+    "price": 185,
+    "stock": 20,
+    "image": "https://example.com/dress-blue-m.jpg"
+  }
+]
+```
+
+للتعديل، أرسل `PATCH /api/products/:id/variants` وأضف `"variantId": "<معرف الصنف>"` لكل عنصر.
+
+#### حذف عدة أصناف:
+`DELETE /api/products/:id/variants`
+
+```json
+["64f000000000000000000001", "64f000000000000000000002"]
+```
+
+#### مراجعة عدة أصناف:
+`PATCH /api/products/:id/variants/approval`
+
+```json
+[
+  { "variantId": "64f000000000000000000001", "approveStatus": "approved" },
+  { "variantId": "64f000000000000000000002", "approveStatus": "rejected", "reason": "الصورة غير واضحة" }
+]
+```
+
 ### رفع صور المنتجات والأصناف
 
 تستخدم طلبات الصور `multipart/form-data` مع نفس المسارات والصلاحيات:
@@ -153,7 +189,8 @@
 | المسار | اسم حقل الملف | الحد |
 | :--- | :--- | :--- |
 | `POST /api/products` و`PATCH /api/products/:id` | `images` (يتكرر لكل صورة) | من صورة واحدة إلى 5 صور عند الإنشاء، وبحد أقصى 5 صور في التعديل |
-| `POST /api/products/:id/variants` و`PATCH /api/products/:id/variants/:variantId` | `image` | صورة واحدة مطلوبة عند الإنشاء، واختيارية عند التعديل |
+| `POST /api/products/:id/variants` و`PATCH /api/products/:id/variants` | `image` (يتكرر بترتيب الأصناف التي لا تحتوي على رابط `image`) | صورة واحدة كحد أقصى لكل صنف بلا رابط |
+| `PATCH /api/products/:id/variants/:variantId` | `image` | صورة اختيارية لصنف واحد |
 
 الصيغ المقبولة هي JPEG وPNG وWebP، بحد أقصى 5 ميغابايت لكل صورة. استبدال صور المنتج عبر التعديل يحدّث قائمة الصور كاملة؛ عدم إرسال ملفات جديدة يحافظ على الصور الحالية. يجب أن يكون لكل صنف صورة واحدة؛ عند إنشاء منتج بصنف بسيط، تُستخدم الصورة الأولى للمنتج كصورة الصنف. عند إنشاء أصناف متعددة، أرسل صورة URL واحدة في حقل `image` لكل صنف. عدم إرسال صورة عند تعديل الصنف يحافظ على صورته الحالية.
 

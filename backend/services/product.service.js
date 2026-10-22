@@ -4,6 +4,13 @@ const { withMongoTransaction } = require("../config/db")
 const { deleteProductWithVariantsImages, deleteImages } = require("./cloudinary.service")
 const { validateNewProductImages } = require("../utils/images")
 
+const findProduct = async (req, { populateCategory = false } = {}) => {
+    const filter = { _id: req.params.id, storeId: req.store._id, isDeleted: false };
+    let query = Product.findOne(filter);
+    if (populateCategory) query = query.populate('categoryId', 'variantAttributes');
+    return query;
+}
+
 const createProduct = async (productData, options) => {
     const product = new Product(productData)
     await product.save(options)
@@ -104,4 +111,5 @@ module.exports = {
     createProductWithVariants,
     deleteProductWithVariants,
     updateProduct,
+    findProduct
 };

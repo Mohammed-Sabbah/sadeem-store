@@ -6,16 +6,16 @@ const upload = require("../middleware/upload")
 const uploadToCloudinary = require("../middleware/uploadToCloudinary")
 
 const {
-    addVariant,
-    updateVariant,
-    updateVariantApproval,
-    deleteVariant,
+    createVariants,
+    updateVariants,
+    updateVariantsApproval,
+    deleteVariants,
 } = require('../controllers/variantController');
 
 const { validateProductId } = require('../schemas/productSchema');
 
 const {
-    validateVariantIds,
+    validateVariantBatchIds,
     validateCreateVariant,
     validateVariantApproval,
     validateVariantPatch,
@@ -26,36 +26,37 @@ const sellerOnly = [authenticate, authorize(ROLE.SELLER), verifyActiveStore];
 const adminOnly = [authenticate, authorize(ROLE.ADMIN)];
 
 const imageFolder = "variants"
-// Create Variant
+
+// Create Variants
 router.post('/',
     ...sellerOnly,
     validateProductId,
-    upload.array("image", 1),
+    upload.array("image", 8),
     validateCreateVariant,
     uploadToCloudinary(imageFolder),
-    addVariant
+    createVariants
 );
 
-// Update Variant
-router.patch('/:variantId',
+// Update variants
+router.patch('/',
     ...sellerOnly,
-    validateVariantIds,
-    upload.array("image", 1),
+    validateProductId,
+    upload.array("image", 8),
     validateVariantPatch,
     uploadToCloudinary(imageFolder),
-    updateVariant
+    updateVariants
 );
 
-// Delete Variant
-router.delete('/:variantId', ...sellerOnly, validateVariantIds, deleteVariant);
-
-// Update Variant Approval
+// Update Variants Approval
 router.patch(
-    '/:variantId/approval',
+    '/approval',
     ...adminOnly,
-    validateVariantIds,
+    validateProductId,
     validateVariantApproval,
-    updateVariantApproval
+    updateVariantsApproval
 );
+
+// Delete Variants
+router.delete('/', ...sellerOnly, validateProductId, validateVariantBatchIds, deleteVariants);
 
 module.exports = router;

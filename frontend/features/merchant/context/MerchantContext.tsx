@@ -8,13 +8,11 @@ import {
   useToggleProductActiveMutation,
   useDeleteProductMutation,
   useQuickStockMutation,
-  useCreateProductMutation,
 } from '../queries/useMerchantQueries';
 import { merchantKeys } from '../queries/merchant.keys';
 import type {
   StoreProfile,
   ProductItem,
-  ProductFormData,
   MerchantMetrics,
 } from '../types/merchant.types';
 
@@ -23,10 +21,7 @@ interface MerchantContextValue {
   products: ProductItem[];
   metrics: MerchantMetrics;
   isLoading: boolean;
-  isModalOpen: boolean;
-  setIsModalOpen: (open: boolean) => void;
   feedbackMessage: { type: 'success' | 'error'; text: string } | null;
-  handleCreateProduct: (formData: ProductFormData) => Promise<{ success: boolean; message?: string } | boolean>;
   handleToggleActive: (productId: string, currentActive: boolean) => Promise<void>;
   handleDeleteProduct: (productId: string) => Promise<void>;
   handleQuickStockUpdate: (productId: string, newStock: number, variantId?: string) => Promise<void>;
@@ -46,13 +41,11 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
   const toggleActiveMutation = useToggleProductActiveMutation();
   const deleteMutation = useDeleteProductMutation();
   const quickStockMutation = useQuickStockMutation();
-  const createProductMutation = useCreateProductMutation();
 
   const store = profileQuery.data || null;
   const products = productsQuery.data || [];
   const isLoading = profileQuery.isLoading || productsQuery.isLoading;
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -79,26 +72,6 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
       activeProducts: active,
     };
   }, [products]);
-
-  const handleCreateProduct = async (formData: ProductFormData): Promise<{ success: boolean; message?: string }> => {
-    try {
-      const res = await createProductMutation.mutateAsync(formData);
-      if (res.success && res.data) {
-        setFeedbackMessage({
-          type: 'success',
-          text: `تم حفظ وإضافة «${res.data.name}» بنجاح في الكتالوج`,
-        });
-        return { success: true };
-      }
-      return { success: false, message: res.message || 'تعذر إضافة المنتج' };
-    } catch (err: any) {
-      setFeedbackMessage({
-        type: 'error',
-        text: err.message || 'تعذر إضافة المنتج، يرجى المحاولة لاحقاً',
-      });
-      return { success: false, message: err?.message || 'تعذر إضافة المنتج' };
-    }
-  };
 
   const handleToggleActive = async (productId: string, currentActive: boolean) => {
     try {
@@ -161,10 +134,7 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
     products,
     metrics,
     isLoading,
-    isModalOpen,
-    setIsModalOpen,
     feedbackMessage,
-    handleCreateProduct,
     handleToggleActive,
     handleDeleteProduct,
     handleQuickStockUpdate,

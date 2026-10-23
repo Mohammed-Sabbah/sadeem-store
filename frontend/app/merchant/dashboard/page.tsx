@@ -6,7 +6,6 @@ import { useMerchantContext } from '@/features/merchant/context/MerchantContext'
 import MerchantDashboardHeader from '@/features/merchant/components/MerchantDashboardHeader';
 import MerchantMetricsBar from '@/features/merchant/components/MerchantMetricsBar';
 import MerchantProductList, { type FilterTab } from '@/features/merchant/components/MerchantProductList';
-import AddProductModal from '@/features/merchant/components/AddProductModal';
 
 export default function MerchantDashboardPage() {
   const router = useRouter();
@@ -17,10 +16,7 @@ export default function MerchantDashboardPage() {
     products,
     metrics,
     isLoading,
-    isModalOpen,
-    setIsModalOpen,
     feedbackMessage,
-    handleCreateProduct,
     handleToggleActive,
     handleDeleteProduct,
     handleQuickStockUpdate,
@@ -112,13 +108,6 @@ export default function MerchantDashboardPage() {
         onOpenAddModal={() => router.push('/merchant/products/new')}
         activeFilterTab={activeFilterTab}
         onTabChange={setActiveFilterTab}
-      />
-
-      {/* 4. Slide-Over Add Product Terminal */}
-      <AddProductModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleCreateProduct}
       />
     </div>
   );

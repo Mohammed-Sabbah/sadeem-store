@@ -8,6 +8,12 @@ import { ProductCard } from '@/components/ui/ProductCard';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { catalogService, type CatalogProduct } from '@/features/catalog/catalog.service';
 import type { Product } from '@/types';
+import {
+  getAttributeKey,
+  getAttributeDisplayName,
+  isColorAttribute,
+  isSizeAttribute,
+} from '@/shared/lib/attributeUtils';
 
 
 // Comprehensive palette color mapper for swatch colors
@@ -140,12 +146,13 @@ export default function ProductDetailPage() {
         }
 
         // Set initial selected image:
-        // Priority 1: Variant image
+        // Priority 1: Variant image (v.image or v.images[0])
         // Priority 2: Product cover image
-        if (item.image) {
+        const initVariantImg = initialVariant?.image || (initialVariant?.images && initialVariant.images[0]);
+        if (initVariantImg) {
+          setSelectedImage(initVariantImg);
+        } else if (item.image) {
           setSelectedImage(item.image);
-        } else if (initialVariant?.images && initialVariant.images[0]) {
-          setSelectedImage(initialVariant.images[0]);
         } else {
           setSelectedImage('/placeholder_product.svg');
         }
@@ -205,20 +212,39 @@ export default function ProductDetailPage() {
     };
   }, [product]);
 
+  // Helper to match a variant against selected attributes robustly
+  const isVariantMatch = (variant: any, selected: Record<string, string>, requireAll = true) => {
+    if (!variant || !variant.attributes || typeof variant.attributes !== 'object') return false;
+    const vEntries = Object.entries(variant.attributes);
+    if (vEntries.length === 0) return false;
+
+    const checkEntry = ([vk, vv]: [string, any]) => {
+      const trimmedVal = String(vv ?? '').trim().toLowerCase();
+      const selectedVal =
+        selected[vk] ??
+        selected[vk.toLowerCase()] ??
+        selected[getAttributeKey(vk)] ??
+        selected[getAttributeDisplayName(vk)];
+
+      if (selectedVal === undefined || selectedVal === null) {
+        return false;
+      }
+      return String(selectedVal).trim().toLowerCase() === trimmedVal;
+    };
+
+    return requireAll ? vEntries.every(checkEntry) : vEntries.some(checkEntry);
+  };
+
   // Derive active variant based on user selection
   const selectedVariant = useMemo(() => {
     if (!product || !('variants' in product) || !product.variants?.length) return null;
-    
-    // 1. Try exact match on all selected attributes
-    const exactMatch = product.variants.find((v) =>
-      v.attributes && Object.entries(selectedAttributes).every(([name, val]) => v.attributes[name] === val)
-    );
+
+    // 1. Try exact match on all variant attributes
+    const exactMatch = product.variants.find((v) => isVariantMatch(v, selectedAttributes, true));
     if (exactMatch) return exactMatch;
 
     // 2. Partial match fallback if user is selecting options sequentially
-    const partialMatch = product.variants.find((v) =>
-      v.attributes && Object.entries(selectedAttributes).some(([name, val]) => v.attributes[name] === val)
-    );
+    const partialMatch = product.variants.find((v) => isVariantMatch(v, selectedAttributes, false));
     return partialMatch || product.variants[0];
   }, [product, selectedAttributes]);
 
@@ -286,23 +312,27 @@ export default function ProductDetailPage() {
   }, [product]);
 
   // Handler for attribute selection with automatic image switching
-  const handleSelectAttribute = (attrName: string, val: string) => {
-    const nextAttrs = { ...selectedAttributes, [attrName]: val };
+  const handleSelectAttribute = (attrKey: string, val: string, displayName?: string) => {
+    const nextAttrs = {
+      ...selectedAttributes,
+      [attrKey]: val,
+      ...(displayName ? { [displayName]: val } : {}),
+      [attrKey.toLowerCase()]: val,
+    };
     setSelectedAttributes(nextAttrs);
 
     // 1. Check if matching variant has a dedicated image
     if (product && 'variants' in product && product.variants?.length) {
-      const match = product.variants.find((v) =>
-        v.attributes && Object.entries(nextAttrs).every(([k, vVal]) => v.attributes[k] === vVal)
-      );
-      if (match?.images && match.images[0]) {
-        setSelectedImage(match.images[0]);
+      const match = product.variants.find((v) => isVariantMatch(v, nextAttrs, true));
+      const vImg = match?.image || (match?.images && match.images[0]);
+      if (vImg) {
+        setSelectedImage(vImg);
         return;
       }
     }
 
     // 2. If changing a color attribute, check colorImageMap
-    const isColor = attrName.includes('لون') || attrName === 'اللون';
+    const isColor = isColorAttribute(attrKey) || (displayName && isColorAttribute(displayName));
     if (isColor && product && 'colorImageMap' in product && product.colorImageMap?.[val]) {
       setSelectedImage(product.colorImageMap[val]);
     }
@@ -317,7 +347,7 @@ export default function ProductDetailPage() {
       const entry = Object.entries(product.colorImageMap).find(([, mappedUrl]) => mappedUrl === img);
       if (entry) {
         const [colorName] = entry;
-        const colorKey = Object.keys(selectedAttributes).find((k) => k.includes('لون') || k === 'اللون') || 'اللون';
+        const colorKey = Object.keys(selectedAttributes).find((k) => isColorAttribute(k)) || 'اللون';
         setSelectedAttributes((prev) => ({ ...prev, [colorKey]: colorName }));
         return;
       }
@@ -325,7 +355,9 @@ export default function ProductDetailPage() {
 
     // Synchronize with variant attributes if image belongs to a specific variant
     if (product && 'variants' in product && product.variants?.length) {
-      const match = product.variants.find((v) => v.images && v.images.includes(img));
+      const match = product.variants.find((v) =>
+        (v.image && v.image === img) || (v.images && v.images.includes(img))
+      );
       if (match?.attributes) {
         setSelectedAttributes((prev) => ({ ...prev, ...match.attributes }));
       }
@@ -350,7 +382,7 @@ export default function ProductDetailPage() {
 
     const colorVal = Object.entries(selectedAttributes).find(([k]) => k.includes('لون') || k === 'اللون')?.[1];
     const sizeVal = Object.entries(selectedAttributes).find(([k]) => k.includes('مقاس') || k === 'المقاس')?.[1];
-    const activeImage = selectedImage || (selectedVariant?.images && selectedVariant.images[0]) || product.image;
+    const activeImage = selectedVariant?.image || (selectedVariant?.images && selectedVariant.images[0]) || selectedImage || product.image;
 
     addToCart(
       {
@@ -606,14 +638,22 @@ export default function ProductDetailPage() {
             {!isSimpleProduct && variantDefinitions && variantDefinitions.length > 0 ? (
               variantDefinitions.map((definition) => {
                 const values = definition.values || [];
-                const isColor = definition.name.includes('لون') || definition.name === 'اللون';
-                const isSize = definition.name.includes('مقاس') || definition.name === 'المقاس';
-                const currentSelected = selectedAttributes[definition.name] || values[0] || '';
+                const attrKey = definition.key || definition.name;
+                const displayName = definition.name || definition.key || '';
+                const isColor = isColorAttribute(attrKey) || isColorAttribute(displayName);
+                const isSize = isSizeAttribute(attrKey) || isSizeAttribute(displayName);
+
+                const currentSelected =
+                  selectedAttributes[attrKey] ||
+                  selectedAttributes[displayName] ||
+                  selectedAttributes[attrKey.toLowerCase()] ||
+                  values[0] ||
+                  '';
 
                 return (
-                  <div key={definition.name} className="border-t border-brand-border/60 pt-3">
+                  <div key={attrKey} className="border-t border-brand-border/60 pt-3">
                     <div className="flex items-center justify-between text-xs font-bold mb-2">
-                      <span className="text-brand-muted">{definition.name}:</span>
+                      <span className="text-brand-muted">{displayName}:</span>
                       <div className="flex items-center gap-2">
                         <span className="text-brand-dark font-extrabold">{currentSelected}</span>
                         {isSize && (
@@ -632,7 +672,7 @@ export default function ProductDetailPage() {
                     {isColor ? (
                       <div className="flex items-center gap-2.5 flex-wrap">
                         {values.map((val) => {
-                          const isActive = currentSelected === val;
+                          const isActive = String(currentSelected).trim().toLowerCase() === String(val).trim().toLowerCase();
                           const hex = resolveColorHex(val);
                           const hasDedicatedImage = Boolean(
                             'colorImageMap' in product && (product as any).colorImageMap?.[val]
@@ -648,7 +688,7 @@ export default function ProductDetailPage() {
                                   : 'hover:scale-105 opacity-85 hover:opacity-100'
                               }`}
                               style={{ backgroundColor: hex }}
-                              onClick={() => handleSelectAttribute(definition.name, val)}
+                              onClick={() => handleSelectAttribute(attrKey, val, displayName)}
                               title={`${val}${hasDedicatedImage ? ' (صورة متوفرة)' : ''}`}
                             >
                               {isActive && (
@@ -664,7 +704,7 @@ export default function ProductDetailPage() {
                     ) : (
                       <div className="flex items-center gap-2 flex-wrap">
                         {values.map((val) => {
-                          const isActive = currentSelected === val;
+                          const isActive = String(currentSelected).trim().toLowerCase() === String(val).trim().toLowerCase();
                           return (
                             <button
                               key={val}
@@ -674,7 +714,7 @@ export default function ProductDetailPage() {
                                   ? 'bg-brand-dark text-white border-brand-dark shadow-xs'
                                   : 'bg-brand-surface text-brand-dark border-brand-border hover:border-brand-dark/50'
                               }`}
-                              onClick={() => handleSelectAttribute(definition.name, val)}
+                              onClick={() => handleSelectAttribute(attrKey, val, displayName)}
                             >
                               {val}
                             </button>

@@ -10,7 +10,7 @@
 ## 1. الفلسفة المعمارية لمنظومة المنتجات والأصناف (Product Architecture)
 تعتمد المنصة على نمذجة عالية الأداء تدمج بين وضعين تشغيليين:
 1. **نمط الحفظ الجماعي الذري (Atomic Batch Matrix Mode):** مخصص لاستوديو التاجر (`POST /products` أو `PATCH /products/:id`) لحفظ مصفوفة الخيارات والأصناف دفعة واحدة بمعاملة ذرية (Mongoose Transaction & Automatic Rollback).
-2. **نمط العمليات المفردة (Granular Sub-resource Mode):** مخصص لإدارة المخازن، التعديل السريع، أو ماسحات الباركود (`/products/:id/variants`) مع احتساب تلقائي وفوري لملخص الأسعار والمخزون (`minPrice`, `maxPrice`, `totalStock`, `inStock`).
+2. **نمط الدُفعات (Batch Sub-resource Mode):** جميع عمليات الأصناف تمر عبر `/products/:id/variants` بمصفوفة JSON واحدة (إضافة، تعديل، حذف، أو اعتماد)، مع احتساب تلقائي وفوري لملخص الأسعار والمخزون (`minPrice`, `maxPrice`, `totalStock`, `inStock`).
 
 ---
 
@@ -109,48 +109,21 @@
 
 ---
 
-## 3. مسارات الأصناف المفردة (Variant Sub-resources)
+## 3. مسارات الأصناف (Variant Sub-resources)
+
+تعمل جميع المسارات التالية بنمط الدُفعات فقط: يرسل الطلب مصفوفة JSON، وتُتحقق جميع العناصر قبل حفظ أي منها. لا توجد مسارات مفردة مثل `/:variantId`.
 
 | الطريقة | المسار | الصلاحية | الوصف |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/products/:id/variants` | تاجر (Seller) | إضافة صنف واحد أو عدة أصناف بعد التحقق من جميعها |
-| `PATCH` | `/products/:id/variants` | تاجر (Seller) | تعديل عدة أصناف دفعة واحدة بعد التحقق من جميعها |
+| `POST` | `/products/:id/variants` | تاجر (Seller) | إضافة صنف واحد أو عدة أصناف |
+| `PATCH` | `/products/:id/variants` | تاجر (Seller) | تعديل عدة أصناف؛ كل عنصر يتضمن `variantId` |
 | `DELETE` | `/products/:id/variants` | تاجر (Seller) | حذف عدة أصناف ناعماً؛ الأصناف المحذوفة مسبقاً يتم تخطيها |
-| `PATCH` | `/products/:id/variants/:variantId` | تاجر (Seller) | تعديل سعر، مخزون، أو خصائص صنف محدد واحتساب الملخص |
-| `DELETE` | `/products/:id/variants/:variantId` | تاجر (Seller) | حذف ناعم (Soft Delete) للصنف واستثناؤه من المخزون |
-| `PATCH` | `/products/:id/variants/:variantId/status` | تاجر (Seller) | تعديل حالة الصنف: `{"status": "inActive"}` |
-| `PATCH` | `/products/:id/variants/approval` | مدير (Admin) | مراجعة واعتماد أو رفض عدة أصناف دفعة واحدة |
-| `PATCH` | `/products/:id/variants/:variantId/approval` | مدير (Admin) | مراجعة واعتماد الصنف: `{"approveStatus": "approved"}` |
+| `PATCH` | `/products/:id/variants/approval` | مدير (Admin) | مراجعة واعتماد أو رفض عدة أصناف |
 
-### أمثلة طلبات الأصناف المفردة:
+### أمثلة طلبات الأصناف:
 
-#### إضافة صنف جديد (Add Variant):
+#### إضافة أصناف جديدة (Create Variants):
 `POST /api/products/:id/variants`
-
-```json
-{
-  "image": "https://example.com/dress-blue-l.jpg",
-  "attributes": {
-    "color": "أزرق نيلي",
-    "size": "L"
-  },
-  "price": 195,
-  "stock": 12
-}
-```
-
-#### تعديل صنف مفرد (Update Variant):
-`PATCH /api/products/:id/variants/:variantId`
-
-```json
-{
-  "price": 185,
-  "stock": 20
-}
-```
-
-#### إضافة أو تعديل عدة أصناف:
-أرسل مصفوفة `variants` إلى مسار الإضافة أو التعديل. في التعديل، يتضمن كل عنصر `variantId`. تُفحص جميع الأصناف قبل حفظ أي منها.
 
 ```json
 [
@@ -163,7 +136,20 @@
 ]
 ```
 
-للتعديل، أرسل `PATCH /api/products/:id/variants` وأضف `"variantId": "<معرف الصنف>"` لكل عنصر.
+#### تعديل عدة أصناف (Update Variants):
+`PATCH /api/products/:id/variants`
+
+```json
+[
+  {
+    "variantId": "64f000000000000000000001",
+    "price": 185,
+    "stock": 20,
+    "status": "active",
+    "attributes": { "color": "أزرق", "size": "M" }
+  }
+]
+```
 
 #### حذف عدة أصناف:
 `DELETE /api/products/:id/variants`
@@ -189,10 +175,10 @@
 | المسار | اسم حقل الملف | الحد |
 | :--- | :--- | :--- |
 | `POST /api/products` و`PATCH /api/products/:id` | `images` (يتكرر لكل صورة) | من صورة واحدة إلى 5 صور عند الإنشاء، وبحد أقصى 5 صور في التعديل |
-| `POST /api/products/:id/variants` و`PATCH /api/products/:id/variants` | `image` (يتكرر بترتيب الأصناف التي لا تحتوي على رابط `image`) | صورة واحدة كحد أقصى لكل صنف بلا رابط |
-| `PATCH /api/products/:id/variants/:variantId` | `image` | صورة اختيارية لصنف واحد |
 
-الصيغ المقبولة هي JPEG وPNG وWebP، بحد أقصى 5 ميغابايت لكل صورة. استبدال صور المنتج عبر التعديل يحدّث قائمة الصور كاملة؛ عدم إرسال ملفات جديدة يحافظ على الصور الحالية. يجب أن يكون لكل صنف صورة واحدة؛ عند إنشاء منتج بصنف بسيط، تُستخدم الصورة الأولى للمنتج كصورة الصنف. عند إنشاء أصناف متعددة، أرسل صورة URL واحدة في حقل `image` لكل صنف. عدم إرسال صورة عند تعديل الصنف يحافظ على صورته الحالية.
+الصيغ المقبولة هي JPEG وPNG وWebP، بحد أقصى 5 ميغابايت لكل صورة. استبدال صور المنتج عبر التعديل يحدّث قائمة الصور كاملة؛ عدم إرسال ملفات جديدة يحافظ على الصور الحالية.
+
+بالنسبة للأصناف، مسارات `/products/:id/variants` تستقبل مصفوفة JSON فقط ولا تدعم `multipart/form-data` لرفع ملفات الأصناف. أرسل رابط صورة واحداً في الحقل `image` داخل كل عنصر، أو احذفه ليستخدم الخادم صورة المنتج الأولى. عند إنشاء منتج بصنف بسيط، تُستخدم الصورة الأولى للمنتج كصورة الصنف. عدم إرسال صورة عند تعديل الصنف يحافظ على صورته الحالية.
 
 مثال إنشاء منتج باستخدام `FormData`:
 
@@ -212,7 +198,7 @@ await fetch('/api/products', {
 });
 ```
 
-أرسل حقول المنتج أو الصنف النصية ضمن `FormData` أيضاً. لإرفاق صورة صنف، استخدم `formData.append('image', imageFile)`؛ لا تضبط ترويسة `Content-Type` يدوياً حتى يضيف المتصفح حدّ `multipart/form-data` تلقائياً.
+أرسل حقول المنتج النصية ضمن `FormData` أيضاً. لا تضبط ترويسة `Content-Type` يدوياً حتى يضيف المتصفح حدّ `multipart/form-data` تلقائياً. أما الأصناف فتُرسل كمصفوفة JSON عبر طلباتها المخصصة، وصورها كروابط URL.
 
 ---
 

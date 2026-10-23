@@ -1,4 +1,5 @@
 const Variant = require('../models/Variant');
+const { STATUS } = require('../constants/enums');
 const { getAttributeEntries } = require('./attributes');
 
 function toProductResponse(product, variants = product.variants || []) {

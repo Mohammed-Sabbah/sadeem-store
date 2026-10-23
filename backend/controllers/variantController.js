@@ -219,6 +219,9 @@ async function deleteVariants(req, res, next) {
             await deactivateProductWithNoActiveVariants(product);
         }
 
+        await product.populate('categoryId', 'title slug variantAttributes');
+        await product.populate({ path: 'storeId', select: 'name' });
+
         return success(res, 200, {
             message: variantsToDelete.length === 1
                 ? 'Variant deleted successfully'

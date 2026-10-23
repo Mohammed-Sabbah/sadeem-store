@@ -42,6 +42,7 @@ export interface OptionDefinition {
   unit?: string | null;
   values: OptionDefinitionValue[];
   isActive: boolean;
+    status?: 'active' | 'inActive';
 }
 
 export interface ProductOption {
@@ -66,6 +67,7 @@ export interface ProductVariant {
   originalPrice?: number | null;
   stock: number;
   isActive: boolean;
+  status?: 'active' | 'inActive';
   image?: string;
   images?: string[];
 }
@@ -123,6 +125,7 @@ export interface ProductFormData {
     originalPrice?: number | null;
     stock: number;
     isActive: boolean;
+    status?: 'active' | 'inActive';
     image?: string;
     imageFile?: File;
     images?: string[];

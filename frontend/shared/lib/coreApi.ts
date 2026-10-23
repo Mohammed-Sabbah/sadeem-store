@@ -150,6 +150,14 @@ export function patchRequest<T>(path: string, body?: any, options?: RequestOptio
   });
 }
 
-export function deleteRequest<T>(path: string, options?: RequestOptions) {
-  return sendRequest<T>(path, { method: 'DELETE', ...options });
+export function deleteRequest<T>(path: string, body?: any, options?: RequestOptions) {
+  const isOptionsObject = body && typeof body === 'object' && !Array.isArray(body) && ('timeoutMs' in body || 'headers' in body || 'signal' in body);
+  const resolvedBody = isOptionsObject ? undefined : body;
+  const resolvedOptions = isOptionsObject ? body : options;
+
+  return sendRequest<T>(path, {
+    method: 'DELETE',
+    ...(resolvedBody !== undefined ? { body: resolvedBody instanceof FormData ? resolvedBody : JSON.stringify(resolvedBody) } : {}),
+    ...resolvedOptions,
+  });
 }

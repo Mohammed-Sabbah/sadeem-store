@@ -77,21 +77,22 @@ export const sellerProductService = {
 
   updateVariant(productId: string, variantId: string, values: Partial<Pick<SellerVariant, 'attributes' | 'price' | 'stock' | 'status'>>) {
     return unwrap(patchRequest<{ product: SellerProduct }>(
-      `/api/products/${productId}/variants/${variantId}`,
-      values
+      `/api/products/${productId}/variants`,
+      [{ variantId, ...values }]
     )).then((result) => result.product);
   },
 
   createVariant(productId: string, values: Pick<SellerVariant, 'attributes' | 'price' | 'stock'>) {
     return unwrap(postRequest<{ product: SellerProduct }>(
       `/api/products/${productId}/variants`,
-      values
+      [values]
     )).then((result) => result.product);
   },
 
   deleteVariant(productId: string, variantId: string) {
     return unwrap(deleteRequest<{ product: SellerProduct }>(
-      `/api/products/${productId}/variants/${variantId}`
+      `/api/products/${productId}/variants`,
+      [variantId]
     )).then((result) => result.product);
   },
 

@@ -79,6 +79,7 @@ export const merchantService = {
         originalPrice: cmpPrice,
         stock: Number(v.stock) || 0,
         isActive: v.status !== undefined ? v.status === 'active' : (v.isActive !== undefined ? v.isActive : true),
+        status: v.status || 'active',
         images: v.images || (v.image ? [v.image] : []),
       };
     });
@@ -213,23 +214,82 @@ export const merchantService = {
 
       const p = res.data.product;
 
-      // 2. If any variant has a specific imageFile, upload it concurrently
-      if (!formData.isSimple && Array.isArray(formData.variants) && Array.isArray(p.variants)) {
-        const variantImageFiles = formData.variants
-          .map((v, idx) => ({ file: v.imageFile, idx }))
-          .filter((item): item is { file: File; idx: number } => item.file instanceof File);
+      // 2. Post-Creation Variant Synchronization (Variant Images & Inactive Statuses)
+      // When files were uploaded, variants originally had local blob/base64 previews,
+      // and backend defaulted them to images[0]. Now that Cloudinary uploaded the files,
+      // p.images contains the final URLs in the same index order as formData.images/imageFiles.
+      if (
+        !formData.isSimple &&
+        Array.isArray(formData.variants) &&
+        Array.isArray(p.variants) &&
+        p.variants.length > 0
+      ) {
+        const variantUpdates: Array<{
+          variantId: string;
+          image?: string;
+          status?: 'active' | 'inActive';
+        }> = [];
 
-        if (variantImageFiles.length > 0) {
-          await Promise.allSettled(
-            variantImageFiles.map(async ({ file, idx }) => {
-              const targetVarId = p.variants[idx]?._id;
-              if (targetVarId) {
-                const vFd = new FormData();
-                vFd.append('image', file);
-                await patchRequest('/api/products/' + p._id + '/variants/' + targetVarId, vFd);
-              }
-            })
-          );
+        p.variants.forEach((dbVar: any, idx: number) => {
+          // Robust attribute matching with index fallback
+          const formVar =
+            formData.variants.find((fv) => {
+              const dbAttrs =
+                dbVar.attributes instanceof Map
+                  ? Object.fromEntries(dbVar.attributes)
+                  : dbVar.attributes || {};
+              const fvAttrs = fv.attributes || {};
+              const dbKeys = Object.keys(dbAttrs);
+              const fvKeys = Object.keys(fvAttrs);
+              if (dbKeys.length !== fvKeys.length) return false;
+              return fvKeys.every(
+                (k) =>
+                  String(fvAttrs[k] ?? '').trim().toLowerCase() ===
+                  String(dbAttrs[k] ?? '').trim().toLowerCase()
+              );
+            }) || formData.variants[idx];
+
+          if (!formVar) return;
+
+          let targetImageUrl: string | undefined;
+
+          // If formVar had a direct remote URL
+          if (
+            typeof formVar.image === 'string' &&
+            (formVar.image.startsWith('http://') || formVar.image.startsWith('https://'))
+          ) {
+            targetImageUrl = formVar.image;
+          } else if (
+            typeof formVar.image === 'string' &&
+            Array.isArray(formData.images) &&
+            Array.isArray(p.images)
+          ) {
+            // Find which gallery index was selected
+            const imgIdx = formData.images.indexOf(formVar.image);
+            if (imgIdx >= 0 && p.images[imgIdx]) {
+              targetImageUrl = p.images[imgIdx];
+            }
+          }
+
+          const hasImageChange = Boolean(targetImageUrl && targetImageUrl !== dbVar.image);
+          const isExplicitlyInactive =
+            formVar.status === 'inActive' || formVar.isActive === false;
+
+          if (hasImageChange || isExplicitlyInactive) {
+            variantUpdates.push({
+              variantId: String(dbVar._id),
+              ...(hasImageChange ? { image: targetImageUrl } : {}),
+              ...(isExplicitlyInactive ? { status: 'inActive' } : {}),
+            });
+          }
+        });
+
+        if (variantUpdates.length > 0) {
+          try {
+            await this.batchUpdateVariants(p._id, variantUpdates);
+          } catch (patchErr) {
+            console.warn('Post-creation variant sync warning:', patchErr);
+          }
         }
       }
 
@@ -275,7 +335,9 @@ export const merchantService = {
       }
 
       if (resolvedVariantId && /^[0-9a-fA-F]{24}$/.test(resolvedVariantId)) {
-        const res = await patchRequest(`/api/products/${productId}/variants/${resolvedVariantId}`, { stock: cleanStock });
+        const res = await this.batchUpdateVariants(productId, [
+          { variantId: resolvedVariantId, stock: cleanStock },
+        ]);
         return { success: res.success, data: res.data, message: res.message };
       }
       return { success: false, message: 'تعذر تحديد الصنف لتحديث المخزون' };
@@ -390,6 +452,52 @@ export const merchantService = {
   /**
    * مزامنة وتحديث الأصناف والمتغيرات عبر مسارات /api/products/:id/variants
    */
+  /**
+   * 1. إضافة أصناف جديدة دفعة واحدة (Batch Create)
+   */
+  async batchCreateVariants(
+    productId: string,
+    variants: Array<{
+      attributes: Record<string, string>;
+      price: number;
+      stock: number;
+      image?: string;
+    }>
+  ): Promise<{ success: boolean; data?: any; message?: string }> {
+    return postRequest(`/api/products/${productId}/variants`, variants);
+  },
+
+  /**
+   * 2. تعديل أصناف قائمة دفعة واحدة (Batch Update)
+   */
+  async batchUpdateVariants(
+    productId: string,
+    updates: Array<{
+      variantId: string;
+      price?: number;
+      stock?: number;
+      status?: 'active' | 'inActive';
+      attributes?: Record<string, string>;
+      image?: string;
+    }>
+  ): Promise<{ success: boolean; data?: any; message?: string }> {
+    return patchRequest(`/api/products/${productId}/variants`, updates);
+  },
+
+  /**
+   * 3. حذف أصناف دفعة واحدة (Batch Delete)
+   */
+  async batchDeleteVariants(
+    productId: string,
+    variantIds: string[]
+  ): Promise<{ success: boolean; message?: string }> {
+    if (!variantIds.length) return { success: true };
+    return deleteRequest(`/api/products/${productId}/variants`, variantIds);
+  },
+
+  /**
+   * مزامنة وتحديث الأصناف والمتغيرات بنظام الدُفعات (Batch Sync)
+   */
   async syncProductVariants(
     productId: string,
     variants: any[]
@@ -397,57 +505,63 @@ export const merchantService = {
     try {
       const currentProdRes = await this.getProductById(productId);
       const existingVariants = currentProdRes.data?.variants || [];
+      const existingIdSet = new Set(existingVariants.map((ev) => String(ev._id)));
 
-      for (let i = 0; i < variants.length; i++) {
-        const v = variants[i];
-        const rawId = v._id || v.id;
-        const isExisting = rawId && existingVariants.some((ev) => String(ev._id) === String(rawId));
+      const toCreate: Array<{ attributes: Record<string, string>; price: number; stock: number; image?: string }> = [];
+      const toUpdate: Array<{ variantId: string; price?: number; stock?: number; status?: 'active' | 'inActive'; attributes?: Record<string, string>; image?: string }> = [];
 
-        const variantPayload: Record<string, any> = {
-          price: Number(v.price) || 0,
-          stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
-          attributes: v.attributes || {},
-        };
+      for (const v of variants) {
+        const rawId = v._id || v.id || v.dbId;
+        const isExisting = rawId && existingIdSet.has(String(rawId));
 
         const fallbackImg = typeof v.image === 'string' && (v.image.startsWith('http://') || v.image.startsWith('https://'))
           ? v.image
           : currentProdRes.data?.images?.[0];
-        if (fallbackImg) {
-          variantPayload.image = fallbackImg;
-        }
-
-        let varRes;
-        let targetVarId = rawId;
 
         if (isExisting) {
-          varRes = await patchRequest(`/api/products/${productId}/variants/${rawId}`, variantPayload);
+          toUpdate.push({
+            variantId: String(rawId),
+            price: Number(v.price) || 0,
+            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+            ...(v.attributes ? { attributes: v.attributes } : {}),
+            ...(fallbackImg ? { image: fallbackImg } : {}),
+            ...(v.status ? { status: v.status } : {}),
+          });
         } else {
-          varRes = await postRequest<{ variant?: any }>(`/api/products/${productId}/variants`, variantPayload);
-          targetVarId = varRes.data?.variant?._id;
-        }
-
-        if (!varRes.success) {
-          return { success: false, message: varRes.message || `فشل حفظ الصنف رقم ${i + 1}` };
-        }
-
-        if (v.imageFile && targetVarId) {
-          const vFd = new FormData();
-          vFd.append('image', v.imageFile);
-          await patchRequest(`/api/products/${productId}/variants/${targetVarId}`, vFd);
+          toCreate.push({
+            price: Number(v.price) || 0,
+            stock: Math.max(0, Math.floor(Number(v.stock) || 0)),
+            attributes: v.attributes || {},
+            ...(fallbackImg ? { image: fallbackImg } : {}),
+          });
         }
       }
 
-      // حذف الأصناف التي أزالها التاجر من الواجهة
+      // 1. تنفيذ التعديل
+      if (toUpdate.length > 0) {
+        const updateRes = await this.batchUpdateVariants(productId, toUpdate);
+        if (!updateRes.success) {
+          return { success: false, message: updateRes.message || 'فشل تحديث الأصناف الحالية' };
+        }
+      }
+
+      // 2. تنفيذ الإضافة
+      if (toCreate.length > 0) {
+        const createRes = await this.batchCreateVariants(productId, toCreate);
+        if (!createRes.success) {
+          return { success: false, message: createRes.message || 'فشل إضافة الأصناف الجديدة' };
+        }
+      }
+
+      // 3. حذف الأصناف القديمة التي أزالها التاجر من الواجهة
       if (variants.length > 0) {
-        const activeNewIds = new Set(variants.map((v) => String(v._id || v.id)).filter(Boolean));
-        for (const ev of existingVariants) {
-          if (!activeNewIds.has(String(ev._id))) {
-            try {
-              await deleteRequest(`/api/products/${productId}/variants/${ev._id}`);
-            } catch (delErr) {
-              console.warn('Could not delete obsolete variant:', ev._id, delErr);
-            }
-          }
+        const activeIds = new Set(variants.map((v) => String(v._id || v.id || v.dbId)).filter(Boolean));
+        const toDeleteIds = existingVariants
+          .map((ev) => String(ev._id))
+          .filter((id) => !activeIds.has(id));
+
+        if (toDeleteIds.length > 0) {
+          await this.batchDeleteVariants(productId, toDeleteIds);
         }
       }
 
@@ -474,11 +588,13 @@ export const merchantService = {
 
         if (currentCatId && String(currentCatId) !== String(formData.categoryId)) {
           const oldVariants = currentProdRes.data?.variants || [];
-          for (const oldVar of oldVariants) {
-            try {
-              await deleteRequest(`/api/products/${productId}/variants/${oldVar._id}`);
-            } catch (delErr) {
-              console.warn('Could not delete old variant before category change:', delErr);
+          const oldVariantIds = oldVariants
+            .map((oldVar) => String(oldVar._id))
+            .filter(Boolean);
+          if (oldVariantIds.length > 0) {
+            const delRes = await this.batchDeleteVariants(productId, oldVariantIds);
+            if (!delRes.success) {
+              console.warn('Could not delete old variants before category change:', delRes.message);
             }
           }
         }
@@ -523,10 +639,9 @@ export const merchantService = {
         const prod = await this.getProductById(productId);
         const defVarId = prod.data?.variants?.[0]?._id;
         if (defVarId) {
-          await patchRequest(`/api/products/${productId}/variants/${defVarId}`, {
-            price: Number(formData.simplePrice) || 0,
-            stock: Math.max(0, Math.floor(Number(formData.simpleStock) || 0)),
-          });
+          await this.batchUpdateVariants(productId, [
+            { variantId: defVarId, price: Number(formData.simplePrice) || 0, stock: Math.max(0, Math.floor(Number(formData.simpleStock) || 0)) },
+          ]);
         }
       }
 
@@ -550,26 +665,17 @@ export const merchantService = {
       stock?: number;
       attributes?: Record<string, any>;
       status?: 'active' | 'inActive';
+      image?: string;
     }
   ): Promise<{ success: boolean; message?: string }> {
-    return patchRequest(`/api/products/${productId}/variants/${variantId}`, data);
-  },
-
-  async uploadVariantImage(
-    productId: string,
-    variantId: string,
-    file: File
-  ): Promise<{ success: boolean; message?: string }> {
-    const vFd = new FormData();
-    vFd.append('image', file);
-    return patchRequest(`/api/products/${productId}/variants/${variantId}`, vFd);
+    return this.batchUpdateVariants(productId, [{ variantId, ...data }]);
   },
 
   async addCustomVariant(
     productId: string,
     data: { attributes: Record<string, string>; price: number; stock: number; image?: string }
   ): Promise<{ success: boolean; data?: any; message?: string }> {
-    return postRequest(`/api/products/${productId}/variants`, data);
+    return this.batchCreateVariants(productId, [data]);
   },
 
   async updateVariantStatus(
@@ -577,14 +683,14 @@ export const merchantService = {
     variantId: string,
     status: 'active' | 'inActive'
   ): Promise<{ success: boolean; message?: string }> {
-    return patchRequest(`/api/products/${productId}/variants/${variantId}/status`, { status });
+    return this.batchUpdateVariants(productId, [{ variantId, status }]);
   },
 
   async deleteProductVariant(
     productId: string,
     variantId: string
   ): Promise<{ success: boolean; message?: string }> {
-    return deleteRequest(`/api/products/${productId}/variants/${variantId}`);
+    return this.batchDeleteVariants(productId, [variantId]);
   },
 
   async fetchOptionDefinitions(): Promise<{

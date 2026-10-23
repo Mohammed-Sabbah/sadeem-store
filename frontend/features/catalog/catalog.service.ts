@@ -74,7 +74,7 @@ export interface CatalogProduct extends Product {
   categoryId: string;
   categoryTitle: string;
   variants: ApiVariant[];
-  variantDefinitions: { name: string; values: string[] }[];
+  variantDefinitions: { key?: string; name: string; values: string[] }[];
   colorImageMap: Record<string, string>;
   isSimple: boolean;
   stock: number;
@@ -91,7 +91,12 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
   if (!product || !product._id) return null;
 
   const rawVariants = Array.isArray(product.variants) ? product.variants : [];
-  const validVariants = rawVariants.filter((v) => !v.isDeleted);
+  const validVariants = rawVariants.filter(
+    (v) =>
+      !v.isDeleted &&
+      v.status !== 'inActive' &&
+      (!v.approveStatus || v.approveStatus === 'approved')
+  );
 
   const resolvedImage =
     (product.image && product.image.trim()) ||
@@ -121,14 +126,13 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
     });
   }
   variants.forEach((v) => {
-    const hasColor = Boolean(v.attributes?.['اللون'] || v.attributes?.['color']);
-    if (!hasColor) return;
+    if (v.image && v.image.trim()) {
+      gallerySet.add(v.image.trim());
+    }
     if (Array.isArray(v.images)) {
       v.images.forEach((img) => {
         if (img && img.trim()) gallerySet.add(img.trim());
       });
-    } else if (v.image && v.image.trim()) {
-      gallerySet.add(v.image.trim());
     }
   });
   const gallery = gallerySet.size > 0 ? Array.from(gallerySet) : [DEFAULT_CATALOG_PRODUCT_IMAGE];
@@ -136,24 +140,54 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
   // 2. Build color-to-image map
   const colorImageMap: Record<string, string> = {};
   variants.forEach((v) => {
-    const colorVal = v.attributes?.['اللون'] || v.attributes?.['color'];
-    const vImg = v.images?.[0] || v.image;
+    const colorVal =
+      v.attributes?.['اللون'] ||
+      v.attributes?.['color'] ||
+      v.attributes?.['Color'] ||
+      v.attributes?.['لون'];
+    const vImg = v.image || (v.images?.[0]);
     if (colorVal && vImg && !colorImageMap[colorVal]) {
       colorImageMap[colorVal] = vImg;
     }
   });
 
   // 3. Derive variant definitions
-  let definitions: { name: string; values: string[] }[] = [];
+  let definitions: { key?: string; name: string; values: string[] }[] = [];
+
+  const category = typeof product.categoryId === 'object' ? product.categoryId : null;
+  const catVariantAttrs = (category as any)?.variantAttributes as { name: string; key?: string }[] | undefined;
+
+  const catAttrMap = new Map<string, { key: string; name: string }>();
+  if (Array.isArray(catVariantAttrs)) {
+    catVariantAttrs.forEach((ca) => {
+      const k = (ca.key || ca.name || '').trim();
+      const n = (ca.name || ca.key || '').trim();
+      if (k) catAttrMap.set(k.toLowerCase(), { key: k, name: n });
+      if (n) catAttrMap.set(n.toLowerCase(), { key: k || n, name: n });
+    });
+  }
+
+  const standardNameMap: Record<string, string> = {
+    color: 'اللون',
+    colour: 'اللون',
+    size: 'المقاس',
+    material: 'الخامة',
+    weight: 'الوزن',
+    capacity: 'السعة',
+    flavor: 'النكهة',
+    style: 'النمط',
+  };
 
   if (Array.isArray(product.options) && product.options.length > 0) {
     definitions = product.options
       .filter((o) => o.values && o.values.length > 0)
       .map((o) => {
         const rawName = o.name || o.label || o.key || '';
+        const k = getAttributeKey(o.key || rawName);
+        const catInfo = catAttrMap.get(k.toLowerCase());
         return {
-          key: getAttributeKey(o.key || rawName),
-          name: getAttributeDisplayName(rawName),
+          key: catInfo?.key || k,
+          name: catInfo?.name || standardNameMap[k.toLowerCase()] || getAttributeDisplayName(rawName),
           values: o.values,
         };
       });
@@ -165,15 +199,23 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
       if (v.attributes && typeof v.attributes === 'object') {
         Object.entries(v.attributes).forEach(([k, val]) => {
           if (k && val && String(val).trim()) {
-            const attrKey = getAttributeKey(k);
-            if (!attrMap[attrKey]) {
-              attrMap[attrKey] = {
-                key: attrKey,
-                name: getAttributeDisplayName(k),
+            const rawKey = k.trim();
+            const lowerKey = rawKey.toLowerCase();
+            const catInfo = catAttrMap.get(lowerKey);
+            const canonicalKey = catInfo?.key || rawKey;
+            const displayName =
+              catInfo?.name ||
+              standardNameMap[lowerKey] ||
+              getAttributeDisplayName(rawKey);
+
+            if (!attrMap[canonicalKey]) {
+              attrMap[canonicalKey] = {
+                key: canonicalKey,
+                name: displayName,
                 values: new Set(),
               };
             }
-            attrMap[attrKey].values.add(String(val).trim());
+            attrMap[canonicalKey].values.add(String(val).trim());
           }
         });
       }
@@ -188,7 +230,6 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
 
   const isSimple = definitions.length === 0;
 
-  const category = typeof product.categoryId === 'object' ? product.categoryId : null;
   const store = typeof product.storeId === 'object' ? product.storeId : null;
 
   const price = available.price || (product as any).minPrice || 0;

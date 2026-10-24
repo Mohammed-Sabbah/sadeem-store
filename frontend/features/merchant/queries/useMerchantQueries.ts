@@ -302,6 +302,8 @@ export function useSaveProductStudioMutation() {
       );
 
       if (mode === 'create') {
+        const isSimple = variantsRows.length === 0;
+
         const hasActiveVariant = variantsRows.some(
           (r) => (r.status ? r.status === 'active' : r.isEnabled !== false)
         );
@@ -313,15 +315,33 @@ export function useSaveProductStudioMutation() {
           title: cleanTitle,
           description: description.trim(),
           categoryId,
-          price:
-            variantsRows.length > 0 && variantsRows[0].price !== ''
-              ? Number(variantsRows[0].price)
-              : Number(basePrice) || 0,
-          compareAtPrice: baseCompareAtPrice !== '' ? Number(baseCompareAtPrice) : undefined,
-          totalStock:
-            variantsRows.length > 0
-              ? variantsRows.reduce((sum, r) => sum + (Number(r.stock) || 0), 0)
-              : Number(baseStock) || 0,
+          isSimple,
+          simplePrice: isSimple ? (Number(basePrice) || 0) : undefined,
+          simpleStock: isSimple ? (Number(baseStock) || 0) : undefined,
+          price: isSimple
+            ? (Number(basePrice) || 0)
+            : (variantsRows[0]?.price !== '' ? Number(variantsRows[0].price) : 0),
+          totalStock: isSimple
+            ? (Number(baseStock) || 0)
+            : variantsRows.reduce((sum, r) => sum + (Number(r.stock) || 0), 0),
+          variants: isSimple
+            ? undefined
+            : variantsRows.map((r) => {
+                const rowActive = r.status ? r.status === 'active' : r.isEnabled !== false;
+                return {
+                  attributes: r.attributes,
+                  price: Number(r.price),
+                  compareAtPrice:
+                    r.compareAtPrice !== '' && r.compareAtPrice !== undefined
+                      ? Number(r.compareAtPrice)
+                      : undefined,
+                  stock: Number(r.stock) || 0,
+                  sku: r.sku || undefined,
+                  status: rowActive ? ('active' as const) : ('inActive' as const),
+                  image: r.image || undefined,
+                };
+              }),
+          images: existingKeptUrls,
           existingImages: existingKeptUrls,
           imageFiles: imageFiles.length > 0 ? imageFiles : undefined,
           status: targetProductActive ? 'active' : 'inActive',
@@ -332,30 +352,7 @@ export function useSaveProductStudioMutation() {
           throw new Error(createRes.message || 'فشل إنشاء الصنف');
         }
 
-        const createdId = createRes.data._id;
-
-        // Batch create variants if options were defined
-        if (variantsRows.length > 0) {
-          const variantsPayload = variantsRows.map((r) => {
-            const rowActive = r.status ? r.status === 'active' : r.isEnabled !== false;
-            return {
-              attributes: r.attributes,
-              price: Number(r.price),
-              compareAtPrice:
-                r.compareAtPrice !== '' && r.compareAtPrice !== undefined
-                  ? Number(r.compareAtPrice)
-                  : undefined,
-              stock: Number(r.stock) || 0,
-              sku: r.sku || undefined,
-              status: rowActive ? ('active' as const) : ('inActive' as const),
-              images: r.image ? [r.image] : undefined,
-            };
-          });
-
-          await merchantService.batchCreateVariants(createdId, variantsPayload);
-        }
-
-        return { productId: createdId, title: cleanTitle };
+        return { productId: createRes.data._id, title: cleanTitle };
       } else {
         // mode === 'edit'
         if (!productId) {

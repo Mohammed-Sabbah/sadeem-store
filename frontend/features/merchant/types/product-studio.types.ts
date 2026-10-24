@@ -18,7 +18,7 @@ export interface VariantRowState {
   image?: string;
 }
 
-// Color Swatches Palette (Accurate RGB/Hex for Central Gaza Merchants)
+// Presentation-Only CSS Color Swatches Map (Maps common Arabic color names to visual hex dots)
 export const COLOR_SWATCHES: Record<string, { hex: string; border?: boolean }> = {
   'أسود': { hex: '#18181B' },
   'أبيض': { hex: '#FFFFFF', border: true },
@@ -38,8 +38,3 @@ export const COLOR_SWATCHES: Record<string, { hex: string; border?: boolean }> =
   'أخضر': { hex: '#15803D' },
   'أحمر': { hex: '#DC2626' },
 };
-
-// Quick Preset Suggestions
-export const PRESET_COLORS = ['أسود', 'أبيض', 'كحلي', 'رمادي', 'بيج', 'زيتي', 'أزرق', 'عنابي', 'بني'];
-export const PRESET_CLOTHING_SIZES = ['S', 'M', 'L', 'XL', 'XXL', '3XL'];
-export const PRESET_SHOE_SIZES = ['39', '40', '41', '42', '43', '44', '45'];

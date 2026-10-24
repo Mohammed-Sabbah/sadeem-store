@@ -288,7 +288,9 @@ export function ProductPricingAndOptionsCard({
 
                         {filteredUnselected.length === 0 && (
                           <div className="w-full py-2 text-center text-xs text-brand-muted">
-                            تم اختيار كافة الخيارات المقترحة
+                            {allowedValues.length === 0
+                              ? 'أدخل الخيارات المتوفرة لديك عبر الزر بالأسفل'
+                              : 'تم اختيار كافة الخيارات المقترحة'}
                           </div>
                         )}
                       </div>

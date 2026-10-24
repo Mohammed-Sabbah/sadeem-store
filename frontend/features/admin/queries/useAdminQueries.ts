@@ -137,3 +137,41 @@ export function useAdminStoreMutations() {
     isToggling: toggleStatusMutation.isPending,
   };
 }
+
+export function useAdminProductMutations() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  const approvalMutation = useMutation({
+    mutationFn: ({
+      productId,
+      approveStatus,
+      rejectReason,
+    }: {
+      productId: string;
+      approveStatus: 'approved' | 'rejected';
+      rejectReason?: string;
+    }) => adminService.updateProductApproval(productId, approveStatus, rejectReason),
+    onSuccess: (res, vars) => {
+      if (res.success) {
+        toast.success(
+          vars.approveStatus === 'approved'
+            ? 'تم تنشيط وفك تجميد الصنف بنجاح'
+            : 'تم إيقاف الصنف إدارياً'
+        );
+        queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.products });
+      } else {
+        toast.error(res.message || 'تعذر تحديث حالة الصنف');
+      }
+    },
+    onError: () => {
+      toast.error('حدث خطأ أثناء تحديث حالة الصنف');
+    },
+  });
+
+  return {
+    updateApproval: approvalMutation.mutate,
+    isUpdating: approvalMutation.isPending,
+  };
+}
+

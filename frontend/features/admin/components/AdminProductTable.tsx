@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { getProductTotalStock } from '../utils/productAdminFilters';
 
 interface AdminProductTableProps {
   products: any[];
@@ -71,7 +72,7 @@ export const AdminProductTable: React.FC<AdminProductTableProps> = ({
               const categoryTitle = typeof p.categoryId === 'object' ? p.categoryId?.title || 'صنف عام' : 'صنف عام';
               const priceLabel = getProductPrice(p);
               const isRejected = p.approveStatus === 'rejected';
-              const totalStock = Number(p.totalStock ?? p.stock ?? 0);
+              const totalStock = getProductTotalStock(p);
               const hasStock = p.inStock !== false && totalStock > 0;
 
               return (
@@ -196,7 +197,7 @@ export const AdminProductTable: React.FC<AdminProductTableProps> = ({
           const categoryTitle = typeof p.categoryId === 'object' ? p.categoryId?.title || 'صنف عام' : 'صنف عام';
           const priceLabel = getProductPrice(p);
           const isRejected = p.approveStatus === 'rejected';
-          const totalStock = Number(p.totalStock ?? p.stock ?? 0);
+          const totalStock = getProductTotalStock(p);
           const hasStock = p.inStock !== false && totalStock > 0;
 
           return (

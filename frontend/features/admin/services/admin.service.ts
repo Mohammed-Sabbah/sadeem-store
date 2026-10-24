@@ -108,7 +108,7 @@ export const adminService = {
    */
   async createCategory(data: {
     title: string;
-    variantAttributes?: Array<{ name: string; key: string; type: string }>;
+    variantAttributes?: Array<{ name: string; key: string; type: string; values?: string[] }>;
   }): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
       const res = await postRequest<{ category: any }>('/api/categories', data);
@@ -125,7 +125,7 @@ export const adminService = {
     id: string,
     data: {
       title?: string;
-      variantAttributes?: Array<{ name: string; key: string; type: string }>;
+      variantAttributes?: Array<{ name: string; key: string; type: string; values?: string[] }>;
       isActive?: boolean;
     }
   ): Promise<{ success: boolean; message?: string; data?: any }> {

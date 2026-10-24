@@ -55,7 +55,7 @@ export default function AdminCategoriesPage() {
 
   const handleModalSubmit = (data: {
     title: string;
-    variantAttributes: Array<{ name: string; key: string; type: string }>;
+    variantAttributes: Array<{ name: string; key: string; type: string; values: string[] }>;
   }) => {
     if (editingCategory) {
       updateCategory(

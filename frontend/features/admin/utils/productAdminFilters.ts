@@ -14,6 +14,15 @@ export interface AdminProductMetrics {
   outOfStock: number;
 }
 
+export function getProductTotalStock(p: any): number {
+  if (Array.isArray(p?.variants) && p.variants.length > 0) {
+    return p.variants
+      .filter((v: any) => !v.isDeleted)
+      .reduce((sum: number, v: any) => sum + Number(v.stock || 0), 0);
+  }
+  return Number(p?.totalStock ?? p?.stock ?? 0);
+}
+
 export function computeAdminProductMetrics(products: any[]): AdminProductMetrics {
   let approved = 0;
   let rejected = 0;
@@ -26,7 +35,7 @@ export function computeAdminProductMetrics(products: any[]): AdminProductMetrics
       approved += 1;
     }
 
-    const stock = Number(p.totalStock ?? p.stock ?? 0);
+    const stock = getProductTotalStock(p);
     const inStock = p.inStock !== false && stock > 0;
     if (!inStock) {
       outOfStock += 1;
@@ -55,7 +64,7 @@ export function filterAdminProducts(
     if (tab === 'approved' && p.approveStatus === 'rejected') return false;
     if (tab === 'rejected' && p.approveStatus !== 'rejected') return false;
     if (tab === 'out_of_stock') {
-      const stock = Number(p.totalStock ?? p.stock ?? 0);
+      const stock = getProductTotalStock(p);
       const inStock = p.inStock !== false && stock > 0;
       if (inStock) return false;
     }

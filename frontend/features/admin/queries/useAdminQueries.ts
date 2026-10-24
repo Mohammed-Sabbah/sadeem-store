@@ -182,7 +182,7 @@ export function useAdminCategoryMutations() {
   const createMutation = useMutation({
     mutationFn: (data: {
       title: string;
-      variantAttributes?: Array<{ name: string; key: string; type: string }>;
+      variantAttributes?: Array<{ name: string; key: string; type: string; values?: string[] }>;
     }) => adminService.createCategory(data),
     onSuccess: (res) => {
       if (res.success) {
@@ -205,7 +205,7 @@ export function useAdminCategoryMutations() {
       id: string;
       data: {
         title?: string;
-        variantAttributes?: Array<{ name: string; key: string; type: string }>;
+        variantAttributes?: Array<{ name: string; key: string; type: string; values?: string[] }>;
         isActive?: boolean;
       };
     }) => adminService.updateCategory(id, data),

@@ -52,9 +52,9 @@ const validateCategory = (partial = false) => [
                 !Array.isArray(attribute) &&
                 typeof attribute.name === 'string' &&
                 typeof attribute.key === 'string' &&
-                Object.keys(attribute).every((field) => ['name', 'key', 'type'].includes(field))
+                Object.keys(attribute).every((field) => ['name', 'key', 'type', 'values'].includes(field))
             )) {
-                throw new Error('Each variant attribute must contain a name and key, and only an optional type');
+                throw new Error('Each variant attribute must contain a name and key, and only optional type and values');
             }
             const keys = attributes.map((attribute) => attribute.key.trim().toLowerCase());
             if (new Set(keys).size !== keys.length) {
@@ -96,12 +96,15 @@ const validateCategory = (partial = false) => [
         Array.isArray(attributes)
             ? attributes
                 .filter((attribute) => attribute && typeof attribute === 'object')
-                .map(({ name, key, type }) => ({
+                .map(({ name, key, type, values }) => ({
                     name: typeof name === 'string' ? name.trim() : '',
                     key: typeof key === 'string' ? key.trim() : '',
                     type: ATTRIBUTE_VALUE_TYPE_VALUES.includes(type)
                         ? type
                         : ATTRIBUTE_VALUE_TYPE.STRING,
+                    values: Array.isArray(values)
+                        ? Array.from(new Set(values.filter((v) => typeof v === 'string' && v.trim()).map((v) => v.trim())))
+                        : [],
                 }))
             : []
     ),

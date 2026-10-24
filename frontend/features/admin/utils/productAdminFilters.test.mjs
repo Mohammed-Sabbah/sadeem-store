@@ -7,7 +7,7 @@ const mockProducts = [
     _id: 'p1',
     title: 'عسل سدر جبلي فاخر',
     approveStatus: 'approved',
-    totalStock: 15,
+    variants: [{ stock: 10 }, { stock: 5 }],
     inStock: true,
     storeId: { _id: 'store1', name: 'مناحل العسل' },
     categoryId: { _id: 'cat1', title: 'عسل وزيوت' },

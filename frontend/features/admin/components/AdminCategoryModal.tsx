@@ -12,7 +12,7 @@ interface AdminCategoryModalProps {
   onClose: () => void;
   onSubmit: (data: {
     title: string;
-    variantAttributes: Array<{ name: string; key: string; type: string }>;
+    variantAttributes: Array<{ name: string; key: string; type: string; values: string[] }>;
   }) => void;
   initialCategory?: any | null;
   isSubmitting?: boolean;
@@ -27,6 +27,7 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [attributes, setAttributes] = useState<CategoryAttributeDraft[]>([]);
+  const [valueInputs, setValueInputs] = useState<Record<number, string>>({});
   const [error, setError] = useState('');
 
   const isEdit = Boolean(initialCategory);
@@ -40,12 +41,14 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
             name: a.name || '',
             key: a.key || '',
             type: a.type || 'String',
+            values: Array.isArray(a.values) ? a.values : [],
           }))
         );
       } else {
         setTitle('');
         setAttributes([]);
       }
+      setValueInputs({});
       setError('');
     }
   }, [isOpen, initialCategory]);
@@ -64,12 +67,17 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
   const handleAddAttribute = () => {
     setAttributes((prev) => [
       ...prev,
-      { name: '', key: '', type: 'String' },
+      { name: '', key: '', type: 'String', values: [] },
     ]);
   };
 
   const handleRemoveAttribute = (index: number) => {
     setAttributes((prev) => prev.filter((_, i) => i !== index));
+    setValueInputs((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
   };
 
   const handleAttributeChange = (
@@ -88,6 +96,40 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
     });
   };
 
+  const handleAddValue = (attrIndex: number) => {
+    const raw = (valueInputs[attrIndex] || '').trim();
+    if (!raw) return;
+
+    const parts = raw
+      .split(/[,،]+/)
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0);
+
+    setAttributes((prev) => {
+      const next = [...prev];
+      const current = next[attrIndex].values || [];
+      const set = new Set(current);
+      for (const p of parts) {
+        set.add(p);
+      }
+      next[attrIndex] = { ...next[attrIndex], values: Array.from(set) };
+      return next;
+    });
+
+    setValueInputs((prev) => ({ ...prev, [attrIndex]: '' }));
+  };
+
+  const handleRemoveValue = (attrIndex: number, valIndex: number) => {
+    setAttributes((prev) => {
+      const next = [...prev];
+      next[attrIndex] = {
+        ...next[attrIndex],
+        values: (next[attrIndex].values || []).filter((_, i) => i !== valIndex),
+      };
+      return next;
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const validation = validateCategoryDraft(title, attributes);
@@ -100,6 +142,7 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
       name: a.name.trim(),
       key: cleanAttributeKey(a.key || a.name),
       type: a.type,
+      values: Array.isArray(a.values) ? a.values : [],
     }));
 
     onSubmit({
@@ -116,7 +159,7 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
       }}
     >
       <div
-        className="bg-brand-card rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl border border-brand-border text-right relative max-h-[90vh] overflow-y-auto scrollbar-none"
+        className="bg-brand-card rounded-2xl max-w-xl w-full p-6 space-y-5 shadow-2xl border border-brand-border text-right relative max-h-[90vh] overflow-y-auto scrollbar-none"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -152,7 +195,7 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
                 setTitle(e.target.value);
                 if (error) setError('');
               }}
-              placeholder="مثال: أجبان وألبان بلدية، تمور ومؤونة..."
+              placeholder="مثال: ملابس وأزياء، تمور ومؤونة..."
               className="w-full h-10 px-3 text-xs font-medium rounded-xl border border-brand-border bg-brand-surface text-brand-dark placeholder:text-brand-muted/60 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
             />
           </div>
@@ -165,7 +208,7 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
                   خصائص المتغيرات (Variant Attributes)
                 </span>
                 <span className="text-[10px] text-brand-muted block">
-                  الخصائص المتاحة لتجار هذه الفئة عند إضافة منتجاتهم (مثل الحجم، الوزن، النوع)
+                  الخصائص والخيارات المعيارية المتاحة لتجار هذه الفئة عند إضافة منتجاتهم
                 </span>
               </div>
 
@@ -180,50 +223,109 @@ export const AdminCategoryModal: React.FC<AdminCategoryModalProps> = ({
 
             {attributes.length === 0 ? (
               <div className="p-4 rounded-xl bg-brand-surface/40 border border-brand-border/60 text-center text-[11px] text-brand-muted">
-                لا توجد خصائص محددة بعد. يمكنك إضافة أبعاد كـ «الوزن» أو «الحجم» لمساعدة التجار.
+                لا توجد خصائص محددة بعد. يمكنك إضافة أبعاد كـ «اللون» أو «المقاس» لتنظيم خيارات التجار.
               </div>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {attributes.map((attr, idx) => (
                   <div
                     key={idx}
-                    className="p-3 rounded-xl bg-brand-surface/60 border border-brand-border flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
+                    className="p-3.5 rounded-xl bg-brand-surface/60 border border-brand-border space-y-2.5"
                   >
-                    <input
-                      type="text"
-                      value={attr.name}
-                      onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)}
-                      placeholder="اسم الخاصية (مثال: الحجم)"
-                      className="flex-1 h-9 px-2.5 text-xs font-medium rounded-lg border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                    />
+                    {/* Top Definition Row */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <input
+                        type="text"
+                        value={attr.name}
+                        onChange={(e) => handleAttributeChange(idx, 'name', e.target.value)}
+                        placeholder="اسم الخاصية (مثال: اللون، المقاس)"
+                        className="flex-1 h-9 px-2.5 text-xs font-medium rounded-lg border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      />
 
-                    <input
-                      type="text"
-                      value={attr.key}
-                      onChange={(e) => handleAttributeChange(idx, 'key', e.target.value)}
-                      placeholder="المفتاح (size)"
-                      dir="ltr"
-                      className="w-full sm:w-28 h-9 px-2.5 text-xs font-mono font-medium rounded-lg border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                    />
+                      <input
+                        type="text"
+                        value={attr.key}
+                        onChange={(e) => handleAttributeChange(idx, 'key', e.target.value)}
+                        placeholder="المفتاح (color)"
+                        className="w-full sm:w-28 h-9 px-2.5 text-xs font-mono font-medium rounded-lg border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      />
 
-                    <select
-                      value={attr.type}
-                      onChange={(e) => handleAttributeChange(idx, 'type', e.target.value)}
-                      className="w-full sm:w-24 h-9 px-2 text-xs font-bold rounded-lg border border-brand-border bg-brand-card text-brand-dark cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary"
-                    >
-                      <option value="String">نص</option>
-                      <option value="Number">رقم</option>
-                      <option value="Boolean">شرطي</option>
-                    </select>
+                      <select
+                        value={attr.type}
+                        onChange={(e) => handleAttributeChange(idx, 'type', e.target.value)}
+                        className="w-full sm:w-36 h-9 px-2 text-xs font-bold rounded-lg border border-brand-border bg-brand-card text-brand-dark cursor-pointer focus:outline-none focus:ring-1 focus:ring-brand-primary"
+                      >
+                        <option value="String">نص (خيارات أو كتابة)</option>
+                        <option value="Number">رقم (أبعاد وأوزان)</option>
+                        <option value="Boolean">منطقي (نعم / لا)</option>
+                      </select>
 
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveAttribute(idx)}
-                      className="w-9 h-9 rounded-lg border border-brand-border text-brand-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-                      title="حذف الخاصية"
-                    >
-                      ✕
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAttribute(idx)}
+                        className="w-9 h-9 rounded-lg border border-brand-border text-brand-muted hover:text-red-600 hover:bg-red-50 flex items-center justify-center transition-colors cursor-pointer shrink-0"
+                        title="حذف الخاصية"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    {/* Predefined Values Manager */}
+                    <div className="pt-2 border-t border-brand-border/40 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-brand-dark">
+                          القيم والخيارات المتاحة للتاجر ({attr.values?.length || 0}):
+                        </span>
+                        <span className="text-[10px] text-brand-muted">
+                          اضغط Enter أو زر الإضافة
+                        </span>
+                      </div>
+
+                      {/* Values Pills & Input */}
+                      <div className="p-2 rounded-lg bg-brand-card border border-brand-border flex flex-wrap items-center gap-1.5 min-h-[38px]">
+                        {(attr.values || []).map((val, vIdx) => (
+                          <span
+                            key={vIdx}
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-brand-surface text-brand-dark border border-brand-border text-xs font-bold"
+                          >
+                            <span>{val}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveValue(idx, vIdx)}
+                              className="text-brand-muted hover:text-red-600 transition-colors cursor-pointer text-[10px]"
+                              title="حذف القيمة"
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+
+                        <div className="flex items-center gap-1 flex-1 min-w-[150px]">
+                          <input
+                            type="text"
+                            placeholder="أضف قيمة (مثال: أحمر، أسود، XL)..."
+                            value={valueInputs[idx] || ''}
+                            onChange={(e) =>
+                              setValueInputs((prev) => ({ ...prev, [idx]: e.target.value }))
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleAddValue(idx);
+                              }
+                            }}
+                            className="flex-1 text-xs px-2 py-1 bg-transparent text-brand-dark placeholder:text-brand-muted/50 focus:outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleAddValue(idx)}
+                            className="px-2.5 py-1 text-[11px] font-bold rounded-md bg-brand-surface border border-brand-border text-brand-primary hover:bg-brand-primary hover:text-white transition-colors cursor-pointer shrink-0"
+                          >
+                            + إضافة
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

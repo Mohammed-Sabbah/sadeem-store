@@ -18,6 +18,10 @@ const variantAttributeSchema = new mongoose.Schema(
             enum: ATTRIBUTE_VALUE_TYPE_VALUES,
             default: ATTRIBUTE_VALUE_TYPE.STRING,
         },
+        values: {
+            type: [String],
+            default: [],
+        },
     },
     { _id: false }
 );

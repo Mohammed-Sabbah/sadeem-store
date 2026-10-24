@@ -6,6 +6,7 @@ test('cleanAttributeKey cleans raw strings into valid keys', () => {
   assert.equal(cleanAttributeKey('Color Size'), 'color_size');
   assert.equal(cleanAttributeKey('Weight-kg'), 'weight_kg');
   assert.equal(cleanAttributeKey('  volume__ml  '), 'volume_ml');
+  assert.equal(cleanAttributeKey('اللون والمقاس'), 'اللون_والمقاس');
 });
 
 test('validateCategoryDraft validates title length', () => {

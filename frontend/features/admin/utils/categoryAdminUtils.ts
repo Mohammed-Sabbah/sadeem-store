@@ -2,6 +2,7 @@ export interface CategoryAttributeDraft {
   name: string;
   key: string;
   type: 'String' | 'Number' | 'Boolean';
+  values: string[];
 }
 
 export function cleanAttributeKey(raw: string): string {
@@ -9,7 +10,7 @@ export function cleanAttributeKey(raw: string): string {
     .trim()
     .toLowerCase()
     .replace(/[\s\-_]+/g, '_')
-    .replace(/[^a-z0-9_]/g, '');
+    .replace(/[.$]/g, '');
 }
 
 export function validateCategoryDraft(

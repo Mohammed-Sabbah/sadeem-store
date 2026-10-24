@@ -10,6 +10,17 @@ interface AdminCategoryGridProps {
   isBusy?: boolean;
 }
 
+function getArabicType(type?: string): string {
+  switch (type) {
+    case 'Number':
+      return 'رقم';
+    case 'Boolean':
+      return 'نعم / لا';
+    default:
+      return 'نص';
+  }
+}
+
 export const AdminCategoryGrid: React.FC<AdminCategoryGridProps> = ({
   categories,
   onEdit,
@@ -43,19 +54,24 @@ export const AdminCategoryGrid: React.FC<AdminCategoryGridProps> = ({
             className="bg-brand-card rounded-2xl border border-brand-border p-5 space-y-4 shadow-2xs hover:border-brand-primary/40 transition-all flex flex-col justify-between"
           >
             {/* Top Info */}
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               <div className="flex items-start justify-between gap-3">
-                <div className="space-y-0.5 min-w-0">
-                  <h3 className="text-base font-black text-brand-dark truncate">
-                    {cat.title}
-                  </h3>
-                  <span className="text-[10px] font-mono font-medium text-brand-muted block dir-ltr text-right">
+                <div className="space-y-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-black text-brand-dark truncate">
+                      {cat.title}
+                    </h3>
+                  </div>
+                  <span className="text-[11px] font-mono font-medium text-brand-muted/80 block dir-ltr text-right">
                     /{cat.slug}
                   </span>
                 </div>
 
                 {/* Status Toggle Switch */}
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[10px] font-bold ${isActive ? 'text-brand-trust' : 'text-brand-muted'}`}>
+                    {isActive ? 'نشط' : 'معطل'}
+                  </span>
                   <button
                     type="button"
                     onClick={() => onToggleActive(cat)}
@@ -67,34 +83,65 @@ export const AdminCategoryGrid: React.FC<AdminCategoryGridProps> = ({
                   >
                     <span className="w-4.5 h-4.5 rounded-full bg-brand-card shadow-2xs" />
                   </button>
-                  <span className="text-[10px] font-bold text-brand-muted">
-                    {isActive ? 'نشط' : 'معطل'}
-                  </span>
                 </div>
               </div>
 
-              {/* Variant Attributes Preview */}
-              <div className="pt-2 border-t border-brand-border/40 space-y-1.5">
-                <span className="text-[10px] font-bold text-brand-muted block">
-                  خصائص المتغيرات ({attributes.length}):
-                </span>
+              {/* Variant Attributes & Values */}
+              <div className="pt-3 border-t border-brand-border/40 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-brand-dark">
+                    خصائص المتغيرات ({attributes.length})
+                  </span>
+                </div>
+
                 {attributes.length === 0 ? (
-                  <span className="text-[11px] text-brand-muted/70 block">
-                    صنف موحد (بدون أبعاد مخصصة)
+                  <span className="text-[11px] text-brand-muted block py-1">
+                    صنف قياسي موحد بدون خصائص متغيرات
                   </span>
                 ) : (
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {attributes.map((attr: any, idx: number) => (
-                      <span
-                        key={idx}
-                        className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-brand-surface text-brand-dark border border-brand-border"
-                      >
-                        <span>{attr.name}</span>
-                        <span className="text-[9px] text-brand-muted font-mono opacity-80">
-                          ({attr.type || 'String'})
-                        </span>
-                      </span>
-                    ))}
+                  <div className="space-y-2">
+                    {attributes.map((attr: any, idx: number) => {
+                      const typeArabic = getArabicType(attr.type);
+                      const values = Array.isArray(attr.values) ? attr.values : [];
+
+                      return (
+                        <div
+                          key={idx}
+                          className="p-2.5 rounded-xl bg-brand-surface/70 border border-brand-border/60 space-y-1.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black text-brand-dark">
+                              {attr.name}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-brand-card text-brand-muted border border-brand-border">
+                              {typeArabic}
+                            </span>
+                          </div>
+
+                          {values.length > 0 ? (
+                            <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                              {values.slice(0, 5).map((v: string, vIdx: number) => (
+                                <span
+                                  key={vIdx}
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-brand-card text-brand-dark border border-brand-border/80"
+                                >
+                                  {v}
+                                </span>
+                              ))}
+                              {values.length > 5 && (
+                                <span className="text-[10px] font-bold text-brand-primary px-1">
+                                  +{values.length - 5} خيارات
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-brand-muted block">
+                              خيارات حرة للتاجر عند الإضافة
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -102,8 +149,16 @@ export const AdminCategoryGrid: React.FC<AdminCategoryGridProps> = ({
 
             {/* Bottom Actions */}
             <div className="pt-3 border-t border-brand-border/60 flex items-center justify-between gap-2">
-              <span className="text-[10px] font-bold text-brand-muted">
-                كود: <span className="font-mono text-brand-dark">{cat._id?.slice(-6)}</span>
+              <span className="text-[11px] font-bold text-brand-muted">
+                {isActive ? (
+                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                    متاح بالمتجر
+                  </span>
+                ) : (
+                  <span className="text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200">
+                    موقوف مؤقتاً
+                  </span>
+                )}
               </span>
 
               <div className="flex items-center gap-1.5">

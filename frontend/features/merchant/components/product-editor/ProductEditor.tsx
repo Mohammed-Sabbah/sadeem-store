@@ -96,6 +96,7 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
           categoryAttributes={editor.categoryAttributes}
           matrix={editor.matrix}
           onRemoveVariantRow={editor.handleRemoveVariantRow}
+          onClearAllRows={editor.handleClearAllVariantRows}
           onOpenGalleryPicker={(idx) => editor.setGalleryPickerRowIdx(idx)}
           onOpenAddSingleModal={() => editor.setShowAddSingleModal(true)}
         />

@@ -176,6 +176,16 @@ export function useProductEditor({ mode, productId }: UseProductEditorOptions) {
     [matrixHook]
   );
 
+  const handleClearAllVariantRows = useCallback(() => {
+    const existingDbIds = matrixHook.variantsRows
+      .map((r) => r.dbId)
+      .filter((id): id is string => Boolean(id));
+    if (existingDbIds.length > 0) {
+      setDeletedDbIds((prev) => [...prev, ...existingDbIds]);
+    }
+    matrixHook.setVariantsRows([]);
+  }, [matrixHook]);
+
   // Deterministic Dirty State Calculation
   const isDirty = useMemo(() => {
     if (mode === 'create') {
@@ -426,6 +436,7 @@ export function useProductEditor({ mode, productId }: UseProductEditorOptions) {
     handleRemoveImage: mediaHook.handleRemoveImage,
     matrix: matrixHook,
     handleRemoveVariantRow,
+    handleClearAllVariantRows,
     singleVariantRequiredKeys,
     galleryPickerRowIdx,
     setGalleryPickerRowIdx,

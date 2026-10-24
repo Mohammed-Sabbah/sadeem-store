@@ -19,6 +19,7 @@ interface ProductPricingAndOptionsCardProps {
   categoryAttributes: CategoryVariantAttribute[];
   matrix: ReturnType<typeof useVariantMatrix>;
   onRemoveVariantRow: (index: number) => void;
+  onClearAllRows?: () => void;
   onOpenGalleryPicker: (rowIndex: number) => void;
   onOpenAddSingleModal: () => void;
 }
@@ -35,6 +36,7 @@ export function ProductPricingAndOptionsCard({
   categoryAttributes,
   matrix,
   onRemoveVariantRow,
+  onClearAllRows,
   onOpenGalleryPicker,
   onOpenAddSingleModal,
 }: ProductPricingAndOptionsCardProps) {
@@ -70,6 +72,14 @@ export function ProductPricingAndOptionsCard({
     (r) => (r.status ? r.status === 'active' : r.isEnabled !== false)
   ).length;
   const disabledVariantsCount = variantsRows.length - enabledVariantsCount;
+
+  const suggestedCount =
+    activeOptionKeys.length > 0
+      ? activeOptionKeys.reduce((acc, k) => {
+          const count = selectedAttributeValues[k]?.length || 0;
+          return acc * count;
+        }, 1)
+      : 0;
 
   return (
     <section className="bg-white rounded-2xl border border-brand-border/70 p-5 sm:p-7 shadow-xs space-y-5">
@@ -440,46 +450,43 @@ export function ProductPricingAndOptionsCard({
         </div>
       )}
 
-      {/* Action-Driven Cartesian Generator Button Bar */}
-      {activeOptionKeys.length > 0 && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border border-brand-primary/20 bg-brand-primary/5">
-          <div className="space-y-0.5">
-            <h4 className="text-xs font-black text-brand-dark flex items-center gap-1.5">
-              <span>تجهيز جدول الأصناف تلقائياً</span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary">
-                ({Object.values(selectedAttributeValues).reduce((acc, curr) => acc * (curr.length || 1), 1)} صنف مقترح)
-              </span>
-            </h4>
-            <p className="text-[11px] text-brand-muted">
-              دمج المقاسات والألوان المحددة في جدول الأصناف دفعة واحدة، مع الحفاظ على أسعارك وصورك الحالية.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => handleGenerateCartesian(basePrice, '', baseStock)}
-            className="h-8 px-4 rounded-lg bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover active:scale-95 transition-all shadow-2xs flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-          >
-            <span>توليد جدول الأصناف</span>
-          </button>
-        </div>
-      )}
-
-      {/* Generated Variants Table */}
+      {/* Generated Variants Table / Setup Empty State */}
       {variantsRows.length === 0 ? (
-        <div className="p-5 rounded-xl border border-dashed border-brand-border bg-brand-surface/40 text-center space-y-3 mt-4">
-          <div className="space-y-1">
-            <h4 className="text-xs font-black text-brand-dark">لا توجد أصناف في الجدول حالياً</h4>
-            <p className="text-[11px] text-brand-muted max-w-md mx-auto">
-              اختر المقاسات والألوان أعلاه واضغط على &quot;توليد جدول الأصناف&quot; لتجهيزها فوراً، أو أضف صنفاً يدوياً.
+        <div className="p-6 rounded-2xl border border-dashed border-brand-border/80 bg-brand-surface/30 text-center space-y-4 mt-4">
+          <div className="space-y-1.5 max-w-md mx-auto">
+            <h4 className="text-xs font-black text-brand-dark flex items-center justify-center gap-2">
+              <span>لا توجد أصناف في الجدول حالياً</span>
+              {suggestedCount > 0 && (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary">
+                  {suggestedCount} صنف مقترح
+                </span>
+              )}
+            </h4>
+            <p className="text-[11px] text-brand-muted leading-relaxed">
+              {suggestedCount > 0
+                ? 'حددت الخيارات والمقاسات أعلاه. اضغط على زر التوليد التلقائي لدمجها وإنشاء الجدول، أو أضف صنفاً محدداً يدوياً.'
+                : 'اختر المقاسات والألوان من الخيارات أعلاه لتجهيز الجدول تلقائياً، أو أضف صنفاً يدوياً.'}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onOpenAddSingleModal}
-            className="h-9 px-4 rounded-xl border border-brand-border bg-white hover:border-brand-primary text-brand-dark hover:text-brand-primary text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>+ إضافة صنف / توليفة مفردة</span>
-          </button>
+
+          <div className="flex items-center justify-center gap-2.5 flex-wrap">
+            {suggestedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => handleGenerateCartesian(basePrice, '', baseStock)}
+                className="h-9 px-4 rounded-xl bg-brand-primary text-white text-xs font-black hover:bg-brand-primary-hover active:scale-95 transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>⚡ توليد جدول الأصناف تلقائياً ({suggestedCount})</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onOpenAddSingleModal}
+              className="h-9 px-4 rounded-xl border border-brand-border bg-white hover:border-brand-primary text-brand-dark hover:text-brand-primary text-xs font-bold transition-all shadow-2xs inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
+            >
+              <span>+ إضافة صنف / توليفة يدوياً</span>
+            </button>
+          </div>
         </div>
       ) : (
         <div className="space-y-3 pt-4 border-t border-brand-border/50">
@@ -575,6 +582,21 @@ export function ProductPricingAndOptionsCard({
               >
                 <span>+ إضافة صنف يدوياً</span>
               </button>
+
+              {onClearAllRows && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('هل تريد حذف جميع الأصناف من الجدول لإعادة التجهيز؟')) {
+                      onClearAllRows();
+                    }
+                  }}
+                  className="h-8 px-2.5 rounded-lg border border-red-200/60 bg-red-50/30 hover:bg-red-50 text-red-600 text-[11px] font-bold transition-all shadow-2xs cursor-pointer active:scale-95"
+                  title="حذف كافة الأصناف لإعادة التوليد"
+                >
+                  <span>إفراغ الجدول</span>
+                </button>
+              )}
             </div>
           </div>
 

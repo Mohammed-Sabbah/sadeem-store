@@ -10,6 +10,7 @@ import {
 } from '../utils/productFilters';
 import { useMerchantProductFilters } from '../hooks/useMerchantProductFilters';
 import { MerchantProductFilterBar } from './MerchantProductFilterBar';
+import { MerchantQuickStockStepper } from './MerchantQuickStockStepper';
 
 export type { FilterTab };
 
@@ -214,40 +215,11 @@ export default function MerchantProductList({
                             </button>
                           ) : (
                             /* Simple Product Direct Stepper */
-                            <div className="inline-flex items-center gap-1 bg-brand-surface rounded-xl p-0.5 border border-brand-border shadow-2xs select-none">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const current = p.totalStock ?? 0;
-                                  if (current > 0) onQuickStockChange?.(p._id, current - 1);
-                                }}
-                                disabled={(p.totalStock ?? 0) <= 0}
-                                className="w-6 h-6 rounded-lg bg-brand-card text-brand-dark flex items-center justify-center font-black text-xs hover:bg-brand-surface active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none shadow-2xs"
-                                title="إنقاص قطعة واحدة (-1)"
-                              >
-                                -
-                              </button>
-
-                              <div
-                                className="px-2 text-xs font-black min-w-9 text-center text-brand-dark flex items-center justify-center gap-0.5"
-                                title="الكمية المتوفرة"
-                              >
-                                <span>{p.totalStock ?? 0}</span>
-                                <span className="text-[10px] font-medium text-brand-muted">ق</span>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const current = p.totalStock ?? 0;
-                                  onQuickStockChange?.(p._id, current + 1);
-                                }}
-                                className="w-6 h-6 rounded-lg bg-brand-card text-brand-dark flex items-center justify-center font-black text-xs hover:bg-brand-surface active:scale-90 transition-all cursor-pointer shadow-2xs"
-                                title="زيادة قطعة واحدة (+1)"
-                              >
-                                +
-                              </button>
-                            </div>
+                            <MerchantQuickStockStepper
+                              stock={p.totalStock ?? 0}
+                              onChange={(newStock) => onQuickStockChange?.(p._id, newStock)}
+                              size="md"
+                            />
                           )}
                         </td>
 
@@ -350,36 +322,12 @@ export default function MerchantProductList({
                                       </div>
 
                                       {/* Variant Stepper */}
-                                      <div className="inline-flex items-center bg-brand-surface rounded-lg p-0.5 border border-brand-border shadow-2xs select-none shrink-0">
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const current = v.stock ?? 0;
-                                            if (current > 0) {
-                                              onQuickStockChange?.(p._id, current - 1, v._id);
-                                            }
-                                          }}
-                                          disabled={(v.stock ?? 0) <= 0}
-                                          className="w-5 h-5 rounded-md bg-brand-card text-brand-dark flex items-center justify-center font-bold text-xs hover:bg-brand-surface active:scale-90 transition-all cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
-                                        >
-                                          -
-                                        </button>
-
-                                        <span className="px-1.5 text-xs font-black min-w-6 text-center text-brand-dark">
-                                          {v.stock}
-                                        </span>
-
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            const current = v.stock ?? 0;
-                                            onQuickStockChange?.(p._id, current + 1, v._id);
-                                          }}
-                                          className="w-5 h-5 rounded-md bg-brand-card text-brand-dark flex items-center justify-center font-bold text-xs hover:bg-brand-surface active:scale-90 transition-all cursor-pointer"
-                                        >
-                                          +
-                                        </button>
-                                      </div>
+                                      <MerchantQuickStockStepper
+                                        stock={v.stock ?? 0}
+                                        onChange={(newStock) => onQuickStockChange?.(p._id, newStock, v._id)}
+                                        size="sm"
+                                        showUnit={false}
+                                      />
                                     </div>
                                   );
                                 })}
@@ -492,34 +440,11 @@ export default function MerchantProductList({
                         {p.totalStock} ق ({p.variants?.length} متغيرات ▾)
                       </button>
                     ) : (
-                      <div className="inline-flex items-center bg-brand-surface rounded-xl p-1 border border-brand-border select-none">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const current = p.totalStock ?? 0;
-                            if (current > 0) onQuickStockChange?.(p._id, current - 1);
-                          }}
-                          disabled={(p.totalStock ?? 0) <= 0}
-                          className="w-8 h-8 rounded-lg bg-brand-card text-brand-dark font-bold text-sm flex items-center justify-center shadow-2xs active:scale-90 transition-transform cursor-pointer disabled:opacity-30 disabled:pointer-events-none"
-                          aria-label="إنقاص المخزون"
-                        >
-                          -
-                        </button>
-                        <span className="px-2.5 text-xs font-black min-w-9 text-center text-brand-dark">
-                          {p.totalStock ?? 0}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const current = p.totalStock ?? 0;
-                            onQuickStockChange?.(p._id, current + 1);
-                          }}
-                          className="w-8 h-8 rounded-lg bg-brand-card text-brand-dark font-bold text-sm flex items-center justify-center shadow-2xs active:scale-90 transition-transform cursor-pointer"
-                          aria-label="زيادة المخزون"
-                        >
-                          +
-                        </button>
-                      </div>
+                      <MerchantQuickStockStepper
+                        stock={p.totalStock ?? 0}
+                        onChange={(newStock) => onQuickStockChange?.(p._id, newStock)}
+                        size="lg"
+                      />
                     )}
 
                     {/* Toggle Active */}

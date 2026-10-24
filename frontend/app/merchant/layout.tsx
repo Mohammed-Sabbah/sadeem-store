@@ -10,13 +10,13 @@ import MerchantMobileDrawer from '@/features/merchant/components/MerchantMobileD
 
 function MerchantLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPendingPage = pathname === '/merchant/pending-approval';
+  const isIsolatedPage = pathname === '/merchant/pending-approval' || pathname === '/merchant/join';
 
   // If merchant is pending approval or joining, keep isolated minimal shell
-  if (isPendingPage) {
+  if (isIsolatedPage) {
     return (
       <div className="min-h-screen bg-brand-bg text-brand-dark font-almarai antialiased flex flex-col">
-        <main className="flex-1 w-full max-w-5xl mx-auto px-4 py-8">
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8">
           {children}
         </main>
       </div>

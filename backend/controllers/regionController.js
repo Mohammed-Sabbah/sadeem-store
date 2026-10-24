@@ -6,34 +6,28 @@ const { success, error } = require('../utils/responses');
  * مزامنة وغرس المحافظات الخمس في MongoDB بحالاتها الثلاث
  */
 async function ensureRegionsSeeded() {
-    const count = await Region.countDocuments();
     const orderMap = { central: 1, khan_younis: 2, gaza: 3, north: 4, rafah: 5 };
+    const validCodes = Object.keys(GAZA_REGIONS);
 
-    if (count === 0) {
-        const docs = Object.values(GAZA_REGIONS).map((reg) => ({
-            code: reg.id,
-            name: reg.name,
-            status: reg.status,
-            isActive: reg.status !== 'closed',
-            center: reg.center,
-            cities: reg.cities,
-            order: orderMap[reg.id] || 99,
-        }));
-        await Region.insertMany(docs);
-    } else {
-        // تحديث الحالات إذا كانت المستندات القديمة لا تملك status
-        for (const reg of Object.values(GAZA_REGIONS)) {
-            await Region.updateOne(
-                { code: reg.id },
-                {
-                    $set: {
-                        status: reg.status,
-                        isActive: reg.status !== 'closed',
-                        order: orderMap[reg.id] || 99,
-                    },
-                }
-            );
-        }
+    // تنظيف أي سجلات قديمة للمدن تم حفظها خطأ في جدول المحافظات
+    await Region.deleteMany({ code: { $nin: validCodes } });
+
+    for (const reg of Object.values(GAZA_REGIONS)) {
+        await Region.updateOne(
+            { code: reg.id },
+            {
+                $set: {
+                    code: reg.id,
+                    name: reg.name,
+                    status: reg.status,
+                    isActive: reg.status !== 'closed',
+                    center: reg.center,
+                    cities: reg.cities,
+                    order: orderMap[reg.id] || 99,
+                },
+            },
+            { upsert: true }
+        );
     }
 }
 

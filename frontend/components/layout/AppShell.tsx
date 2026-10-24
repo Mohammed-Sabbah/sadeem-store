@@ -12,12 +12,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const isAuthPage = pathname?.startsWith('/auth');
   const isMerchantPortal = pathname?.startsWith('/merchant');
+  const isAdminPortal = pathname?.startsWith('/admin');
   const isTransactional = pathname === '/checkout' || pathname === '/order-success' || pathname === '/tracking';
 
   // Strictly isolate merchant portal from customer storefront chrome (while keeping palette switcher available)
-  const showBottomNav = !isTransactional && !isAuthPage && !isMerchantPortal;
-  const showHeaderFooter = !isAuthPage && !isMerchantPortal;
-  const showPaletteSwitcher = !isTransactional && !isAuthPage;
+  const showBottomNav = !isTransactional && !isAuthPage && !isMerchantPortal && !isAdminPortal;
+  const showHeaderFooter = !isAuthPage && !isMerchantPortal && !isAdminPortal;
+  const showPaletteSwitcher = !isTransactional && !isAuthPage && !isAdminPortal;
 
   return (
     <div

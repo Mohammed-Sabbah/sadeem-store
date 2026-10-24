@@ -9,8 +9,16 @@ export function useProductMedia(initialImages: string[] = []) {
   const [isUploadingImages, setIsUploadingImages] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFilesSelected = useCallback(async (files: FileList | File[]) => {
-    const fileList = Array.from(files);
+  const handleFilesSelected = useCallback(async (eventOrFiles: React.ChangeEvent<HTMLInputElement> | FileList | File[]) => {
+    let fileList: File[] = [];
+    if ('target' in eventOrFiles) {
+      if (eventOrFiles.target.files) {
+        fileList = Array.from(eventOrFiles.target.files);
+      }
+      eventOrFiles.target.value = '';
+    } else {
+      fileList = Array.from(eventOrFiles);
+    }
     if (fileList.length === 0) return;
 
     setIsUploadingImages(true);

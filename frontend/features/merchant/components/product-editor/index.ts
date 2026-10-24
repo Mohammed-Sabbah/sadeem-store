@@ -1,9 +1,8 @@
-export { ProductEditor } from './ProductEditor';
-export { ProductBasicInfoSection } from './ProductBasicInfoSection';
-export { ProductPricingStockSection } from './ProductPricingStockSection';
-export { ProductMediaSection } from './ProductMediaSection';
-export { ProductOptionsBuilder } from './ProductOptionsBuilder';
-export { ProductVariantTable } from './ProductVariantTable';
-export { ProductVariantModal } from './ProductVariantModal';
-export { ProductGalleryPickerModal } from './ProductGalleryPickerModal';
-export { ProductEditorBottomBar } from './ProductEditorBottomBar';
+export * from './ProductEditor';
+export * from './ProductEditorialHeader';
+export * from './ProductInfoAndMediaCard';
+export * from './ProductPricingAndOptionsCard';
+export * from './ProductStickyBottomBar';
+export * from './ProductDeleteModal';
+export * from './ProductGalleryPickerModal';
+export * from './ProductVariantModal';

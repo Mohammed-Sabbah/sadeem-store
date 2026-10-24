@@ -64,7 +64,7 @@ export function useVariantMatrix(options: UseVariantMatrixOptions = {}) {
   }, []);
 
   const handleGenerateCartesian = useCallback(
-    (defaultPrice: number | '', defaultCompareAtPrice: number | '', defaultStock: number | '') => {
+    (defaultPrice: number | '' = '', defaultCompareAtPrice: number | '' = '', defaultStock: number | '' = 10) => {
       const activeKeysWithValues = activeOptionKeys.filter(
         (k) => selectedAttributeValues[k] && selectedAttributeValues[k].length > 0
       );
@@ -178,8 +178,24 @@ export function useVariantMatrix(options: UseVariantMatrixOptions = {}) {
     );
   }, []);
 
+  const handleEnableAllVariants = useCallback(() => {
+    setVariantsRows((prev) =>
+      prev.map((r) => ({
+        ...r,
+        status: 'active',
+        isEnabled: true,
+      }))
+    );
+  }, []);
+
   const handleRemoveVariantRow = useCallback((idx: number) => {
     setVariantsRows((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const handleUpdateVariantRow = useCallback((idx: number, patch: Partial<VariantRowState>) => {
+    setVariantsRows((prev) =>
+      prev.map((r, i) => (i === idx ? { ...r, ...patch } : r))
+    );
   }, []);
 
   const handleUpdateRowField = useCallback((idx: number, field: keyof VariantRowState, val: any) => {
@@ -262,7 +278,9 @@ export function useVariantMatrix(options: UseVariantMatrixOptions = {}) {
     handleApplyBulkPrice,
     handleApplyBulkStock,
     handleToggleVariantStatus,
+    handleEnableAllVariants,
     handleRemoveVariantRow,
+    handleUpdateVariantRow,
     handleUpdateRowField,
     handleAssignImageToRow,
     handleAddSingleCustomVariant,

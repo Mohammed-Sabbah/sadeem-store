@@ -599,6 +599,7 @@ export function useProductEditor({ mode, productId }: UseProductEditorOptions) {
     errorMessage,
     setErrorMessage,
     successMessage,
+    setSuccessMessage,
     handleSave,
     handleDeleteProduct,
     isDeleting,

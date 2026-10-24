@@ -85,6 +85,7 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
 
         {/* Card 2: Pricing, Stock & Progressive Options */}
         <ProductPricingAndOptionsCard
+          mode={mode}
           hasVariantsUnderTheHood={editor.hasVariantsUnderTheHood}
           basePrice={editor.basePrice}
           setBasePrice={editor.setBasePrice}

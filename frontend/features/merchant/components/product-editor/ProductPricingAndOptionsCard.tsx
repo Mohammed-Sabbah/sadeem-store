@@ -2,12 +2,13 @@
 
 import React from 'react';
 import type { CategoryVariantAttribute } from '@/features/store/services/taxonomy.service';
-import type { VariantRowState } from '../../types/product-studio.types';
+import type { VariantRowState, ProductEditorMode } from '../../types/product-studio.types';
 import type { useVariantMatrix } from '../../hooks/useVariantMatrix';
 import { COLOR_SWATCHES } from '../../types/product-studio.types';
 import { getAttributeKey, getAttributeDisplayName, isColorAttribute } from '@/shared/lib/attributeUtils';
 
 interface ProductPricingAndOptionsCardProps {
+  mode: ProductEditorMode;
   hasVariantsUnderTheHood: boolean;
   basePrice: number | '';
   setBasePrice: (val: number | '') => void;
@@ -23,6 +24,7 @@ interface ProductPricingAndOptionsCardProps {
 }
 
 export function ProductPricingAndOptionsCard({
+  mode,
   hasVariantsUnderTheHood,
   basePrice,
   setBasePrice,
@@ -487,9 +489,9 @@ export function ProductPricingAndOptionsCard({
                 قائمة الأصناف
               </h3>
               <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                {enabledVariantsCount} معروضة للبيع
+                {mode === 'create' ? `${variantsRows.length} صنف` : `${enabledVariantsCount} معروضة للبيع`}
               </span>
-              {disabledVariantsCount > 0 && (
+              {mode === 'edit' && disabledVariantsCount > 0 && (
                 <button
                   type="button"
                   onClick={handleEnableAllVariants}
@@ -588,7 +590,7 @@ export function ProductPricingAndOptionsCard({
                 <div
                   key={row.id || idx}
                   className={`p-3 rounded-xl border transition-all ${
-                    isActive
+                    isActive || mode === 'create'
                       ? 'bg-brand-surface/25 border-brand-border/70 shadow-2xs'
                       : 'bg-brand-surface/10 border-brand-border/30 opacity-40'
                   }`}
@@ -596,23 +598,25 @@ export function ProductPricingAndOptionsCard({
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     {/* Status Toggle & Details */}
                     <div className="flex items-center gap-2.5">
-                      {/* iOS Status Switch */}
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={isActive}
-                        onClick={() => handleToggleVariantStatus(idx)}
-                        className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer relative shrink-0 ${
-                          isActive ? 'bg-brand-primary' : 'bg-brand-border'
-                        }`}
-                        title={isActive ? 'إيقاف الصنف مؤقتاً (معطل)' : 'تفعيل الصنف للبيع (معروض)'}
-                      >
-                        <span
-                          className={`block w-4 h-4 rounded-full bg-white shadow-xs transition-transform transform ${
-                            isActive ? '-translate-x-4' : 'translate-x-0'
+                      {/* iOS Status Switch - Only in edit mode */}
+                      {mode === 'edit' && (
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={isActive}
+                          onClick={() => handleToggleVariantStatus(idx)}
+                          className={`w-9 h-5 rounded-full p-0.5 transition-colors cursor-pointer relative shrink-0 ${
+                            isActive ? 'bg-brand-primary' : 'bg-brand-border'
                           }`}
-                        />
-                      </button>
+                          title={isActive ? 'إيقاف الصنف مؤقتاً (معطل)' : 'تفعيل الصنف للبيع (معروض)'}
+                        >
+                          <span
+                            className={`block w-4 h-4 rounded-full bg-white shadow-xs transition-transform transform ${
+                              isActive ? '-translate-x-4' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      )}
 
                       {/* Variant Image from Gallery Picker */}
                       <div className="relative shrink-0">
@@ -644,15 +648,17 @@ export function ProductPricingAndOptionsCard({
 
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs font-black text-brand-dark">{label}</span>
-                        <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
-                            isActive
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : 'bg-zinc-100 text-zinc-500 border-zinc-200'
-                          }`}
-                        >
-                          {isActive ? 'معروض' : 'معطل'}
-                        </span>
+                        {mode === 'edit' && (
+                          <span
+                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
+                              isActive
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-zinc-100 text-zinc-500 border-zinc-200'
+                            }`}
+                          >
+                            {isActive ? 'معروض' : 'معطل'}
+                          </span>
+                        )}
                       </div>
                     </div>
 

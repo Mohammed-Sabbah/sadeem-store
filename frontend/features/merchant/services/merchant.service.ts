@@ -92,9 +92,9 @@ export const merchantService = {
 
     return {
       _id: p._id,
-      storeId: typeof p.storeId === 'object' ? p.storeId._id : p.storeId,
-      categoryId: p.categoryId,
-      categoryTitle: typeof p.categoryId === 'object' ? p.categoryId.title : undefined,
+      storeId: p.storeId && typeof p.storeId === 'object' ? p.storeId._id : p.storeId,
+      categoryId: p.categoryId && typeof p.categoryId === 'object' ? p.categoryId._id : p.categoryId,
+      categoryTitle: p.categoryId && typeof p.categoryId === 'object' ? p.categoryId.title : undefined,
       name: p.title || p.name || 'بدون عنوان',
       title: p.title || p.name || 'بدون عنوان',
       slug: p.slug,

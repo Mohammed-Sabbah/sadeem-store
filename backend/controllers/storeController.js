@@ -77,8 +77,58 @@ async function approveStore(req, res, next) {
     }
 }
 
+async function getAdminStores(req, res, next) {
+    try {
+        const stores = await Store.find({ isDeleted: false })
+            .populate('ownerId', 'name email phoneNumber')
+            .sort({ createdAt: -1 })
+            .lean();
+
+        return success(res, 200, {
+            stores,
+            count: stores.length,
+        });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function toggleStoreStatus(req, res, next) {
+    const { id } = req.params;
+    try {
+        const store = await Store.findOne({ _id: id, isDeleted: false });
+        if (!store) return error(res, 404, 'Store not found');
+        store.status = store.status === STATUS.ACTIVE ? STATUS.IN_ACTIVE : STATUS.ACTIVE;
+        await store.save();
+        return success(res, 200, {
+            message: `Store ${store.status === STATUS.ACTIVE ? 'activated' : 'frozen'} successfully`,
+            store: store.toObject(),
+        });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function rejectStore(req, res, next) {
+    const { id } = req.params;
+    try {
+        const store = await Store.findOneAndUpdate(
+            { _id: id, isDeleted: false, approveStatus: APPROVE_STATUS.PENDING },
+            { $set: { approveStatus: APPROVE_STATUS.REJECTED, status: STATUS.IN_ACTIVE } },
+            { new: true }
+        );
+        if (!store) return error(res, 404, 'Pending store not found');
+        return success(res, 200, { message: 'Store rejected successfully', store: store.toObject() });
+    } catch (err) {
+        return next(err);
+    }
+}
+
 module.exports = {
     getPublicStore,
     approveStore,
-    getMyStore
+    getMyStore,
+    getAdminStores,
+    toggleStoreStatus,
+    rejectStore
 };

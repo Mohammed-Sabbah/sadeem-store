@@ -17,9 +17,39 @@ export interface AdminNavItem {
   description?: string;
 }
 
+export interface AdminStoreOwner {
+  _id: string;
+  name: string;
+  email: string;
+  phoneNumber?: string;
+}
+
+export interface AdminStoreItem {
+  _id: string;
+  name: string;
+  logo?: string;
+  description?: string;
+  address?: {
+    governorate?: string;
+    city?: string;
+    detailedAddress?: string;
+    coordinates?: {
+      lat: number;
+      lng: number;
+    };
+  };
+  balance?: number;
+  status: 'active' | 'inActive';
+  approveStatus: 'pending' | 'approved' | 'rejected';
+  ownerId?: AdminStoreOwner;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface AdminOverviewMetrics {
   totalStores: number;
   pendingStores: number;
+  activeStores: number;
   totalProducts: number;
   rejectedProducts: number;
   totalCategories: number;

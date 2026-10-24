@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useMerchantContext } from '@/features/merchant/context/MerchantContext';
+import { useMerchantProfileQuery } from '@/features/merchant/queries/useMerchantQueries';
+import { useMerchantProductOperations } from '@/features/merchant/hooks/useMerchantProductOperations';
 import MerchantDashboardHeader from '@/features/merchant/components/MerchantDashboardHeader';
 import MerchantMetricsBar from '@/features/merchant/components/MerchantMetricsBar';
 import MerchantProductList, { type FilterTab } from '@/features/merchant/components/MerchantProductList';
@@ -11,16 +12,17 @@ export default function MerchantDashboardPage() {
   const router = useRouter();
   const [activeFilterTab, setActiveFilterTab] = useState<FilterTab>('all');
 
+  const { data: store, isLoading: isLoadingStore } = useMerchantProfileQuery();
   const {
-    store,
     products,
     metrics,
-    isLoading,
-    feedbackMessage,
+    isLoading: isLoadingProducts,
     handleToggleActive,
     handleDeleteProduct,
     handleQuickStockUpdate,
-  } = useMerchantContext();
+  } = useMerchantProductOperations();
+
+  const isLoading = isLoadingStore || isLoadingProducts;
 
   // Strict Gatekeeper Rule: If store is not approved, route immediately to pending screen
   useEffect(() => {
@@ -67,26 +69,6 @@ export default function MerchantDashboardPage() {
 
   return (
     <div className="w-full space-y-4 sm:space-y-5 animate-fadeIn font-almarai">
-      {/* Floating Apple-Grade Capsule HUD (Instant Feedback) */}
-      {feedbackMessage && (
-        <div className="fixed top-18 lg:top-8 left-1/2 -translate-x-1/2 z-50 pointer-events-none animate-fadeIn transition-all">
-          <div
-            className={`px-4 py-2 rounded-full text-xs font-black shadow-xl flex items-center gap-2 border backdrop-blur-xl ${
-              feedbackMessage.type === 'success'
-                ? 'bg-brand-dark/95 text-white border-brand-border/40'
-                : 'bg-red-950/95 text-white border-red-700/60'
-            }`}
-          >
-            <span
-              className={`w-2 h-2 rounded-full shrink-0 ${
-                feedbackMessage.type === 'success' ? 'bg-brand-trust' : 'bg-red-400'
-              }`}
-            />
-            <span>{feedbackMessage.text}</span>
-          </div>
-        </div>
-      )}
-
       {/* 1. Serene Page Action Bar (Title + Primary Action Button) */}
       <MerchantDashboardHeader
         store={store}

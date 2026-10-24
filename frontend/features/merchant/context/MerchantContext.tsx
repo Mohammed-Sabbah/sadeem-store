@@ -10,6 +10,7 @@ import {
   useQuickStockMutation,
 } from '../queries/useMerchantQueries';
 import { merchantKeys } from '../queries/merchant.keys';
+import { computeMerchantMetrics } from '../utils/merchantMetrics';
 import type {
   StoreProfile,
   ProductItem,
@@ -57,21 +58,7 @@ export function MerchantProvider({ children }: { children: React.ReactNode }) {
   }, [feedbackMessage]);
 
   // Dynamic live metrics computation based on cached query data
-  const metrics: MerchantMetrics = useMemo(() => {
-    const total = products.length;
-    const inStock = products.filter((p) => p.inStock && (p.totalStock ?? 0) > 0).length;
-    const outOfStock = products.filter((p) => !p.inStock || (p.totalStock ?? 0) === 0).length;
-    const active = products.filter((p) => p.isActive).length;
-    const units = products.reduce((sum, p) => sum + (p.totalStock ?? 0), 0);
-
-    return {
-      totalProducts: total,
-      inStockProducts: inStock,
-      outOfStockProducts: outOfStock,
-      totalInventoryUnits: units,
-      activeProducts: active,
-    };
-  }, [products]);
+  const metrics: MerchantMetrics = useMemo(() => computeMerchantMetrics(products), [products]);
 
   const handleToggleActive = async (productId: string, currentActive: boolean) => {
     try {

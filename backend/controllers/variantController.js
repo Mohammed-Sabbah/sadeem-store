@@ -115,9 +115,6 @@ async function updateVariants(req, res, next) {
         }
 
         for (const variant of targetVariants) {
-            if (activeVariants.length > 1 && !hasVariantAttributes(variant.attributes)) {
-                return error(res, 400, 'Every variant must have category attributes once a product has multiple variants');
-            }
             if (findDuplicateVariant(activeVariants, variant.attributes, variant._id)) {
                 return error(res, 409, 'A variant with these attributes already exists');
             }

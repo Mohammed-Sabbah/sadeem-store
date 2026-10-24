@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { merchantKeys } from './merchant.keys';
 import { merchantService } from '../services/merchant.service';
+import type { VariantRowState } from '../types/product-studio.types';
 import type {
   ProductItem,
   StoreProfile,
@@ -243,6 +244,243 @@ export function useUpdateProductMutation() {
       }
       void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
       void queryClient.invalidateQueries({ queryKey: merchantKeys.productDetail(productId) });
+    },
+  });
+}
+
+
+/**
+ * 9. Save Product Studio Mutation (Orchestrated Multi-Step Pipeline)
+ */
+export interface SaveProductStudioPayload {
+  mode: 'create' | 'edit';
+  productId?: string;
+  cleanTitle: string;
+  description: string;
+  categoryId?: string;
+  hasOptions: boolean;
+  basePrice: number | '';
+  baseCompareAtPrice: number | '';
+  baseStock: number | '';
+  isProductActive: boolean;
+  images: string[];
+  imageFiles: File[];
+  variantsRows: VariantRowState[];
+  rawDbVariants?: ProductVariant[];
+  deletedDbIds?: string[];
+  product?: ProductItem | null;
+}
+
+export function useSaveProductStudioMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: SaveProductStudioPayload) => {
+      const {
+        mode,
+        productId,
+        cleanTitle,
+        description,
+        categoryId,
+        hasOptions,
+        basePrice,
+        baseCompareAtPrice,
+        baseStock,
+        isProductActive,
+        images,
+        imageFiles,
+        variantsRows,
+        rawDbVariants = [],
+        deletedDbIds = [],
+        product,
+      } = payload;
+
+      const existingKeptUrls = images.filter(
+        (u) =>
+          typeof u === 'string' &&
+          (u.startsWith('http://') || u.startsWith('https://') || u.startsWith('/'))
+      );
+
+      if (mode === 'create') {
+        const hasActiveVariant = variantsRows.some(
+          (r) => (r.status ? r.status === 'active' : r.isEnabled !== false)
+        );
+        const targetProductActive =
+          variantsRows.length > 0 ? hasActiveVariant && isProductActive : isProductActive;
+
+        const createPayload: any = {
+          name: cleanTitle,
+          title: cleanTitle,
+          description: description.trim(),
+          categoryId,
+          price:
+            variantsRows.length > 0 && variantsRows[0].price !== ''
+              ? Number(variantsRows[0].price)
+              : Number(basePrice) || 0,
+          compareAtPrice: baseCompareAtPrice !== '' ? Number(baseCompareAtPrice) : undefined,
+          totalStock:
+            variantsRows.length > 0
+              ? variantsRows.reduce((sum, r) => sum + (Number(r.stock) || 0), 0)
+              : Number(baseStock) || 0,
+          existingImages: existingKeptUrls,
+          imageFiles: imageFiles.length > 0 ? imageFiles : undefined,
+          status: targetProductActive ? 'active' : 'inActive',
+        };
+
+        const createRes = await merchantService.createProduct(createPayload);
+        if (!createRes.success || !createRes.data) {
+          throw new Error(createRes.message || 'فشل إنشاء الصنف');
+        }
+
+        const createdId = createRes.data._id;
+
+        // Batch create variants if options were defined
+        if (variantsRows.length > 0) {
+          const variantsPayload = variantsRows.map((r) => {
+            const rowActive = r.status ? r.status === 'active' : r.isEnabled !== false;
+            return {
+              attributes: r.attributes,
+              price: Number(r.price),
+              compareAtPrice:
+                r.compareAtPrice !== '' && r.compareAtPrice !== undefined
+                  ? Number(r.compareAtPrice)
+                  : undefined,
+              stock: Number(r.stock) || 0,
+              sku: r.sku || undefined,
+              status: rowActive ? ('active' as const) : ('inActive' as const),
+              images: r.image ? [r.image] : undefined,
+            };
+          });
+
+          await merchantService.batchCreateVariants(createdId, variantsPayload);
+        }
+
+        return { productId: createdId, title: cleanTitle };
+      } else {
+        // mode === 'edit'
+        if (!productId) {
+          throw new Error('معرف الصنف مفقود');
+        }
+
+        const hasActiveVariant = variantsRows.some((r) => r.status === 'active');
+        const targetProductActive =
+          variantsRows.length > 0 ? hasActiveVariant && isProductActive : isProductActive;
+
+        const productStatus: 'active' | 'inActive' | undefined =
+          product && product.isActive !== targetProductActive
+            ? targetProductActive
+              ? 'active'
+              : 'inActive'
+            : undefined;
+
+        const baseUpdatePayload = {
+          title: cleanTitle,
+          name: cleanTitle,
+          description: description.trim(),
+          categoryId: hasOptions ? undefined : categoryId,
+          images: existingKeptUrls,
+          existingImages: existingKeptUrls,
+          imageFiles: imageFiles.length > 0 ? imageFiles : undefined,
+          status: productStatus,
+        };
+
+        const baseRes = await merchantService.updateProductBase(productId, baseUpdatePayload);
+        if (!baseRes.success) {
+          throw new Error(baseRes.message || 'فشل تحديث البيانات الأساسية للصنف');
+        }
+
+        // Variants Batch Sync
+        if (variantsRows.length === 0) {
+          // Simple product sync
+          const defaultVar = rawDbVariants[0];
+          if (defaultVar && defaultVar._id) {
+            const keptId = String(defaultVar._id);
+            const extraIds = Array.from(
+              new Set([
+                ...rawDbVariants.slice(1).map((v) => String(v._id)),
+                ...deletedDbIds.filter((id) => String(id) !== keptId),
+              ])
+            );
+
+            await merchantService.batchUpdateVariants(productId, [
+              {
+                variantId: keptId,
+                price: Number(basePrice) || 0,
+                stock: Number(baseStock) || 0,
+                status: targetProductActive ? 'active' : 'inActive',
+              },
+            ]);
+
+            if (extraIds.length > 0) {
+              await merchantService.batchDeleteVariants(productId, extraIds);
+            }
+          }
+        } else {
+          // Multi-variant batch sync
+          const toDeleteIds = Array.from(
+            new Set([
+              ...deletedDbIds,
+              ...rawDbVariants
+                .map((v) => String(v._id))
+                .filter((id) => !variantsRows.some((r) => String(r.dbId) === id)),
+            ])
+          );
+
+          if (toDeleteIds.length > 0) {
+            await merchantService.batchDeleteVariants(productId, toDeleteIds);
+          }
+
+          const toUpdateList: Array<{
+            variantId: string;
+            price?: number;
+            stock?: number;
+            status?: 'active' | 'inActive';
+            attributes?: Record<string, string>;
+            image?: string;
+          }> = [];
+          const toCreateList: any[] = [];
+
+          for (const row of variantsRows) {
+            const variantStatus = row.status === 'inActive' ? ('inActive' as const) : ('active' as const);
+
+            if (row.dbId) {
+              toUpdateList.push({
+                variantId: row.dbId,
+                attributes: row.attributes,
+                price: Number(row.price),
+                stock: Number(row.stock),
+                status: variantStatus,
+                image: row.image,
+              });
+            } else {
+              toCreateList.push({
+                attributes: row.attributes,
+                price: Number(row.price),
+                stock: Number(row.stock),
+                status: variantStatus,
+                images: row.image ? [row.image] : undefined,
+              });
+            }
+          }
+
+          if (toUpdateList.length > 0) {
+            await merchantService.batchUpdateVariants(productId, toUpdateList);
+          }
+
+          if (toCreateList.length > 0) {
+            await merchantService.batchCreateVariants(productId, toCreateList);
+          }
+        }
+
+        return { productId, title: cleanTitle };
+      }
+    },
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.products() });
+      void queryClient.invalidateQueries({ queryKey: merchantKeys.profile() });
+      if (result.productId) {
+        void queryClient.invalidateQueries({ queryKey: merchantKeys.productDetail(result.productId) });
+      }
     },
   });
 }

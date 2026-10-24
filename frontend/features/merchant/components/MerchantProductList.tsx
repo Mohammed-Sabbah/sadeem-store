@@ -3,8 +3,15 @@
 import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import type { ProductItem } from '../types/merchant.types';
+import {
+  type FilterTab,
+  computeFilterMetrics,
+  filterProducts,
+} from '../utils/productFilters';
+import { useMerchantProductFilters } from '../hooks/useMerchantProductFilters';
+import { MerchantProductFilterBar } from './MerchantProductFilterBar';
 
-export type FilterTab = 'all' | 'in_stock' | 'out_of_stock' | 'inactive';
+export type { FilterTab };
 
 interface MerchantProductListProps {
   products: ProductItem[];
@@ -25,30 +32,21 @@ export default function MerchantProductList({
   activeFilterTab,
   onTabChange,
 }: MerchantProductListProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [internalTab, setInternalTab] = useState<FilterTab>('all');
   const [expandedVariantsId, setExpandedVariantsId] = useState<string | null>(null);
 
-  const activeTab = activeFilterTab !== undefined ? activeFilterTab : internalTab;
-  const setTab = (tab: FilterTab) => {
-    if (onTabChange) onTabChange(tab);
-    else setInternalTab(tab);
-  };
+  const {
+    activeTab,
+    setTab,
+    searchQuery,
+    setSearchQuery,
+    filterState,
+  } = useMerchantProductFilters({
+    controlledTab: activeFilterTab,
+    onTabChange,
+  });
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      const matchesSearch =
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        Boolean(p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()));
-
-      if (!matchesSearch) return false;
-
-      if (activeTab === 'in_stock') return p.inStock && (p.totalStock ?? 0) > 0;
-      if (activeTab === 'out_of_stock') return !p.inStock || (p.totalStock ?? 0) === 0;
-      if (activeTab === 'inactive') return !p.isActive;
-      return true;
-    });
-  }, [products, searchQuery, activeTab]);
+  const filterMetrics = useMemo(() => computeFilterMetrics(products), [products]);
+  const filteredProducts = useMemo(() => filterProducts(products, filterState), [products, filterState]);
 
   const confirmDelete = (productId: string, name: string) => {
     if (confirm(`هل أنت متأكد من رغبتك في حذف الصنف «${name}» نهائياً من المتجر؟`)) {
@@ -63,93 +61,14 @@ export default function MerchantProductList({
   return (
     <div className="bg-brand-card rounded-xl border border-brand-border shadow-2xs font-almarai text-right overflow-hidden transition-all">
       {/* 1. Universal Search & Segmented Filter Bar */}
-      <div className="p-4 sm:p-5 border-b border-brand-border/70 bg-brand-surface/40">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          {/* Spotlight Search Input */}
-          <div className="relative flex-1 group">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="بحث باسم الصنف أو القسم..."
-              className="w-full h-10 pr-9 pl-8 text-xs font-medium rounded-xl border border-brand-border bg-brand-card text-brand-dark placeholder:text-brand-muted/60 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary transition-all"
-            />
-            <svg
-              className="w-4 h-4 text-brand-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none group-focus-within:text-brand-primary transition-colors"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-brand-surface text-brand-muted hover:bg-brand-border text-xs flex items-center justify-center cursor-pointer transition-colors"
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          {/* Result Count Tag */}
-          <div className="text-[11px] font-bold text-brand-muted self-center sm:self-auto">
-            <span>عرض {filteredProducts.length} من أصل {products.length}</span>
-          </div>
-        </div>
-
-        {/* 2. Apple-Style Segmented Filter Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-3 mt-3 border-t border-brand-border/60 scrollbar-none text-xs select-none">
-          <button
-            type="button"
-            onClick={() => setTab('all')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all duration-150 shrink-0 cursor-pointer active:scale-95 ${
-              activeTab === 'all'
-                ? 'bg-brand-dark text-white shadow-xs'
-                : 'bg-brand-surface text-brand-muted hover:text-brand-dark hover:bg-brand-border/60'
-            }`}
-          >
-            الكل ({products.length})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab('in_stock')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all duration-150 shrink-0 cursor-pointer active:scale-95 ${
-              activeTab === 'in_stock'
-                ? 'bg-brand-dark text-white shadow-xs'
-                : 'bg-brand-surface text-brand-muted hover:text-brand-dark hover:bg-brand-border/60'
-            }`}
-          >
-            متوفر للطلب ({products.filter((p) => p.inStock && (p.totalStock ?? 0) > 0).length})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab('out_of_stock')}
-            className={`px-3.5 py-1.5 rounded-lg font-bold transition-all duration-150 shrink-0 cursor-pointer active:scale-95 ${
-              activeTab === 'out_of_stock'
-                ? 'bg-brand-primary text-white shadow-xs'
-                : 'bg-brand-surface text-brand-muted hover:text-brand-dark hover:bg-brand-border/60'
-            }`}
-          >
-            نواقص المخزون ({products.filter((p) => !p.inStock || (p.totalStock ?? 0) === 0).length})
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setTab('inactive')}
-            className={`px-3.5 py-1.5 rounded-lg font-bold transition-all duration-150 shrink-0 cursor-pointer active:scale-95 ${
-              activeTab === 'inactive'
-                ? 'bg-brand-dark text-white shadow-xs'
-                : 'bg-brand-surface text-brand-muted hover:text-brand-dark hover:bg-brand-border/60'
-            }`}
-          >
-            معطل مؤقتاً ({products.filter((p) => !p.isActive).length})
-          </button>
-        </div>
-      </div>
+      <MerchantProductFilterBar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        activeTab={activeTab}
+        onTabChange={setTab}
+        metrics={filterMetrics}
+        filteredCount={filteredProducts.length}
+      />
 
       {/* 3. Empty State */}
       {filteredProducts.length === 0 ? (

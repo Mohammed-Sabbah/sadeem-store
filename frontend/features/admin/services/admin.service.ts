@@ -1,4 +1,4 @@
-import { getRequest, patchRequest } from '@/shared/lib/coreApi';
+import { getRequest, postRequest, patchRequest, deleteRequest } from '@/shared/lib/coreApi';
 import type { AdminStoreItem, AdminOverviewMetrics } from '../types/admin.types';
 
 export const adminService = {
@@ -100,6 +100,52 @@ export const adminService = {
       return { success: false, data: [], count: 0 };
     } catch {
       return { success: false, data: [], count: 0 };
+    }
+  },
+
+  /**
+   * إضافة فئة جديدة للنظام
+   */
+  async createCategory(data: {
+    title: string;
+    variantAttributes?: Array<{ name: string; key: string; type: string }>;
+  }): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await postRequest<{ category: any }>('/api/categories', data);
+      return { success: res.success, message: res.message, data: res.data?.category };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر إضافة الفئة' };
+    }
+  },
+
+  /**
+   * تعديل فئة موجودة
+   */
+  async updateCategory(
+    id: string,
+    data: {
+      title?: string;
+      variantAttributes?: Array<{ name: string; key: string; type: string }>;
+      isActive?: boolean;
+    }
+  ): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await patchRequest<{ category: any }>(`/api/categories/${id}`, data);
+      return { success: res.success, message: res.message, data: res.data?.category };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر تحديث الفئة' };
+    }
+  },
+
+  /**
+   * حذف فئة
+   */
+  async deleteCategory(id: string): Promise<{ success: boolean; message?: string }> {
+    try {
+      const res = await deleteRequest(`/api/categories/${id}`);
+      return { success: res.success, message: res.message };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر حذف الفئة' };
     }
   },
 };

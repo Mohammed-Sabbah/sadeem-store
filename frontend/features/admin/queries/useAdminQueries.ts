@@ -175,3 +175,76 @@ export function useAdminProductMutations() {
   };
 }
 
+export function useAdminCategoryMutations() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
+
+  const createMutation = useMutation({
+    mutationFn: (data: {
+      title: string;
+      variantAttributes?: Array<{ name: string; key: string; type: string }>;
+    }) => adminService.createCategory(data),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('تمت إضافة الفئة بنجاح');
+        queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.categories });
+      } else {
+        toast.error(res.message || 'تعذر إضافة الفئة');
+      }
+    },
+    onError: () => {
+      toast.error('حدث خطأ أثناء إضافة الفئة');
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: {
+        title?: string;
+        variantAttributes?: Array<{ name: string; key: string; type: string }>;
+        isActive?: boolean;
+      };
+    }) => adminService.updateCategory(id, data),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('تم تحديث الفئة بنجاح');
+        queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.categories });
+      } else {
+        toast.error(res.message || 'تعذر تحديث الفئة');
+      }
+    },
+    onError: () => {
+      toast.error('حدث خطأ أثناء تحديث الفئة');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => adminService.deleteCategory(id),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('تم حذف الفئة بنجاح');
+        queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.categories });
+      } else {
+        toast.error(res.message || 'تعذر حذف الفئة');
+      }
+    },
+    onError: () => {
+      toast.error('حدث خطأ أثناء حذف الفئة');
+    },
+  });
+
+  return {
+    createCategory: createMutation.mutate,
+    isCreating: createMutation.isPending,
+    updateCategory: updateMutation.mutate,
+    isUpdating: updateMutation.isPending,
+    deleteCategory: deleteMutation.mutate,
+    isDeleting: deleteMutation.isPending,
+  };
+}
+
+

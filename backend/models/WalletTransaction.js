@@ -92,6 +92,10 @@ const walletTransactionSchema = new mongoose.Schema(
             type: String,
             default: '',
         },
+        isDeleted: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         versionKey: false,

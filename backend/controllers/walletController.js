@@ -2,14 +2,24 @@ const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
 const walletService = require('../services/walletService');
 const { success, error } = require('../utils/responses');
-const { ROLE, WALLET_TRANSACTION_TYPE, TRANSACTION_STATUS } = require('../constants/enums');
+const { TRANSACTION_STATUS } = require('../constants/enums');
+
+const getWalletFilter = (req) => ({
+    isFrozen: false,
+    userId: req.user._id,
+})
+
 
 async function getWallet(req, res, next) {
     try {
         const wallet = await Wallet.findOne({ userId: req.user._id }).lean();
-        if (!wallet) {
+
+        if (!wallet)
             return error(res, 404, 'Wallet not found');
-        }
+
+        if (wallet.isFrozen)
+            return error(res, 400, "Your wallet is not active")
+
         return success(res, 200, { wallet });
     } catch (err) {
         return next(err);
@@ -18,7 +28,7 @@ async function getWallet(req, res, next) {
 
 async function getWalletTransactions(req, res, next) {
     try {
-        const wallet = await Wallet.findOne({ userId: req.user._id }).lean();
+        const wallet = await Wallet.findOne(getWalletFilter(req)).lean();
         if (!wallet) {
             return error(res, 404, 'Wallet not found');
         }
@@ -36,7 +46,11 @@ async function getWalletTransactions(req, res, next) {
 
 async function createDepositRequest(req, res, next) {
     try {
+        const wallet = await Wallet.findOne(getWalletFilter(req)).lean()
+        if (!wallet) return error(res, 404, "Wallet not found")
+
         const transaction = await walletService.createDepositRequest({
+            walletId: wallet._id,
             userId: req.user._id,
             amount: req.body.amount,
             proofImage: req.body.proofImage,
@@ -53,24 +67,52 @@ async function createDepositRequest(req, res, next) {
     }
 }
 
-async function listPendingDeposits(req, res, next) {
+async function listTransactions(req, res, next) {
     try {
-        const transactions = await WalletTransaction.find({
-            type: WALLET_TRANSACTION_TYPE.DEPOSIT,
-            status: TRANSACTION_STATUS.PENDING,
-        }).sort({ createdAt: -1 }).lean();
+        const { type, status, balanceType, createdFrom, createdTo, userId, walletId } = req.query;
+        const offset = Number(req.query.offset || 0);
+        const limit = Number(req.query.limit || 20);
+        const query = { isDeleted: { $ne: true } };
 
-        return success(res, 200, { transactions });
+        if (type) query.type = type;
+        if (status) query.status = status;
+        if (balanceType) query.balanceType = balanceType;
+        if (userId) query.userId = userId;
+        if (walletId) query.walletId = walletId;
+        if (createdFrom || createdTo) {
+            query.createdAt = {};
+            if (createdFrom) query.createdAt.$gte = new Date(createdFrom);
+            if (createdTo) query.createdAt.$lte = new Date(createdTo);
+        }
+
+        const [transactions, total] = await Promise.all([
+            WalletTransaction.find(query)
+                .sort({ createdAt: -1 })
+                .skip(offset)
+                .limit(limit)
+                .lean(),
+            WalletTransaction.countDocuments(query),
+        ]);
+
+        return success(res, 200, {
+            transactions,
+            total,
+            page: Math.max(1, Math.floor(offset / limit) + 1),
+            limit,
+        });
     } catch (err) {
         return next(err);
     }
 }
 
-async function getDeposit(req, res, next) {
+async function getWalletTransaction(req, res, next) {
     try {
-        const transaction = await WalletTransaction.findById(req.params.id).lean();
+        const transaction = await WalletTransaction.findOne({
+            _id: req.params.id,
+            isDeleted: { $ne: true },
+        }).lean();
         if (!transaction) {
-            return error(res, 404, 'Deposit not found');
+            return error(res, 404, 'Transaction not found');
         }
         return success(res, 200, { transaction });
     } catch (err) {
@@ -78,14 +120,50 @@ async function getDeposit(req, res, next) {
     }
 }
 
-async function approveDeposit(req, res, next) {
+async function cancelTransaction(req, res, next) {
     try {
-        const result = await walletService.approveDeposit({
+        const transaction = await WalletTransaction.findOneAndUpdate(
+            {
+                _id: req.params.id,
+                userId: req.user._id,
+                status: TRANSACTION_STATUS.PENDING,
+                isDeleted: { $ne: true },
+            },
+            { $set: { status: TRANSACTION_STATUS.CANCELLED } },
+            { new: true }
+        ).lean();
+
+        if (!transaction) {
+            const existingTransaction = await WalletTransaction.findOne({
+                _id: req.params.id,
+                userId: req.user._id,
+                isDeleted: { $ne: true },
+            }).select('status').lean();
+
+            if (!existingTransaction) {
+                return error(res, 404, 'Transaction not found');
+            }
+
+            return error(res, 400, 'Only pending transactions can be cancelled');
+        }
+
+        return success(res, 200, {
+            message: 'Transaction cancelled successfully',
+            transaction,
+        });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function completeDeposit(req, res, next) {
+    try {
+        const result = await walletService.completeDeposit({
             adminId: req.user._id,
             transactionId: req.params.id,
         });
         return success(res, 200, {
-            message: 'Deposit approved successfully',
+            message: 'Deposit completed successfully',
             ...result,
         });
     } catch (err) {
@@ -122,31 +200,6 @@ async function createWithdrawalRequest(req, res, next) {
             message: 'Withdrawal request created successfully',
             transaction,
         });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function listPendingWithdrawals(req, res, next) {
-    try {
-        const transactions = await WalletTransaction.find({
-            type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
-            status: TRANSACTION_STATUS.PENDING,
-        }).sort({ createdAt: -1 }).lean();
-
-        return success(res, 200, { transactions });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function getWithdrawal(req, res, next) {
-    try {
-        const transaction = await WalletTransaction.findById(req.params.id).lean();
-        if (!transaction) {
-            return error(res, 404, 'Withdrawal not found');
-        }
-        return success(res, 200, { transaction });
     } catch (err) {
         return next(err);
     }
@@ -206,15 +259,13 @@ module.exports = {
     getWallet,
     getWalletTransactions,
     createDepositRequest,
-    listPendingDeposits,
-    getDeposit,
-    approveDeposit,
+    listTransactions,
+    getWalletTransaction,
+    cancelTransaction,
+    completeDeposit,
     rejectDeposit,
     createWithdrawalRequest,
-    listPendingWithdrawals,
-    getWithdrawal,
     approveWithdrawal,
     completeWithdrawal,
     rejectWithdrawal,
-    ROLE,
 };

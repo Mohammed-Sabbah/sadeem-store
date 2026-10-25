@@ -3,51 +3,104 @@ const {
     getWallet,
     getWalletTransactions,
     createDepositRequest,
-    listPendingDeposits,
-    getDeposit,
-    approveDeposit,
+    listTransactions,
+    getWalletTransaction,
+    cancelTransaction,
+    completeDeposit,
     rejectDeposit,
     createWithdrawalRequest,
-    listPendingWithdrawals,
-    getWithdrawal,
     approveWithdrawal,
     completeWithdrawal,
     rejectWithdrawal,
 } = require('../controllers/walletController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLE } = require('../constants/enums');
+
+// const upload = require("../middleware/upload")
+// const uploadToCloudinary = require("../middleware/uploadToCloudinary")
+
 const {
     validateDepositRequest,
     validateDepositAction,
     validateWalletHistory,
+    validateWalletTransactionFilters,
+    validateWalletTransactionId,
     validateWithdrawalRequest,
     validateWithdrawalAction,
 } = require('../schemas/walletSchema');
+const imageFolder = "proofImages"
 
-// Get User Wallet. 
-router.get('/', authenticate, getWallet);
+router.use(authenticate)
+router.use(authorize(ROLE.USER))
+// User Routes
+
+// Get User Wallet
+router.get('/', getWallet);
 
 // Get User Transactions
-router.get('/transactions', authenticate, validateWalletHistory, getWalletTransactions);
+router.get('/user/transactions',
+    validateWalletHistory,
+    getWalletTransactions
+);
+
+// Get Transaction by Id
+router.get('/transactions/:id',
+    validateWalletTransactionId,
+    getWalletTransaction
+);
 
 // Create Deposite Transaction Request
-router.post('/deposits', authenticate, authorize(ROLE.USER), validateDepositRequest, createDepositRequest);
+router.post('/deposits',
+    validateDepositRequest,
+    createDepositRequest
+);
 
-// 
-router.get('/deposits/pending', authenticate, authorize(ROLE.ADMIN), listPendingDeposits);
+// create Withdraw Transaction
+router.post('/withdrawals',
+    validateWithdrawalRequest,
+    createWithdrawalRequest
+);
 
-// Get Deposit Request by Id
-router.get('/deposits/:id', authenticate, validateDepositAction, getDeposit);
+// Cancel Transaction Request
+router.patch('/transactions/:id/cancel',
+    validateWalletTransactionId,
+    cancelTransaction
+);
 
-// Change Deposit Request
-router.post('/deposits/:id/approve', authenticate, authorize(ROLE.ADMIN), validateDepositAction, approveDeposit);
-router.post('/deposits/:id/reject', authenticate, authorize(ROLE.ADMIN), validateDepositAction, rejectDeposit);
+// Admin Routes
+router.use(authorize(ROLE.ADMIN));
 
-router.post('/withdrawals', authenticate, authorize(ROLE.USER), validateWithdrawalRequest, createWithdrawalRequest);
-router.get('/withdrawals/pending', authenticate, authorize(ROLE.ADMIN), listPendingWithdrawals);
-router.get('/withdrawals/:id', authenticate, validateWithdrawalAction, getWithdrawal);
-router.post('/withdrawals/:id/approve', authenticate, authorize(ROLE.ADMIN), validateWithdrawalAction, approveWithdrawal);
-router.post('/withdrawals/:id/complete', authenticate, authorize(ROLE.ADMIN), validateWithdrawalAction, completeWithdrawal);
-router.post('/withdrawals/:id/reject', authenticate, authorize(ROLE.ADMIN), validateWithdrawalAction, rejectWithdrawal);
+// get Deposites Transactions
+router.get('/transactions',
+    validateWalletTransactionFilters,
+    listTransactions
+);
+
+// Change Deposit Request Status
+router.patch('/deposits/:id/complete',
+    validateDepositAction,
+    completeDeposit
+);
+
+router.patch('/deposits/:id/reject',
+    validateDepositAction,
+    rejectDeposit
+);
+
+// Change Withdraw Request Status
+router.patch('/withdrawals/:id/approve',
+    validateWithdrawalAction,
+    approveWithdrawal
+);
+
+router.patch('/withdrawals/:id/complete',
+    validateWithdrawalAction,
+    completeWithdrawal
+);
+
+router.patch('/withdrawals/:id/reject',
+    validateWithdrawalAction,
+    rejectWithdrawal
+);
 
 module.exports = router;

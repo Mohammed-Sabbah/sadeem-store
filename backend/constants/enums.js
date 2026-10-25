@@ -33,8 +33,8 @@ const BALANCE_TYPE = {
 const TRANSACTION_STATUS = {
     PENDING: "pending",
     COMPLETED: "completed",
+    APPROVED: "approved",
     REJECTED: "rejected",
-    FAILED: "failed",
     CANCELLED: "cancelled",
 };
 
@@ -43,9 +43,12 @@ const WALLET_STATUS = {
     IN_ACTIVE: STATUS.IN_ACTIVE,
 };
 
+// General Enums
 const ROLE_VALUES = Object.values(ROLE);
 const STATUS_VALUES = Object.values(STATUS);
 const STORE_APPROVE_STATUS_VALUES = Object.values(STORE_APPROVE_STATUS);
+
+// Wallet Enums
 const WALLET_TRANSACTION_TYPE_VALUES = Object.values(WALLET_TRANSACTION_TYPE);
 const BALANCE_TYPE_VALUES = Object.values(BALANCE_TYPE);
 const TRANSACTION_STATUS_VALUES = Object.values(TRANSACTION_STATUS);

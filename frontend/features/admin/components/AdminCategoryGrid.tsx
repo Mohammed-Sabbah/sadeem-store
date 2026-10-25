@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 interface AdminCategoryGridProps {
   categories: any[];
@@ -15,7 +16,7 @@ function getArabicType(type?: string): string {
     case 'Number':
       return 'رقم';
     case 'Boolean':
-      return 'نعم / لا';
+      return 'منطقي (نعم / لا)';
     default:
       return 'نص';
   }
@@ -149,17 +150,14 @@ export const AdminCategoryGrid: React.FC<AdminCategoryGridProps> = ({
 
             {/* Bottom Actions */}
             <div className="pt-3 border-t border-brand-border/60 flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold text-brand-muted">
-                {isActive ? (
-                  <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                    متاح بالمتجر
-                  </span>
-                ) : (
-                  <span className="text-stone-600 bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200">
-                    موقوف مؤقتاً
-                  </span>
-                )}
-              </span>
+              <Link
+                href={`/admin/products?categoryId=${cat._id}`}
+                className="text-[11px] font-bold text-brand-muted hover:text-brand-primary transition-colors inline-flex items-center gap-1"
+                title="استعراض الأصناف المرتبطة بهذه الفئة"
+              >
+                <span>أصناف الفئة</span>
+                <span className="text-[10px]">↗</span>
+              </Link>
 
               <div className="flex items-center gap-1.5">
                 <button

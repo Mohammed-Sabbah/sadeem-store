@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import type { AdminStoreItem } from '../types/admin.types';
+import { AdminStoreDetailsModal } from './AdminStoreDetailsModal';
 
 interface AdminRecentApplicationsProps {
   pendingStores: AdminStoreItem[];
@@ -20,13 +21,27 @@ export const AdminRecentApplications: React.FC<AdminRecentApplicationsProps> = (
   isRejecting = false,
 }) => {
   const isBusy = isApproving || isRejecting;
+  const [selectedStore, setSelectedStore] = useState<AdminStoreItem | null>(null);
+  const [actingStoreId, setActingStoreId] = useState<string | null>(null);
+
+  const handleApprove = (storeId: string) => {
+    setActingStoreId(storeId);
+    onApprove(storeId);
+  };
+
+  const handleReject = (storeId: string) => {
+    if (confirm('هل أنت متأكد من رفض طلب انضمام هذا المتجر؟')) {
+      setActingStoreId(storeId);
+      onReject(storeId);
+    }
+  };
 
   return (
     <div className="bg-brand-card rounded-2xl border border-brand-border shadow-2xs overflow-hidden font-almarai text-right">
       {/* Header */}
       <div className="p-4 sm:p-5 border-b border-brand-border/70 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <span className="w-2 h-2 rounded-full bg-brand-primary animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-brand-primary animate-pulse" />
           <h3 className="text-sm font-black text-brand-dark">
             طلبات انضمام المتاجر الجديدة
           </h3>
@@ -37,22 +52,25 @@ export const AdminRecentApplications: React.FC<AdminRecentApplicationsProps> = (
 
         <Link
           href="/admin/stores"
-          className="text-xs font-bold text-brand-primary hover:text-brand-primary-hover transition-colors"
+          className="text-xs font-bold text-brand-primary hover:text-brand-primary-hover transition-colors inline-flex items-center gap-1"
         >
-          عرض شبكة المتاجر كاملة &larr;
+          <span>عرض شبكة المتاجر كاملة</span>
+          <span className="text-[10px]">&larr;</span>
         </Link>
       </div>
 
       {/* Content */}
       {pendingStores.length === 0 ? (
-        <div className="p-8 text-center space-y-2 bg-brand-surface/20">
-          <div className="w-10 h-10 rounded-xl bg-brand-card border border-brand-border text-brand-trust flex items-center justify-center mx-auto shadow-2xs">
-            <svg className="w-5 h-5 stroke-[2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="p-10 text-center space-y-2 bg-brand-surface/20">
+          <div className="w-12 h-12 rounded-2xl bg-brand-card border border-brand-border text-brand-trust flex items-center justify-center mx-auto shadow-2xs">
+            <svg className="w-6 h-6 stroke-[2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <p className="text-xs font-bold text-brand-dark">لا توجد طلبات انضمام معلقة حالياً</p>
-          <p className="text-[11px] text-brand-muted">كافة طلبات المتاجر في المحافظة الوسطى تمت مراجعتها والبت فيها.</p>
+          <p className="text-xs font-black text-brand-dark">لا توجد طلبات انضمام معلقة حالياً</p>
+          <p className="text-[11px] text-brand-muted max-w-sm mx-auto leading-relaxed">
+            كافة طلبات المتاجر في المحافظة الوسطى تمت مراجعتها والبت فيها بدقة.
+          </p>
         </div>
       ) : (
         <div className="divide-y divide-brand-border/40">
@@ -60,15 +78,16 @@ export const AdminRecentApplications: React.FC<AdminRecentApplicationsProps> = (
             const city = store.address?.city || 'المحافظة الوسطى';
             const ownerPhone = store.ownerId?.phoneNumber || 'غير محدد';
             const ownerName = store.ownerId?.name || 'تاجر جديد';
+            const isStoreActing = isBusy && actingStoreId === store._id;
 
             return (
               <div
                 key={store._id}
-                className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-brand-surface/40 transition-colors"
+                className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-brand-surface/40 transition-colors"
               >
                 {/* Store Profile Info */}
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-brand-surface border border-brand-border overflow-hidden shrink-0 flex items-center justify-center text-xs font-black text-brand-dark shadow-2xs">
+                  <div className="w-12 h-12 rounded-2xl bg-brand-surface border border-brand-border overflow-hidden shrink-0 flex items-center justify-center text-xs font-black text-brand-dark shadow-2xs">
                     {store.logo ? (
                       <img
                         src={store.logo}
@@ -81,44 +100,60 @@ export const AdminRecentApplications: React.FC<AdminRecentApplicationsProps> = (
                     )}
                   </div>
 
-                  <div className="min-w-0 space-y-0.5">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-black text-brand-dark truncate">
                         {store.name}
                       </span>
-                      <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-brand-primary-soft text-brand-primary border border-brand-primary-border">
+                      <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-brand-primary-soft text-brand-primary border border-brand-primary-border">
                         طلب جديد
+                      </span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-stone-100 text-stone-700 border border-stone-200">
+                        {city}
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2 text-[11px] text-brand-muted font-medium flex-wrap">
                       <span>المالك: <strong className="text-brand-dark">{ownerName}</strong></span>
-                      <span>&bull;</span>
-                      <span>الهاتف: <span dir="ltr">{ownerPhone}</span></span>
-                      <span>&bull;</span>
-                      <span className="text-brand-trust font-bold">{city}</span>
+                      <span className="text-brand-border">&bull;</span>
+                      <span>الهاتف: <span dir="ltr" className="font-mono text-brand-dark">{ownerPhone}</span></span>
                     </div>
                   </div>
                 </div>
 
-                {/* Direct Approval Actions */}
-                <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                {/* Actions: View Details + Direct Approval Actions */}
+                <div className="flex items-center gap-2 self-end md:self-center shrink-0">
                   <button
                     type="button"
-                    onClick={() => onReject(store._id)}
-                    disabled={isBusy}
-                    className="px-3.5 py-2 rounded-xl border border-brand-border text-xs font-bold text-brand-muted hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors cursor-pointer active:scale-95 disabled:opacity-40"
+                    onClick={() => setSelectedStore(store)}
+                    className="px-3 py-2 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-card text-xs font-bold text-brand-dark transition-all cursor-pointer active:scale-95 shadow-2xs"
                   >
-                    رفض الطلب
+                    معاينة الملف
                   </button>
 
                   <button
                     type="button"
-                    onClick={() => onApprove(store._id)}
+                    onClick={() => handleReject(store._id)}
                     disabled={isBusy}
-                    className="px-4 py-2 rounded-xl bg-brand-trust hover:bg-brand-trust/90 text-white text-xs font-black transition-colors cursor-pointer active:scale-95 shadow-xs disabled:opacity-40"
+                    className="px-3.5 py-2 rounded-xl border border-brand-border text-xs font-bold text-brand-muted hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors cursor-pointer active:scale-95 disabled:opacity-40"
                   >
-                    اعتماد وتفعيل المتجر
+                    {isStoreActing && isRejecting ? 'جارٍ الرفض...' : 'رفض الطلب'}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(store._id)}
+                    disabled={isBusy}
+                    className="px-4 py-2 rounded-xl bg-brand-trust hover:bg-brand-trust/90 text-white text-xs font-black transition-colors cursor-pointer active:scale-95 shadow-xs disabled:opacity-40 flex items-center gap-1.5"
+                  >
+                    {isStoreActing && isApproving ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>جارٍ الاعتماد...</span>
+                      </>
+                    ) : (
+                      <span>اعتماد وتفعيل المتجر</span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -126,6 +161,22 @@ export const AdminRecentApplications: React.FC<AdminRecentApplicationsProps> = (
           })}
         </div>
       )}
+
+      {/* Store Inspection Modal */}
+      <AdminStoreDetailsModal
+        store={selectedStore}
+        isOpen={Boolean(selectedStore)}
+        onClose={() => setSelectedStore(null)}
+        onApprove={(id) => {
+          setSelectedStore(null);
+          handleApprove(id);
+        }}
+        onReject={(id) => {
+          setSelectedStore(null);
+          handleReject(id);
+        }}
+        isBusy={isBusy}
+      />
     </div>
   );
 };

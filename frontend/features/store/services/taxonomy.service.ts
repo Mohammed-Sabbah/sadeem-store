@@ -1,11 +1,19 @@
 import { getRequest } from '@/shared/lib/coreApi';
 
+export interface CategoryVariantAttribute {
+  key?: string;
+  name: string;
+  values?: string[];
+  type?: string;
+}
+
 export interface CategoryItem {
   _id: string;
   title: string;
   slug: string;
   icon?: string;
   order?: number;
+  variantAttributes?: CategoryVariantAttribute[];
 }
 
 export interface CityItem {

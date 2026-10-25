@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 const mongoose = require('mongoose');
 
 async function connectDB() {
@@ -13,4 +14,30 @@ async function connectDB() {
     }
 }
 
-module.exports = connectDB;
+async function withMongoTransaction(callback) {
+    const session = await mongoose.startSession();
+
+    try {
+        return await session.withTransaction(() => callback(session));
+    } catch (txError) {
+        const isNoReplicaSet = txError && txError.message && (
+            txError.message.includes('replica set') ||
+            txError.message.includes('Transaction numbers are only allowed')
+        );
+
+        if (isNoReplicaSet) {
+            return await callback(null);
+        }
+
+        throw txError;
+    } finally {
+        await session.endSession();
+    }
+}
+
+
+
+module.exports = {
+    connectDB,
+    withMongoTransaction
+};

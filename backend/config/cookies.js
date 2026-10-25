@@ -6,7 +6,7 @@ const cookieOptions = {
     secure: isProduction,
 };
 
-const accessTokenTTL = 15 * 60;
+const accessTokenTTL = 15 * 30 * 60;
 const refreshTokenTTL = 30 * 24 * 60 * 60;
 
 function getCookieOptions(maxAgeSeconds) {

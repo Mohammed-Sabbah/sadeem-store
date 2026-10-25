@@ -95,10 +95,14 @@ export async function sendRequest<T>(path: string, options: RequestOptions = {})
     }
 
     if (!res.ok) {
+      let errorMsg = body?.message || body?.msg;
+      if (!errorMsg && Array.isArray(body?.errors) && body.errors.length > 0) {
+        errorMsg = body.errors.map((e: any) => e.message || e.msg || String(e)).filter(Boolean).join(' · ');
+      }
       return {
         success: false,
         statusCode: res.status,
-        message: body?.message || fallbackMessage(res.status),
+        message: errorMsg || fallbackMessage(res.status),
         errors: body?.errors || null,
       };
     }
@@ -127,5 +131,33 @@ export function postRequest<T>(path: string, body?: any, options?: RequestOption
     method: 'POST',
     body: body instanceof FormData ? body : JSON.stringify(body),
     ...options,
+  });
+}
+
+export function putRequest<T>(path: string, body?: any, options?: RequestOptions) {
+  return sendRequest<T>(path, {
+    method: 'PUT',
+    body: body instanceof FormData ? body : JSON.stringify(body),
+    ...options,
+  });
+}
+
+export function patchRequest<T>(path: string, body?: any, options?: RequestOptions) {
+  return sendRequest<T>(path, {
+    method: 'PATCH',
+    body: body instanceof FormData ? body : JSON.stringify(body),
+    ...options,
+  });
+}
+
+export function deleteRequest<T>(path: string, body?: any, options?: RequestOptions) {
+  const isOptionsObject = body && typeof body === 'object' && !Array.isArray(body) && ('timeoutMs' in body || 'headers' in body || 'signal' in body);
+  const resolvedBody = isOptionsObject ? undefined : body;
+  const resolvedOptions = isOptionsObject ? body : options;
+
+  return sendRequest<T>(path, {
+    method: 'DELETE',
+    ...(resolvedBody !== undefined ? { body: resolvedBody instanceof FormData ? resolvedBody : JSON.stringify(resolvedBody) } : {}),
+    ...resolvedOptions,
   });
 }

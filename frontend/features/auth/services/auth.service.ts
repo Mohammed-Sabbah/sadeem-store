@@ -12,7 +12,7 @@ export interface UserResponse {
     name: string;
     phone: string;
     email?: string;
-    role?: 'customer' | 'merchant' | 'courier' | 'admin';
+    role?: 'customer' | 'merchant' | 'seller' | 'courier' | 'admin';
     status?: 'active' | 'pending_approval' | 'suspended';
     city?: string;
     address?: string;

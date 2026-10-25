@@ -1,12 +1,15 @@
 const User = require('../models/User');
 const Store = require('../models/Store');
-const { STATUS, STORE_APPROVE_STATUS, ROLE } = require('../constants/enums');
+const { STATUS, APPROVE_STATUS, ROLE } = require('../constants/enums');
 const { error } = require('../utils/responses');
 const { verifyToken } = require('../utils/token');
 
 async function authenticate(req, res, next) {
     try {
-        const token = req.cookies && req.cookies.accessToken;
+        let token = req.cookies && req.cookies.accessToken;
+        if (!token && req.headers && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+            token = req.headers.authorization.split(' ')[1];
+        }
 
         if (!token) {
             return error(res, 401, 'Unauthorized');
@@ -32,7 +35,7 @@ async function authenticate(req, res, next) {
             if (!store) {
                 return error(res, 401, 'Store not found');
             }
-            if (store.approveStatus !== STORE_APPROVE_STATUS.APPROVED) {
+            if (store.approveStatus !== APPROVE_STATUS.APPROVED) {
                 return error(res, 403, 'Store is not approved');
             }
             req.store = store;
@@ -69,5 +72,5 @@ async function verifyActiveStore(req, res, next) {
 module.exports = {
     authenticate,
     authorize,
-    verifyActiveStore
+    verifyActiveStore,
 };

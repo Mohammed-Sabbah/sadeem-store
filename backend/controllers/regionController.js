@@ -112,11 +112,6 @@ async function updateRegionStatus(req, res, next) {
         const { code } = req.params;
         const { status } = req.body;
 
-        const validStatuses = ['closed', 'delivery_only', 'hub'];
-        if (!validStatuses.includes(status)) {
-            return error(res, 400, 'الحالة التشغيلية غير صالحة. الخيارات المتاحة: closed, delivery_only, hub');
-        }
-
         const updated = await Region.findOneAndUpdate(
             { code: code.toLowerCase() },
             {

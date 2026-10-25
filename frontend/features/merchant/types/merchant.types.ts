@@ -1,0 +1,144 @@
+export type StoreApproveStatus = 'pending' | 'approved' | 'rejected';
+export type StoreStatus = 'active' | 'inActive';
+
+export interface StoreAddress {
+  governorate: string;
+  city: string;
+  detailedAddress: string;
+  coordinates: {
+    lat: number;
+    lng: number;
+  };
+}
+
+export interface StoreProfile {
+  _id: string;
+  name: string;
+  categoryId: string | { _id: string; title: string; slug: string; allowedOptions?: string[] };
+  categoryName?: string;
+  address: StoreAddress;
+  phoneNumber?: string;
+  approveStatus: StoreApproveStatus;
+  status: StoreStatus;
+  balance?: number;
+  ownerId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface OptionDefinitionValue {
+  key: string;
+  label: string;
+  hex?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export interface OptionDefinition {
+  _id?: string;
+  key: string;
+  label: string;
+  type: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC';
+  unit?: string | null;
+  values: OptionDefinitionValue[];
+  isActive: boolean;
+    status?: 'active' | 'inActive';
+}
+
+export interface ProductOption {
+  key?: string;
+  source?: 'DEFINED' | 'CUSTOM';
+  label?: string;
+  name: string; // e.g. "اللون", "المقاس"
+  type?: 'COLOR' | 'SIZE' | 'TEXT' | 'NUMERIC';
+  unit?: string | null;
+  values: string[]; // e.g. ["أسود", "بيج"], ["S", "M", "L"]
+}
+
+export interface ProductVariant {
+  _id?: string;
+  productId?: string;
+  storeId?: string;
+  sku?: string;
+  attributes: Record<string, string>; // e.g. { "color": "black", "size": "L" }
+  attrKey: string; // e.g. "color:black|size:L" or "default"
+  price: number;
+  compareAtPrice?: number | null;
+  originalPrice?: number | null;
+  stock: number;
+  isActive: boolean;
+  status?: 'active' | 'inActive';
+  image?: string;
+  images?: string[];
+}
+
+export interface ProductItem {
+  _id: string;
+  storeId: string;
+  categoryId: string | { _id: string; title: string; slug?: string; allowedOptions?: string[] };
+  categoryTitle?: string;
+  name: string;
+  title?: string;
+  slug?: string;
+  description?: string;
+  images: string[];
+  existingImages?: string[];
+  imageOrder?: string[];
+  options: ProductOption[];
+  minPrice: number;
+  maxPrice: number;
+  inStock: boolean;
+  isFeatured: boolean;
+  isActive: boolean;
+  approveStatus?: 'pending' | 'approved' | 'rejected';
+  isAnonymousVendor?: boolean;
+  isDeleted?: boolean;
+  rejectReason?: string;
+  variants?: ProductVariant[];
+  variantsCount?: number;
+  totalStock?: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ProductFormData {
+  name: string;
+  title?: string;
+  description: string;
+  categoryId: string;
+  images: string[];
+  existingImages?: string[];
+  imageOrder?: string[];
+  imageFiles?: File[];
+  isSimple: boolean;
+  simplePrice: number;
+  simpleCompareAtPrice?: number | null;
+  simpleStock: number;
+  options: ProductOption[];
+  variants: Array<{
+    _id?: string;
+    attributes: Record<string, string>;
+    attrKey: string;
+    sku?: string;
+    price: number;
+    compareAtPrice?: number | null;
+    originalPrice?: number | null;
+    stock: number;
+    isActive: boolean;
+    status?: 'active' | 'inActive';
+    image?: string;
+    imageFile?: File;
+    images?: string[];
+  }>;
+  isFeatured: boolean;
+  isActive: boolean;
+  isAnonymousVendor?: boolean;
+}
+
+export interface MerchantMetrics {
+  totalProducts: number;
+  inStockProducts: number;
+  outOfStockProducts: number;
+  totalInventoryUnits: number;
+  activeProducts: number;
+}

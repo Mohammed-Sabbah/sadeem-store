@@ -56,6 +56,21 @@ export const adminService = {
   /**
    * جلب كافة المنتجات للإدارة
    */
+    /**
+   * جلب تفاصيل صنف مفرد للإدارة
+   */
+  async getProductById(id: string): Promise<{ success: boolean; data?: any; message?: string }> {
+    try {
+      const res = await getRequest<{ product: any }>(`/api/products/admin/${id}`);
+      if (res.success && res.data?.product) {
+        return { success: true, data: res.data.product };
+      }
+      return { success: false, message: 'تعذر جلب بيانات الصنف' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر جلب بيانات الصنف' };
+    }
+  },
+
   async getProducts(): Promise<{ success: boolean; data: any[]; count: number }> {
     try {
       const res = await getRequest<{ products: any[]; count: number }>('/api/products/admin');

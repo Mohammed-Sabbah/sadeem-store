@@ -127,6 +127,27 @@ async function getAdminProducts(req, res, next) {
     }
 }
 
+async function getAdminProductById(req, res, next) {
+    try {
+        const product = await Product.findOne({ _id: req.params.id, isDeleted: false })
+            .populate('categoryId', 'title slug variantAttributes')
+            .populate({ path: 'storeId', select: 'name logo address status approveStatus balance' });
+
+        if (!product) {
+            return error(res, 404, 'Product not found');
+        }
+
+        const productWithVariants = await getProductResponse(product);
+
+        return success(res, 200, {
+            product: productWithVariants,
+        });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+
 async function createProduct(req, res, next) {
     try {
         const { title, description, price, stock, variants } = req.body || {}
@@ -279,6 +300,7 @@ module.exports = {
     getPublicProduct,
     getSellerProducts,
     getAdminProducts,
+    getAdminProductById,
     createProduct,
     updateProduct,
     deleteProduct,

@@ -8,6 +8,7 @@ import type { AdminOverviewMetrics, AdminStoreItem } from '../types/admin.types'
 export const ADMIN_QUERY_KEYS = {
   stores: ['admin', 'stores'] as const,
   products: ['admin', 'products'] as const,
+  product: (id: string) => ['admin', 'product', id] as const,
   categories: ['admin', 'categories'] as const,
 };
 
@@ -29,6 +30,21 @@ export function useAdminProductsQuery() {
       const res = await adminService.getProducts();
       return res.data;
     },
+    staleTime: 1000 * 30,
+  });
+}
+
+export function useAdminProductQuery(productId: string) {
+  return useQuery({
+    queryKey: ADMIN_QUERY_KEYS.product(productId),
+    queryFn: async () => {
+      const res = await adminService.getProductById(productId);
+      if (!res.success || !res.data) {
+        throw new Error(res.message || 'تعذر جلب تفاصيل الصنف');
+      }
+      return res.data;
+    },
+    enabled: Boolean(productId),
     staleTime: 1000 * 30,
   });
 }
@@ -160,6 +176,7 @@ export function useAdminProductMutations() {
             : 'تم إيقاف الصنف إدارياً'
         );
         queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.products });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'product', vars.productId] });
       } else {
         toast.error(res.message || 'تعذر تحديث حالة الصنف');
       }

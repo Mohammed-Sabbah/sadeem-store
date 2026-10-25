@@ -14,6 +14,7 @@ const {
     getPublicProduct,
     getSellerProducts,
     getAdminProducts,
+    getAdminProductById,
     createProduct,
     updateProduct,
     deleteProduct,
@@ -42,6 +43,7 @@ router.get('/seller', ...sellerOnly, getSellerProducts);
 
 // Get All Products For Admin
 router.get('/admin', ...adminOnly, getAdminProducts);
+router.get('/admin/:id', ...adminOnly, validateProductId, getAdminProductById);
 
 
 

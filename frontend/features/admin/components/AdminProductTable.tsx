@@ -101,8 +101,7 @@ export const AdminProductTable: React.FC<AdminProductTableProps> = ({
                       </span>
                     </div>
                     <Link
-                      href={`/product/${p._id}`}
-                      target="_blank"
+                      href={`/admin/products/${p._id}`}
                       className="text-sm font-black text-brand-dark hover:text-brand-primary block tracking-tight transition-colors cursor-pointer"
                     >
                       {p.title || p.name}
@@ -221,9 +220,11 @@ export const AdminProductTable: React.FC<AdminProductTableProps> = ({
                     <span className="text-[10px] font-bold text-brand-primary block">
                       {storeName} &bull; {categoryTitle}
                     </span>
-                    <h4 className="text-sm font-black text-brand-dark truncate block">
-                      {p.title || p.name}
-                    </h4>
+                    <Link href={`/admin/products/${p._id}`} className="block">
+                      <h4 className="text-sm font-black text-brand-dark truncate block hover:text-brand-primary transition-colors">
+                        {p.title || p.name}
+                      </h4>
+                    </Link>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-black text-brand-dark">
                         {priceLabel}

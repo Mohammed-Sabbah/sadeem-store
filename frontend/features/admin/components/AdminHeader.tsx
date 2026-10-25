@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ADMIN_NAV_ITEMS } from '../utils/adminNavigation';
@@ -20,13 +21,15 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onOpenMobile }) => {
   }) || { label: 'لوحة الإدارة' };
 
   const handleLogout = async () => {
-    await logout();
-    router.replace('/auth/login');
+    if (confirm('هل أنت متأكد من تسجيل الخروج من لوحة الإدارة؟')) {
+      await logout();
+      router.replace('/auth/login');
+    }
   };
 
   return (
-    <header className="h-16 bg-brand-card border-b border-brand-border/80 px-4 sm:px-6 flex items-center justify-between shrink-0 select-none">
-      {/* 1. Left side (in RTL: Right side) Title & Mobile Trigger */}
+    <header className="h-16 bg-brand-card border-b border-brand-border/80 px-4 sm:px-6 flex items-center justify-between shrink-0 select-none font-almarai">
+      {/* 1. Right side (RTL): Mobile Trigger & Route Title */}
       <div className="flex items-center gap-3 min-w-0">
         <button
           type="button"
@@ -39,18 +42,37 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onOpenMobile }) => {
           </svg>
         </button>
 
-        <div className="flex items-center gap-2">
-          <h1 className="text-sm sm:text-base font-black text-brand-dark tracking-tight">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-sm sm:text-base font-black text-brand-dark tracking-tight truncate max-w-[150px] sm:max-w-none">
             {currentItem.label}
           </h1>
-          <span className="hidden sm:inline-block text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-primary-soft text-brand-primary border border-brand-primary-border">
-            محطة القيادة
+
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-0.5 rounded-full bg-brand-primary-soft text-brand-primary border border-brand-primary-border shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-primary animate-pulse" />
+            <span>محطة القيادة</span>
+          </span>
+
+          <span className="hidden md:inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-brand-trust" />
+            <span>المحافظة الوسطى نشطة</span>
           </span>
         </div>
       </div>
 
-      {/* 2. User Info & Session Controls */}
+      {/* 2. Left side (RTL): Actions, User & Session */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {/* Quick Link to Consumer Storefront */}
+        <Link
+          href="/"
+          target="_blank"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-card text-xs font-bold text-brand-dark transition-all active:scale-95 shadow-2xs group"
+          title="معاينة متجر سَدِيم العام في تبويب مستقل"
+        >
+          <span className="hidden sm:inline">معاينة المتجر</span>
+          <span className="text-[10px] text-brand-muted group-hover:text-brand-primary transition-colors">↗</span>
+        </Link>
+
+        {/* User Badge */}
         <div className="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl bg-brand-surface border border-brand-border">
           <div className="w-7 h-7 rounded-lg bg-brand-primary text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
             {user?.name ? user.name.charAt(0) : 'م'}
@@ -65,11 +87,12 @@ export const AdminHeader: React.FC<AdminHeaderProps> = ({ onOpenMobile }) => {
           </div>
         </div>
 
+        {/* Logout Button */}
         <button
           type="button"
           onClick={handleLogout}
           className="w-9 h-9 rounded-xl border border-brand-border hover:border-red-200 bg-brand-card hover:bg-red-50 text-brand-muted hover:text-red-600 flex items-center justify-center transition-colors cursor-pointer active:scale-95 shadow-2xs"
-          title="تسجيل الخروج"
+          title="تسجيل الخروج من المنصة"
           aria-label="تسجيل الخروج"
         >
           <svg className="w-4 h-4 stroke-[1.75]" fill="none" viewBox="0 0 24 24" stroke="currentColor">

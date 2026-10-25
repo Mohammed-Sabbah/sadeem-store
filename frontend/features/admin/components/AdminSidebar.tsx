@@ -85,7 +85,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   return (
     <aside
-      className={`h-full flex flex-col bg-brand-card border-l border-brand-border select-none transition-all duration-200 ${
+      className={`h-full flex flex-col bg-brand-card border-l border-brand-border select-none transition-all duration-200 font-almarai ${
         isCollapsed ? 'w-20' : 'w-64'
       }`}
     >
@@ -111,23 +111,35 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           )}
         </Link>
 
-        {/* Desktop Collapse Trigger */}
-        <button
-          type="button"
-          onClick={onToggleCollapse}
-          className="hidden lg:flex w-7 h-7 rounded-lg text-brand-muted hover:text-brand-dark hover:bg-brand-surface items-center justify-center transition-colors cursor-pointer"
-          title={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
-          aria-label={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
-        >
-          <svg
-            className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        {/* Mobile Close Button */}
+        {onCloseMobile ? (
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="w-8 h-8 rounded-lg text-brand-muted hover:text-brand-dark hover:bg-brand-surface flex items-center justify-center transition-colors cursor-pointer text-sm"
+            aria-label="إغلاق القائمة"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
+            ✕
+          </button>
+        ) : (
+          /* Desktop Collapse Trigger */
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="hidden lg:flex w-7 h-7 rounded-lg text-brand-muted hover:text-brand-dark hover:bg-brand-surface items-center justify-center transition-colors cursor-pointer"
+            title={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
+            aria-label={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
+          >
+            <svg
+              className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* 2. Navigation Items List */}
@@ -138,48 +150,67 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
           if (isDeferred) {
             return (
-              <div
-                key={item.id}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-brand-muted/50 cursor-not-allowed select-none ${
-                  isCollapsed ? 'justify-center' : 'justify-between'
-                }`}
-                title={`${item.label} (معطلة مؤقتاً)`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <span className="opacity-40">{getNavIcon(item.id, false)}</span>
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+              <div key={item.id} className="relative group">
+                <div
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-brand-muted/50 cursor-not-allowed select-none ${
+                    isCollapsed ? 'justify-center' : 'justify-between'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="opacity-40">{getNavIcon(item.id, false)}</span>
+                    {!isCollapsed && <span className="truncate">{item.label}</span>}
+                  </div>
+                  {!isCollapsed && item.badge && (
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 border border-stone-200 shrink-0">
+                      {item.badge}
+                    </span>
+                  )}
                 </div>
-                {!isCollapsed && item.badge && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-brand-surface border border-brand-border/60 text-brand-muted/70 shrink-0">
-                    {item.badge}
-                  </span>
+
+                {/* Instant Floating Tooltip in Collapsed Mode */}
+                {isCollapsed && (
+                  <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-brand-dark text-white text-[11px] font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                    <span>{item.label}</span>
+                    {item.badge && (
+                      <span className="mr-1.5 text-[9px] text-stone-300 font-normal">
+                        ({item.badge})
+                      </span>
+                    )}
+                  </div>
                 )}
               </div>
             );
           }
 
           return (
-            <Link
-              key={item.id}
-              href={item.href}
-              onClick={onCloseMobile}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer active:scale-98 ${
-                isCollapsed ? 'justify-center' : 'justify-between'
-              } ${
-                active
-                  ? 'bg-brand-primary-soft text-brand-primary shadow-2xs font-black'
-                  : 'text-brand-dark hover:bg-brand-surface hover:text-brand-primary'
-              }`}
-              title={isCollapsed ? item.label : undefined}
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                {getNavIcon(item.id, active)}
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
-              </div>
-              {!isCollapsed && active && (
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-primary shrink-0" />
+            <div key={item.id} className="relative group">
+              <Link
+                href={item.href}
+                onClick={onCloseMobile}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 cursor-pointer active:scale-98 relative ${
+                  isCollapsed ? 'justify-center' : 'justify-between'
+                } ${
+                  active
+                    ? 'bg-brand-primary-soft text-brand-primary shadow-2xs font-black'
+                    : 'text-brand-dark hover:bg-brand-surface hover:text-brand-primary'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  {getNavIcon(item.id, active)}
+                  {!isCollapsed && <span className="truncate">{item.label}</span>}
+                </div>
+                {!isCollapsed && active && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-primary shrink-0" />
+                )}
+              </Link>
+
+              {/* Instant Floating Tooltip in Collapsed Mode */}
+              {isCollapsed && (
+                <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-brand-dark text-white text-[11px] font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                  {item.label}
+                </div>
               )}
-            </Link>
+            </div>
           );
         })}
       </nav>
@@ -187,12 +218,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
       {/* 3. System Scope Footer Badge */}
       {!isCollapsed && (
         <div className="p-3 border-t border-brand-border/70 shrink-0">
-          <div className="bg-brand-surface rounded-xl p-2.5 border border-brand-border text-center space-y-0.5">
+          <div className="bg-brand-surface rounded-xl p-2.5 border border-brand-border text-center space-y-0.5 shadow-2xs">
             <span className="text-[10px] font-black text-brand-dark block">
               نطاق المرحلة الأولى
             </span>
             <span className="text-[10px] font-bold text-brand-trust block">
-              المحافظة الوسطى
+              المحافظة الوسطى — 8 ₪ موحد
             </span>
           </div>
         </div>

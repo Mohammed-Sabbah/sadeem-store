@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import type { AdminStoreItem } from '../types/admin.types';
 
 interface AdminStoreTableProps {
@@ -20,6 +21,19 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
   onViewDetails,
   isBusy = false,
 }) => {
+  const handleRejectConfirm = (store: AdminStoreItem) => {
+    if (confirm(`هل أنت متأكد من رفض طلب انضمام متجر "${store.name}"؟`)) {
+      onReject(store._id);
+    }
+  };
+
+  const handleToggleConfirm = (store: AdminStoreItem) => {
+    const actionText = store.status === 'active' ? 'تجميد' : 'فك تجميد وتنشيط';
+    if (confirm(`هل أنت متأكد من ${actionText} متجر "${store.name}"؟`)) {
+      onToggleStatus(store._id);
+    }
+  };
+
   if (stores.length === 0) {
     return (
       <div className="text-center py-20 px-4 bg-brand-surface/30">
@@ -49,7 +63,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
               <th className="py-3 px-4 w-36">المدينة</th>
               <th className="py-3 px-4 w-28">المستحقات</th>
               <th className="py-3 px-4 w-32">حالة المتجر</th>
-              <th className="py-3 px-4 w-40 text-center">الإجراءات</th>
+              <th className="py-3 px-4 w-44 text-center">الإجراءات</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-brand-border/40">
@@ -100,7 +114,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                     <span className="font-bold text-brand-dark block text-xs">
                       {ownerName}
                     </span>
-                    <span className="text-[11px] font-medium text-brand-muted dir-ltr block text-right">
+                    <span className="text-[11px] font-mono text-brand-muted dir-ltr block text-right">
                       {ownerPhone}
                     </span>
                   </td>
@@ -151,13 +165,13 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                             type="button"
                             onClick={() => onApprove(store._id)}
                             disabled={isBusy}
-                            className="px-2.5 py-1 rounded-lg bg-brand-trust text-white text-[11px] font-black hover:bg-brand-trust/90 transition-colors cursor-pointer active:scale-95 disabled:opacity-40"
+                            className="px-2.5 py-1 rounded-lg bg-brand-trust text-white text-[11px] font-black hover:bg-brand-trust/90 transition-colors cursor-pointer active:scale-95 disabled:opacity-40 shadow-2xs"
                           >
                             اعتماد
                           </button>
                           <button
                             type="button"
-                            onClick={() => onReject(store._id)}
+                            onClick={() => handleRejectConfirm(store)}
                             disabled={isBusy}
                             className="px-2.5 py-1 rounded-lg border border-brand-border text-brand-muted hover:text-red-600 hover:bg-red-50 text-[11px] font-bold transition-colors cursor-pointer active:scale-95 disabled:opacity-40"
                           >
@@ -167,7 +181,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                       ) : isApproved ? (
                         <button
                           type="button"
-                          onClick={() => onToggleStatus(store._id)}
+                          onClick={() => handleToggleConfirm(store)}
                           disabled={isBusy}
                           className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer active:scale-95 ${
                             isActive
@@ -175,10 +189,22 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                               : 'bg-brand-dark text-white hover:bg-brand-dark/90'
                           }`}
                         >
-                          {isActive ? 'تجميد المتجر' : 'فك التجميد'}
+                          {isActive ? 'تجميد' : 'فك التجميد'}
                         </button>
                       ) : null}
 
+                      {/* Link to Store Products */}
+                      <Link
+                        href={`/admin/products?storeId=${store._id}`}
+                        className="p-1.5 rounded-lg text-brand-muted hover:text-brand-primary hover:bg-brand-surface transition-colors cursor-pointer"
+                        title="استعراض كتالوج منتجات هذا المتجر"
+                      >
+                        <svg className="w-4 h-4 stroke-[1.8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                      </Link>
+
+                      {/* View Details Modal */}
                       <button
                         type="button"
                         onClick={() => onViewDetails(store)}
@@ -266,20 +292,20 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                   المستحقات: <strong className="text-brand-dark">{store.balance ?? 0} ₪</strong>
                 </span>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   {isPending ? (
                     <>
                       <button
                         type="button"
                         onClick={() => onApprove(store._id)}
                         disabled={isBusy}
-                        className="px-3 py-1.5 rounded-lg bg-brand-trust text-white text-xs font-black active:scale-95 disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-lg bg-brand-trust text-white text-xs font-black active:scale-95 disabled:opacity-40 shadow-2xs"
                       >
                         اعتماد
                       </button>
                       <button
                         type="button"
-                        onClick={() => onReject(store._id)}
+                        onClick={() => handleRejectConfirm(store)}
                         disabled={isBusy}
                         className="px-3 py-1.5 rounded-lg border border-brand-border text-brand-muted text-xs font-bold active:scale-95 disabled:opacity-40"
                       >
@@ -289,7 +315,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                   ) : isApproved ? (
                     <button
                       type="button"
-                      onClick={() => onToggleStatus(store._id)}
+                      onClick={() => handleToggleConfirm(store)}
                       disabled={isBusy}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 ${
                         isActive
@@ -301,10 +327,20 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                     </button>
                   ) : null}
 
+                  <Link
+                    href={`/admin/products?storeId=${store._id}`}
+                    className="p-1.5 rounded-lg border border-brand-border text-brand-muted hover:text-brand-primary"
+                    title="كتالوج المنتجات"
+                  >
+                    <svg className="w-4 h-4 stroke-[1.8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                    </svg>
+                  </Link>
+
                   <button
                     type="button"
                     onClick={() => onViewDetails(store)}
-                    className="p-1.5 rounded-lg border border-brand-border text-brand-muted hover:text-brand-dark"
+                    className="px-2.5 py-1.5 rounded-lg border border-brand-border text-xs font-bold text-brand-dark hover:bg-brand-surface"
                   >
                     تفاصيل
                   </button>

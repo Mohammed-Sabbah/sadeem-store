@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Link from 'next/link';
 import type { AdminStoreItem } from '../types/admin.types';
 
 interface AdminStoreDetailsModalProps {
@@ -36,6 +37,21 @@ export const AdminStoreDetailsModal: React.FC<AdminStoreDetailsModalProps> = ({
   const isPending = store.approveStatus === 'pending';
   const isApproved = store.approveStatus === 'approved';
   const isActive = store.status === 'active';
+
+  const handleRejectConfirm = () => {
+    if (confirm(`هل أنت متأكد من رفض طلب انضمام متجر "${store.name}"؟`)) {
+      onReject?.(store._id);
+      onClose();
+    }
+  };
+
+  const handleToggleConfirm = () => {
+    const actionText = isActive ? 'تجميد' : 'فك تجميد وتنشيط';
+    if (confirm(`هل أنت متأكد من ${actionText} متجر "${store.name}"؟`)) {
+      onToggleStatus?.(store._id);
+      onClose();
+    }
+  };
 
   return (
     <div
@@ -97,7 +113,7 @@ export const AdminStoreDetailsModal: React.FC<AdminStoreDetailsModalProps> = ({
             <span className="text-[10px] font-bold text-brand-muted block">بيانات المالك</span>
             <span className="font-black text-brand-dark block">{store.ownerId?.name || 'غير محدد'}</span>
             <span className="text-[11px] font-medium text-brand-muted block">{store.ownerId?.email || 'بدون بريد'}</span>
-            <span className="text-[11px] font-medium text-brand-muted dir-ltr block text-right">{store.ownerId?.phoneNumber || 'بدون هاتف'}</span>
+            <span className="text-[11px] font-medium text-brand-muted dir-ltr block text-right font-mono">{store.ownerId?.phoneNumber || 'بدون هاتف'}</span>
           </div>
 
           <div className="bg-brand-surface/60 rounded-xl p-3 border border-brand-border/60 space-y-1">
@@ -129,16 +145,23 @@ export const AdminStoreDetailsModal: React.FC<AdminStoreDetailsModalProps> = ({
           </div>
         )}
 
+        {/* Direct Link to Store Products */}
+        <Link
+          href={`/admin/products?storeId=${store._id}`}
+          onClick={onClose}
+          className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-card text-xs font-bold text-brand-dark transition-all shadow-2xs"
+        >
+          <span>استعراض أصناف هذا المتجر في الكتالوج</span>
+          <span className="text-brand-muted text-[10px]">↗</span>
+        </Link>
+
         {/* Actions Footer */}
         <div className="flex items-center gap-2 pt-2 border-t border-brand-border/60">
           {isPending ? (
             <>
               <button
                 type="button"
-                onClick={() => {
-                  onReject?.(store._id);
-                  onClose();
-                }}
+                onClick={handleRejectConfirm}
                 disabled={isBusy}
                 className="flex-1 h-9 rounded-xl border border-brand-border text-xs font-bold text-brand-muted hover:text-red-600 hover:bg-red-50 active:scale-95 transition-all cursor-pointer disabled:opacity-50"
               >
@@ -159,10 +182,7 @@ export const AdminStoreDetailsModal: React.FC<AdminStoreDetailsModalProps> = ({
           ) : isApproved ? (
             <button
               type="button"
-              onClick={() => {
-                onToggleStatus?.(store._id);
-                onClose();
-              }}
+              onClick={handleToggleConfirm}
               disabled={isBusy}
               className={`w-full h-9 rounded-xl text-xs font-black active:scale-95 transition-all cursor-pointer shadow-xs ${
                 isActive

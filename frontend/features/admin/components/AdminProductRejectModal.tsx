@@ -10,6 +10,13 @@ interface AdminProductRejectModalProps {
   isSubmitting?: boolean;
 }
 
+const REJECT_REASON_PRESETS = [
+  'بيانات أو صور المنتج غير واضحة',
+  'مخالفة معايير التسعير أو التوصيل',
+  'عدم مطابقة لمواصفات الفئة التجارية',
+  'صنف مكرر أو منتهي الصلاحية',
+];
+
 export const AdminProductRejectModal: React.FC<AdminProductRejectModalProps> = ({
   isOpen,
   onClose,
@@ -71,10 +78,30 @@ export const AdminProductRejectModal: React.FC<AdminProductRejectModalProps> = (
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-3 pt-2">
+        {/* Quick Reason Presets */}
+        <div className="space-y-1.5 pt-1">
+          <span className="text-[11px] font-bold text-brand-muted block">أسباب شائعة جاهزة:</span>
+          <div className="flex flex-wrap gap-1.5">
+            {REJECT_REASON_PRESETS.map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => {
+                  setReason(preset);
+                  if (error) setError('');
+                }}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-brand-surface border border-brand-border text-brand-dark hover:border-red-300 hover:bg-red-50 hover:text-red-700 transition-colors cursor-pointer"
+              >
+                {preset}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3 pt-1">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-brand-dark block">
-              سبب الإيقاف (سيظهر للتاجر في لوحة تحكمه):
+              نص سبب الإيقاف (سيظهر للتاجر في لوحة تحكمه):
             </label>
             <textarea
               rows={3}
@@ -83,7 +110,7 @@ export const AdminProductRejectModal: React.FC<AdminProductRejectModalProps> = (
                 setReason(e.target.value);
                 if (error) setError('');
               }}
-              placeholder="مثال: مخالفة معايير التسعير، أو صور غير واضحة، أو عدم مطابقة الوصف..."
+              placeholder="اكتب سبب الإيقاف بدقة أو اختر من الأسباب الجاهزة أعلاه..."
               className="w-full p-3 text-xs font-medium rounded-xl border border-brand-border bg-brand-surface text-brand-dark placeholder:text-brand-muted/60 focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
             />
             {error && <p className="text-[11px] font-bold text-red-600">{error}</p>}
@@ -101,9 +128,16 @@ export const AdminProductRejectModal: React.FC<AdminProductRejectModalProps> = (
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 h-9 rounded-xl bg-red-600 text-white text-xs font-black hover:bg-red-700 active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50"
+              className="flex-1 h-9 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5"
             >
-              {isSubmitting ? 'جارٍ الإيقاف...' : 'تأكيد الإيقاف'}
+              {isSubmitting ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>جارٍ الإيقاف...</span>
+                </>
+              ) : (
+                <span>تأكيد الإيقاف والتجميد</span>
+              )}
             </button>
           </div>
         </form>

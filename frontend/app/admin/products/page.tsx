@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   useAdminProductsQuery,
   useAdminStoresQuery,
@@ -16,7 +17,11 @@ import { AdminProductFilterBar } from '@/features/admin/components/AdminProductF
 import { AdminProductTable } from '@/features/admin/components/AdminProductTable';
 import { AdminProductRejectModal } from '@/features/admin/components/AdminProductRejectModal';
 
-export default function AdminProductsPage() {
+function AdminProductsContent() {
+  const searchParams = useSearchParams();
+  const initialStoreId = searchParams.get('storeId') || 'all';
+  const initialCategoryId = searchParams.get('categoryId') || 'all';
+
   const { data: products = [], isLoading: isLoadingProducts } = useAdminProductsQuery();
   const { data: stores = [] } = useAdminStoresQuery();
   const { data: categories = [] } = useAdminCategoriesQuery();
@@ -24,9 +29,22 @@ export default function AdminProductsPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<AdminProductTab>('all');
-  const [selectedStoreId, setSelectedStoreId] = useState('all');
-  const [selectedCategoryId, setSelectedCategoryId] = useState('all');
+  const [selectedStoreId, setSelectedStoreId] = useState(initialStoreId);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(initialCategoryId);
   const [productToReject, setProductToReject] = useState<any | null>(null);
+
+  // Sync state if query params change
+  useEffect(() => {
+    if (initialStoreId !== 'all') {
+      setSelectedStoreId(initialStoreId);
+    }
+  }, [initialStoreId]);
+
+  useEffect(() => {
+    if (initialCategoryId !== 'all') {
+      setSelectedCategoryId(initialCategoryId);
+    }
+  }, [initialCategoryId]);
 
   const metrics = useMemo(() => computeAdminProductMetrics(products), [products]);
 
@@ -71,7 +89,7 @@ export default function AdminProductsPage() {
               رقابة الكتالوج والأصناف
             </h2>
             <p className="text-xs text-brand-muted max-w-xl leading-relaxed">
-              رقابة مركزية لكافة الأصناف المعروضة في شبكة سَدِيم عبر مختلف متاجر المحافظة الوسطى، مع إمكانية التجميد الفوري.
+              رقابة مركزية موحدة لكافة الأصناف المعروضة في شبكة سَدِيم عبر مختلف متاجر المحافظة الوسطى، مع إمكانية التجميد الفوري.
             </p>
           </div>
 
@@ -124,5 +142,20 @@ export default function AdminProductsPage() {
         isSubmitting={isUpdating}
       />
     </div>
+  );
+}
+
+export default function AdminProductsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="py-20 flex flex-col items-center justify-center space-y-3 font-almarai">
+          <div className="w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-xs font-bold text-brand-muted">جارٍ تحميل كتالوج الإدارة...</p>
+        </div>
+      }
+    >
+      <AdminProductsContent />
+    </Suspense>
   );
 }

@@ -109,7 +109,7 @@ export default function AdminProductDetailsPage() {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-brand-border bg-brand-surface text-xs font-bold text-brand-dark hover:bg-brand-card transition-colors shrink-0 shadow-2xs"
           >
             <span>العودة للكتالوج</span>
-            <span className="text-xs">←</span>
+            <span className="text-xs">&rarr;</span>
           </Link>
         </div>
 
@@ -208,7 +208,7 @@ export default function AdminProductDetailsPage() {
                   <img
                     src={activeImage}
                     alt={product.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-opacity duration-200"
                   />
                 </div>
 
@@ -222,8 +222,8 @@ export default function AdminProductDetailsPage() {
                         onClick={() => setSelectedImage(img)}
                         className={`w-14 h-14 rounded-xl border overflow-hidden shrink-0 transition-all cursor-pointer ${
                           activeImage === img
-                            ? 'border-brand-primary ring-2 ring-brand-primary/20 scale-95'
-                            : 'border-brand-border hover:border-brand-dark/40'
+                            ? 'border-brand-primary ring-2 ring-brand-primary/20 scale-95 shadow-xs'
+                            : 'border-brand-border hover:border-brand-dark/40 opacity-70 hover:opacity-100'
                         }`}
                       >
                         <img src={img} alt="" className="w-full h-full object-cover" />
@@ -426,7 +426,7 @@ export default function AdminProductDetailsPage() {
                   href={`/admin/stores?search=${encodeURIComponent(store.name || '')}`}
                   className="w-full py-2 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-card text-center text-xs font-bold text-brand-dark transition-colors block shadow-2xs"
                 >
-                  عرض ملف المتجر في شبكة المتاجر ←
+                  عرض ملف المتجر في شبكة المتاجر &larr;
                 </Link>
               </div>
             ) : (
@@ -448,18 +448,25 @@ export default function AdminProductDetailsPage() {
                 </div>
 
                 {category.variantAttributes && category.variantAttributes.length > 0 && (
-                  <div className="pt-2 border-t border-brand-border/40 space-y-1">
+                  <div className="pt-2 border-t border-brand-border/40 space-y-1.5">
                     <span className="text-[10px] font-bold text-brand-muted block">
-                      السمات المصرحة للفئة:
+                      السمات والقيم المصرحة للفئة:
                     </span>
-                    <div className="flex items-center gap-1.5 flex-wrap">
+                    <div className="space-y-1">
                       {category.variantAttributes.map((attr: any, idx: number) => (
-                        <span
+                        <div
                           key={idx}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-brand-surface border border-brand-border text-brand-dark"
+                          className="p-2 rounded-lg bg-brand-surface border border-brand-border text-xs flex items-center justify-between gap-2"
                         >
-                          {attr.name}
-                        </span>
+                          <span className="font-bold text-brand-dark">{attr.name}</span>
+                          {attr.values && attr.values.length > 0 ? (
+                            <span className="text-[10px] font-medium text-brand-muted truncate max-w-[140px]" title={attr.values.join('، ')}>
+                              {attr.values.join('، ')}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-brand-muted">قيم حرة</span>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>

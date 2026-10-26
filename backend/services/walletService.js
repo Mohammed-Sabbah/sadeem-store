@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
+const { withWalletIdempotency } = require('./walletIdempotency');
 const {
     ROLE,
     STATUS,
@@ -10,82 +11,76 @@ const {
     TRANSACTION_STATUS,
 } = require('../constants/enums');
 
-function normalizeNumber(value, fallback = 0) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : fallback;
+function parsePositiveMoney(value, label) {
+    if (value === '' || value === null || value === undefined || typeof value === 'boolean') {
+        const error = new Error(`${label} must be a valid positive amount`);
+        error.statusCode = 400;
+        throw error;
+    }
+
+    const amount = Number(value);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > 100000000 ||
+        Math.round(amount * 100) !== amount * 100) {
+        const error = new Error(`${label} must be a valid positive amount with at most two decimal places`);
+        error.statusCode = 400;
+        throw error;
+    }
+    return Math.round(amount * 100) / 100;
 }
 
-async function withWalletSession(operation) {
-    const session = await mongoose.startSession();
+function validatePayoutDetails(value) {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        const error = new Error('Payout details must be an object');
+        error.statusCode = 400;
+        throw error;
+    }
 
+    let serialized;
     try {
-        return await session.withTransaction(async () => operation(session));
-    } finally {
-        await session.endSession();
+        serialized = JSON.stringify(value);
+    } catch {
+        serialized = null;
     }
+    if (!serialized || Buffer.byteLength(serialized, 'utf8') > 2000) {
+        const error = new Error('Payout details are invalid or too large');
+        error.statusCode = 400;
+        throw error;
+    }
+
+    for (const [key, item] of Object.entries(value)) {
+        if (!/^[a-zA-Z0-9_ -]{1,50}$/.test(key) ||
+            !['string', 'number', 'boolean'].includes(typeof item) ||
+            (typeof item === 'string' && item.length > 300) ||
+            (typeof item === 'number' && !Number.isFinite(item))) {
+            const error = new Error('Payout details contain an invalid field');
+            error.statusCode = 400;
+            throw error;
+        }
+    }
+    if (Object.keys(value).length === 0) {
+        const error = new Error('Payout details are required');
+        error.statusCode = 400;
+        throw error;
+    }
+    return value;
 }
 
-async function getOrCreateWallet(userId, session = null) {
-    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
-        throw new Error('Invalid user id');
-    }
-
-    const user = await User.findById(userId).lean();
-    if (!user) {
-        throw new Error('User not found');
-    }
-
-    if (user.role !== ROLE.USER) {
-        return null;
-    }
-
-    const wallet = await Wallet.findOne({ userId }).session(session || null);
-    if (wallet) {
-        return wallet;
-    }
-
-    const [createdWallet] = await Wallet.create([
-        {
-            userId,
-            withdrawableBalance: 0,
-            storeCreditBalance: 0,
-            balance: 0,
-            currency: 'ILS',
-            status: STATUS.ACTIVE,
-        },
-    ], session ? { session } : {});
-
-    return createdWallet;
+function createWalletError(message, statusCode = 400) {
+    const error = new Error(message);
+    error.statusCode = statusCode;
+    return error;
 }
 
-async function getWalletByUserId(userId) {
-    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
-        throw new Error('Invalid user id');
+function buildTransactionQuery(filters = {}, walletId = null) {
+    const query = { isDeleted: { $ne: true } };
+    if (walletId) {
+        query.walletId = walletId;
     }
 
-    return Wallet.findOne({ userId }).lean();
-}
-
-async function getWalletTransactions(walletId, filters = {}, pagination = {}) {
-    if (!walletId || !mongoose.Types.ObjectId.isValid(String(walletId))) {
-        throw new Error('Invalid wallet id');
-    }
-
-    const query = { walletId };
-    const offset = Number(pagination.offset || 0);
-    const limit = Number(pagination.limit || 20);
-
-    if (filters.type) {
-        query.type = filters.type;
-    }
-
-    if (filters.status) {
-        query.status = filters.status;
-    }
-
-    if (filters.balanceType) {
-        query.balanceType = filters.balanceType;
-    }
+    ['type', 'status', 'balanceType', 'userId'].forEach((field) => {
+        if (filters[field]) query[field] = filters[field];
+    });
+    if (!walletId && filters.walletId) query.walletId = filters.walletId;
 
     if (filters.createdFrom || filters.createdTo) {
         query.createdAt = {};
@@ -97,12 +92,27 @@ async function getWalletTransactions(walletId, filters = {}, pagination = {}) {
         }
     }
 
+    return query;
+}
+
+async function getWalletByUserId(userId) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+        throw new Error('Invalid user id');
+    }
+
+    return Wallet.findOne({ userId }).lean();
+}
+
+async function findWalletTransactions(query, pagination = {}, populateUser = false) {
+    const offset = Number(pagination.offset || 0);
+    const limit = Number(pagination.limit || 20);
+
+    let transactionsQuery = WalletTransaction.find(query).sort({ createdAt: -1 });
+    if (populateUser) {
+        transactionsQuery = transactionsQuery.populate('userId', 'name phoneNumber email');
+    }
     const [transactions, total] = await Promise.all([
-        WalletTransaction.find(query)
-            .sort({ createdAt: -1 })
-            .skip(offset)
-            .limit(limit)
-            .lean(),
+        transactionsQuery.skip(offset).limit(limit).lean(),
         WalletTransaction.countDocuments(query),
     ]);
 
@@ -114,49 +124,188 @@ async function getWalletTransactions(walletId, filters = {}, pagination = {}) {
     };
 }
 
-async function createDepositRequest({ walletId, userId, amount, proofImage = '', referenceId = '', description = 'Deposit request' }) {
+async function getWalletTransactions(walletId, filters = {}, pagination = {}) {
+    if (!walletId || !mongoose.Types.ObjectId.isValid(String(walletId))) {
+        throw new Error('Invalid wallet id');
+    }
+
+    return findWalletTransactions(buildTransactionQuery(filters, walletId), pagination);
+}
+
+async function getAllWalletTransactions(filters = {}, pagination = {}) {
+    return findWalletTransactions(buildTransactionQuery(filters), pagination, true);
+}
+
+async function cancelWalletTransaction({ userId, transactionId, idempotencyKey }) {
     if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
-        throw new Error('Invalid user id');
+        throw createWalletError('Invalid user id');
+    }
+    if (!mongoose.Types.ObjectId.isValid(String(transactionId))) {
+        throw createWalletError('Invalid transaction id');
     }
 
-    const numericAmount = normalizeNumber(amount, 0);
-    if (numericAmount <= 0) {
-        throw new Error('Deposit amount must be greater than zero');
-    }
-
-    return WalletTransaction.create({
-        walletId,
+    return withWalletIdempotency({
         userId,
-        type: WALLET_TRANSACTION_TYPE.DEPOSIT,
-        status: TRANSACTION_STATUS.PENDING,
-        amount: numericAmount,
-        balanceType: BALANCE_TYPE.WITHDRAWABLE,
-        createdBy: userId,
-        referenceId: String(referenceId || ''),
-        proofImage: String(proofImage || ''),
-        description: String(description),
+        idempotencyKey,
+        operation: 'cancel-wallet-transaction',
+        payload: { transactionId: String(transactionId) },
+    }, async (session) => {
+        const transaction = await WalletTransaction.findOne({
+            _id: transactionId,
+            userId,
+            status: TRANSACTION_STATUS.PENDING,
+            isDeleted: { $ne: true },
+        }).session(session);
+
+        if (!transaction) {
+            const existing = await WalletTransaction.findOne({
+                _id: transactionId,
+                userId,
+                isDeleted: { $ne: true },
+            }).select('status').session(session).lean();
+
+            throw createWalletError(
+                existing ? 'Only pending transactions can be cancelled' : 'Transaction not found',
+                existing ? 409 : 404
+            );
+        }
+
+        // A withdrawal reserves funds when requested, so cancellation must release that reservation.
+        if (transaction.type === WALLET_TRANSACTION_TYPE.WITHDRAWAL) {
+            const refund = await Wallet.updateOne(
+                { _id: transaction.walletId, userId },
+                {
+                    $inc: {
+                        withdrawableBalance: transaction.amount,
+                        balance: transaction.amount,
+                    },
+                },
+                { session }
+            );
+            if (refund.modifiedCount !== 1) {
+                throw createWalletError('Reserved withdrawal funds could not be released', 500);
+            }
+        }
+
+        transaction.status = TRANSACTION_STATUS.CANCELLED;
+        transaction.reviewedAt = new Date();
+        await transaction.save({ session });
+        return transaction.toObject();
     });
 }
 
-async function completeDeposit({ adminId, transactionId }) {
-    if (!adminId || !mongoose.Types.ObjectId.isValid(String(adminId))) {
-        throw new Error('Invalid admin id');
+async function createDepositRequest({
+    userId,
+    amount,
+    proofImage,
+    referenceId = '',
+    description = 'Deposit request',
+    idempotencyKey,
+    idempotencyPayload,
+}) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+        throw createWalletError('Invalid user id');
     }
 
-    const complete = async (transactionSession) => {
+    const numericAmount = parsePositiveMoney(amount, 'Deposit amount');
+    if (typeof proofImage !== 'string' || !proofImage.trim()) {
+        throw createWalletError('Deposit proof image is required');
+    }
+
+    const cleanReferenceId = String(referenceId || '').trim().slice(0, 200);
+    const cleanDescription = String(description || 'Deposit request').trim().slice(0, 500);
+
+    return withWalletIdempotency({
+        userId,
+        idempotencyKey,
+        operation: 'create-deposit',
+        payload: idempotencyPayload || {
+            amount: numericAmount,
+            proofImage: proofImage.trim(),
+            referenceId: cleanReferenceId,
+            description: cleanDescription,
+        },
+    }, async (session, key) => {
+        const wallet = await Wallet.findOne({
+            userId,
+            isFrozen: false,
+        }).session(session).lean();
+
+        if (!wallet) {
+            throw createWalletError('Active wallet not found', 404);
+        }
+
+        const [transaction] = await WalletTransaction.create([{
+            walletId: wallet._id,
+            userId,
+            type: WALLET_TRANSACTION_TYPE.DEPOSIT,
+            status: TRANSACTION_STATUS.PENDING,
+            amount: numericAmount,
+            balanceType: BALANCE_TYPE.WITHDRAWABLE,
+            createdBy: userId,
+            proofImage: proofImage.trim(),
+            referenceId: cleanReferenceId,
+            description: cleanDescription,
+            idempotencyKey: key,
+        }], { session });
+
+        return transaction;
+    });
+}
+
+async function approveDeposit({ adminId, transactionId, amount, proofReviewed, idempotencyKey }) {
+    if (!adminId || !mongoose.Types.ObjectId.isValid(String(adminId))) {
+        throw createWalletError('Invalid admin id');
+    }
+    if (!mongoose.Types.ObjectId.isValid(String(transactionId))) {
+        throw createWalletError('Invalid transaction id');
+    }
+    if (proofReviewed !== true && proofReviewed !== 'true') {
+        throw createWalletError('Deposit proof must be reviewed before approval');
+    }
+
+    const approvedAmount = amount === undefined
+        ? undefined
+        : parsePositiveMoney(amount, 'Approved deposit amount');
+
+    return withWalletIdempotency({
+        userId: adminId,
+        idempotencyKey,
+        operation: 'approve-deposit',
+        payload: { transactionId: String(transactionId), amount: approvedAmount ?? null, proofReviewed: true },
+    }, async (session) => {
         const deposit = await WalletTransaction.findOne({
             _id: transactionId,
             type: WALLET_TRANSACTION_TYPE.DEPOSIT,
             status: TRANSACTION_STATUS.PENDING,
-        }).session(transactionSession);
+            isDeleted: { $ne: true },
+        }).session(session);
 
         if (!deposit) {
-            throw new Error('Pending deposit not found');
+            throw createWalletError('Pending deposit not found', 404);
+        }
+        if (!deposit.proofImage || !deposit.proofImage.trim()) {
+            throw createWalletError('Deposit proof image is required before approval');
         }
 
-        const wallet = await Wallet.findById(deposit.walletId).session(transactionSession);
+        const finalAmount = approvedAmount ?? parsePositiveMoney(deposit.amount, 'Deposit amount');
+        const wallet = await Wallet.findOne({
+            _id: deposit.walletId,
+            userId: deposit.userId,
+            isFrozen: false,
+        }).session(session);
+
         if (!wallet) {
-            throw new Error('Wallet not found');
+            throw createWalletError('Active wallet not found', 404);
+        }
+
+        const updatedWallet = await Wallet.updateOne(
+            { _id: wallet._id, userId: deposit.userId, isFrozen: false },
+            { $inc: { withdrawableBalance: finalAmount } },
+            { session }
+        );
+        if (updatedWallet.modifiedCount !== 1) {
+            throw createWalletError('Deposit wallet balance could not be updated', 409);
         }
 
         const updatedTx = await WalletTransaction.findOneAndUpdate(
@@ -164,385 +313,251 @@ async function completeDeposit({ adminId, transactionId }) {
                 _id: deposit._id,
                 type: WALLET_TRANSACTION_TYPE.DEPOSIT,
                 status: TRANSACTION_STATUS.PENDING,
+                isDeleted: { $ne: true },
             },
             {
                 $set: {
-                    status: TRANSACTION_STATUS.COMPLETED,
+                    status: TRANSACTION_STATUS.APPROVED,
+                    amount: finalAmount,
                     balanceType: BALANCE_TYPE.WITHDRAWABLE,
                     verifiedBy: adminId,
                     reviewedAt: new Date(),
                     rejectReason: '',
+                    isProofReviewed: true,
                 },
             },
-            {
-                new: true,
-                session: transactionSession,
-            }
-        );
+            { new: true, session, runValidators: true }
+        ).lean();
 
         if (!updatedTx) {
-            throw new Error('Deposit could not be completed');
-        }
-
-        const walletUpdate = await Wallet.updateOne(
-            { _id: wallet._id },
-            {
-                $inc: {
-                    withdrawableBalance: deposit.amount,
-                    balance: deposit.amount,
-                },
-            },
-            { session: transactionSession }
-        );
-
-        if (walletUpdate.modifiedCount !== 1) {
-            throw new Error('Deposit wallet balance could not be updated');
+            throw createWalletError('Deposit could not be approved', 409);
         }
 
         return {
-            wallet: await Wallet.findById(wallet._id).session(transactionSession).lean(),
+            wallet: await Wallet.findById(wallet._id).session(session).lean(),
             transaction: updatedTx,
         };
-    };
-
-    return withWalletSession(complete);
-}
-
-async function rejectDeposit({ adminId, transactionId, rejectReason = '', session = null }) {
-    if (!adminId || !mongoose.Types.ObjectId.isValid(String(adminId))) {
-        throw new Error('Invalid admin id');
-    }
-
-    const deposit = await WalletTransaction.findOne({
-        _id: transactionId,
-        type: WALLET_TRANSACTION_TYPE.DEPOSIT,
-        status: TRANSACTION_STATUS.PENDING,
-    }).session(session || null);
-
-    if (!deposit) {
-        throw new Error('Pending deposit not found');
-    }
-
-    const updatedTx = await WalletTransaction.findOneAndUpdate(
-        { _id: deposit._id, status: TRANSACTION_STATUS.PENDING },
-        {
-            $set: {
-                status: TRANSACTION_STATUS.REJECTED,
-                verifiedBy: adminId,
-                reviewedAt: new Date(),
-                rejectReason: String(rejectReason || ''),
-            },
-        },
-        { new: true, session: session || undefined }
-    );
-
-    return updatedTx;
-}
-
-async function deductWalletForOrder({ userId, amount, orderId = '', session = null }) {
-    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
-        throw new Error('Invalid user id');
-    }
-
-    const totalAmount = normalizeNumber(amount, 0);
-    if (totalAmount <= 0) {
-        throw new Error('Payment amount must be greater than zero');
-    }
-
-    const wallet = await Wallet.findOne({ userId }).session(session || null);
-    if (!wallet) {
-        throw new Error('Wallet not found');
-    }
-
-    const totalAvailable = Number(wallet.storeCreditBalance || 0) + Number(wallet.withdrawableBalance || 0);
-    if (totalAvailable < totalAmount) {
-        return { ok: false, message: 'Insufficient wallet funds', wallet };
-    }
-
-    const fromStoreCredit = Math.min(Number(wallet.storeCreditBalance || 0), totalAmount);
-    const fromWithdrawable = totalAmount - fromStoreCredit;
-
-    const walletResult = await Wallet.updateOne(
-        {
-            _id: wallet._id,
-            storeCreditBalance: { $gte: fromStoreCredit },
-            withdrawableBalance: { $gte: fromWithdrawable },
-        },
-        {
-            $inc: {
-                storeCreditBalance: -fromStoreCredit,
-                withdrawableBalance: -fromWithdrawable,
-                balance: -totalAmount,
-            },
-        },
-        session ? { session } : {}
-    );
-
-    if (walletResult.modifiedCount !== 1) {
-        throw new Error('Wallet deduction failed due to a concurrent update');
-    }
-
-    const createdTransactions = [];
-
-    if (fromStoreCredit > 0) {
-        createdTransactions.push(await WalletTransaction.create([{
-            walletId: wallet._id,
-            userId,
-            type: WALLET_TRANSACTION_TYPE.ORDER_PAYMENT,
-            status: TRANSACTION_STATUS.COMPLETED,
-            amount: fromStoreCredit,
-            balanceType: BALANCE_TYPE.STORE_CREDIT,
-            referenceId: String(orderId || ''),
-            referenceType: 'order',
-            description: 'Wallet order payment',
-        }], session ? { session } : {}));
-    }
-
-    if (fromWithdrawable > 0) {
-        createdTransactions.push(await WalletTransaction.create([{
-            walletId: wallet._id,
-            userId,
-            type: WALLET_TRANSACTION_TYPE.ORDER_PAYMENT,
-            status: TRANSACTION_STATUS.COMPLETED,
-            amount: fromWithdrawable,
-            balanceType: BALANCE_TYPE.WITHDRAWABLE,
-            referenceId: String(orderId || ''),
-            referenceType: 'order',
-            description: 'Wallet order payment',
-        }], session ? { session } : {}));
-    }
-
-    return {
-        ok: true,
-        wallet: await Wallet.findById(wallet._id).lean(),
-        transactions: createdTransactions.flat(),
-    };
-}
-
-async function refundOrderPayment({ userId, orderId = '', paymentBreakdown = [], session = null }) {
-    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
-        throw new Error('Invalid user id');
-    }
-
-    const wallet = await Wallet.findOne({ userId }).session(session || null);
-    if (!wallet) {
-        throw new Error('Wallet not found');
-    }
-
-    const entries = Array.isArray(paymentBreakdown) ? paymentBreakdown : Object.values(paymentBreakdown || {});
-    const refundPlan = entries.map((entry) => {
-        const amount = normalizeNumber(entry.amount || entry.value || entry.total || 0, 0);
-        const balanceType = entry.balanceType || (entry.type === 'jawwal' ? BALANCE_TYPE.STORE_CREDIT : BALANCE_TYPE.WITHDRAWABLE);
-        return {
-            amount,
-            balanceType,
-        };
-    }).filter((entry) => entry.amount > 0);
-
-    if (refundPlan.length === 0) {
-        return { ok: true, wallet, transactions: [] };
-    }
-
-    const update = { $inc: { balance: 0 } };
-    refundPlan.forEach((entry) => {
-        const field = entry.balanceType === BALANCE_TYPE.STORE_CREDIT ? 'storeCreditBalance' : 'withdrawableBalance';
-        update.$inc[field] = (update.$inc[field] || 0) + entry.amount;
-        update.$inc.balance += entry.amount;
     });
-
-    await Wallet.updateOne({ _id: wallet._id }, update, session ? { session } : {});
-
-    const createdTransactions = [];
-    for (const entry of refundPlan) {
-        const tx = await WalletTransaction.create([{
-            walletId: wallet._id,
-            userId,
-            type: WALLET_TRANSACTION_TYPE.ORDER_REFUND,
-            status: TRANSACTION_STATUS.COMPLETED,
-            amount: entry.amount,
-            balanceType: entry.balanceType,
-            referenceId: String(orderId || ''),
-            referenceType: 'order',
-            description: 'Order refund',
-        }], session ? { session } : {});
-        createdTransactions.push(tx[0]);
-    }
-
-    return {
-        ok: true,
-        wallet: await Wallet.findById(wallet._id).lean(),
-        transactions: createdTransactions,
-    };
 }
 
-async function createWithdrawalRequest({ userId, amount, payoutDetails = {} }) {
+async function rejectDeposit({ adminId, transactionId, rejectReason = '', idempotencyKey }) {
+    if (!adminId || !mongoose.Types.ObjectId.isValid(String(adminId))) {
+        throw createWalletError('Invalid admin id');
+    }
+    if (!mongoose.Types.ObjectId.isValid(String(transactionId))) {
+        throw createWalletError('Invalid transaction id');
+    }
+
+    const reason = String(rejectReason || '').trim().slice(0, 500);
+    return withWalletIdempotency({
+        userId: adminId,
+        idempotencyKey,
+        operation: 'reject-deposit',
+        payload: { transactionId: String(transactionId), rejectReason: reason },
+    }, async (session) => {
+        const updatedTx = await WalletTransaction.findOneAndUpdate(
+            {
+                _id: transactionId,
+                type: WALLET_TRANSACTION_TYPE.DEPOSIT,
+                status: TRANSACTION_STATUS.PENDING,
+                isDeleted: { $ne: true },
+            },
+            {
+                $set: {
+                    status: TRANSACTION_STATUS.REJECTED,
+                    verifiedBy: adminId,
+                    reviewedAt: new Date(),
+                    rejectReason: reason,
+                },
+            },
+            { new: true, session, runValidators: true }
+        ).lean();
+
+        if (!updatedTx) {
+            throw createWalletError('Pending deposit not found', 404);
+        }
+        return updatedTx;
+    });
+}
+
+async function createWithdrawalRequest({ userId, amount, payoutDetails = {}, idempotencyKey }) {
     if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
-        throw new Error('Invalid user id');
+        throw createWalletError('Invalid user id');
     }
 
-    const numericAmount = normalizeNumber(amount, 0);
-    if (numericAmount <= 0) {
-        throw new Error('Withdrawal amount must be greater than zero');
-    }
+    const numericAmount = parsePositiveMoney(amount, 'Withdrawal amount');
+    const cleanPayoutDetails = validatePayoutDetails(payoutDetails);
 
-    const wallet = await Wallet.findOne({ userId });
-    if (!wallet) {
-        throw new Error('Wallet not found');
-    }
-
-    return WalletTransaction.create({
-        walletId: wallet._id,
+    return withWalletIdempotency({
         userId,
-        type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
-        status: TRANSACTION_STATUS.PENDING,
-        amount: numericAmount,
-        balanceType: BALANCE_TYPE.WITHDRAWABLE,
-        createdBy: userId,
-        payoutDetails,
-        description: 'Withdrawal request',
-    });
-}
-
-async function approveWithdrawal({ adminId, transactionId }) {
-    if (!adminId || !mongoose.Types.ObjectId.isValid(String(adminId))) {
-        throw new Error('Invalid admin id');
-    }
-
-    return withWalletSession(async (session) => {
-        const withdrawal = await WalletTransaction.findOne({
-            _id: transactionId,
-            type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
-            status: TRANSACTION_STATUS.PENDING,
-        }).session(session);
-
-        if (!withdrawal) {
-            throw new Error('Pending withdrawal not found');
-        }
-
-        if (withdrawal.balanceType !== BALANCE_TYPE.WITHDRAWABLE) {
-            throw new Error('Withdrawals can only use withdrawable balance');
-        }
-
+        idempotencyKey,
+        operation: 'create-withdrawal',
+        payload: { amount: numericAmount, payoutDetails: cleanPayoutDetails },
+    }, async (session, key) => {
         const wallet = await Wallet.findOne({
-            _id: withdrawal.walletId,
-            userId: withdrawal.userId,
+            userId,
+            isFrozen: false,
         }).session(session);
 
         if (!wallet) {
-            throw new Error('Wallet not found');
+            throw createWalletError('Active wallet not found', 404);
         }
 
-        const walletUpdate = await Wallet.updateOne(
+        const reservation = await Wallet.updateOne(
             {
                 _id: wallet._id,
-                withdrawableBalance: { $gte: withdrawal.amount },
+                userId,
+                isFrozen: false,
+                withdrawableBalance: { $gte: numericAmount },
             },
-            { $inc: { withdrawableBalance: -withdrawal.amount } },
+            {
+                $inc: {
+                    withdrawableBalance: -numericAmount,
+                    balance: -numericAmount,
+                },
+            },
             { session }
         );
 
-        if (walletUpdate.modifiedCount !== 1) {
-            throw new Error('Insufficient withdrawable balance');
+        if (reservation.modifiedCount !== 1) {
+            throw createWalletError('Insufficient withdrawable balance', 409);
         }
 
-        const approvedWithdrawal = await WalletTransaction.findOneAndUpdate(
+        const [transaction] = await WalletTransaction.create([{
+            walletId: wallet._id,
+            userId,
+            type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
+            status: TRANSACTION_STATUS.PENDING,
+            amount: numericAmount,
+            balanceType: BALANCE_TYPE.WITHDRAWABLE,
+            createdBy: userId,
+            payoutDetails: cleanPayoutDetails,
+            description: 'Withdrawal request',
+            idempotencyKey: key,
+        }], { session });
+
+        return transaction;
+    });
+}
+
+async function approveWithdrawal({ adminId, transactionId, payoutReference = '', idempotencyKey }) {
+    if (!adminId || !mongoose.Types.ObjectId.isValid(String(adminId))) {
+        throw createWalletError('Invalid admin id');
+    }
+    if (!mongoose.Types.ObjectId.isValid(String(transactionId))) {
+        throw createWalletError('Invalid transaction id');
+    }
+
+    const cleanPayoutReference = String(payoutReference || '').trim().slice(0, 200);
+    return withWalletIdempotency({
+        userId: adminId,
+        idempotencyKey,
+        operation: 'approve-withdrawal',
+        payload: { transactionId: String(transactionId), payoutReference: cleanPayoutReference },
+    }, async (session) => {
+        const withdrawal = await WalletTransaction.findOneAndUpdate(
             {
-                _id: withdrawal._id,
+                _id: transactionId,
                 type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
                 status: TRANSACTION_STATUS.PENDING,
+                isDeleted: { $ne: true },
             },
             {
                 $set: {
                     status: TRANSACTION_STATUS.APPROVED,
                     verifiedBy: adminId,
                     reviewedAt: new Date(),
+                    referenceId: cleanPayoutReference,
+                    referenceType: cleanPayoutReference ? 'payout' : '',
                 },
             },
-            { new: true, session }
-        );
+            { new: true, session, runValidators: true }
+        ).lean();
 
-        if (!approvedWithdrawal) {
-            throw new Error('Withdrawal could not be approved');
+        if (!withdrawal) {
+            throw createWalletError('Pending withdrawal not found', 404);
         }
 
-        return approvedWithdrawal;
+        // Funds were already reserved when the user created the request.
+        // This operation only records the admin's approval after the real payout has been handled.
+        return withdrawal;
     });
 }
 
-async function completeWithdrawal({ adminId, transactionId, payoutReference = '' }) {
+async function rejectWithdrawal({ adminId, transactionId, rejectReason = '', idempotencyKey }) {
     if (!adminId || !mongoose.Types.ObjectId.isValid(String(adminId))) {
-        throw new Error('Invalid admin id');
+        throw createWalletError('Invalid admin id');
+    }
+    if (!mongoose.Types.ObjectId.isValid(String(transactionId))) {
+        throw createWalletError('Invalid transaction id');
     }
 
-    return withWalletSession(async (session) => {
-        const updates = {
-            status: TRANSACTION_STATUS.COMPLETED,
-            verifiedBy: adminId,
-            reviewedAt: new Date(),
-        };
-        if (payoutReference) {
-            updates.referenceId = String(payoutReference);
+    const reason = String(rejectReason || '').trim().slice(0, 500);
+    return withWalletIdempotency({
+        userId: adminId,
+        idempotencyKey,
+        operation: 'reject-withdrawal',
+        payload: { transactionId: String(transactionId), rejectReason: reason },
+    }, async (session) => {
+        const withdrawal = await WalletTransaction.findOne({
+            _id: transactionId,
+            type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
+            status: TRANSACTION_STATUS.PENDING,
+            isDeleted: { $ne: true },
+        }).session(session);
+
+        if (!withdrawal) {
+            throw createWalletError('Pending withdrawal not found', 404);
         }
 
-        const completedWithdrawal = await WalletTransaction.findOneAndUpdate(
+        const refund = await Wallet.updateOne(
+            { _id: withdrawal.walletId, userId: withdrawal.userId },
             {
-                _id: transactionId,
-                type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
-                status: TRANSACTION_STATUS.APPROVED,
+                $inc: {
+                    withdrawableBalance: withdrawal.amount,
+                    balance: withdrawal.amount,
+                },
             },
-            { $set: updates },
-            { new: true, session }
+            { session }
         );
-
-        if (!completedWithdrawal) {
-            throw new Error('Approved withdrawal not found');
+        if (refund.modifiedCount !== 1) {
+            throw createWalletError('Reserved withdrawal funds could not be released', 500);
         }
 
-        return completedWithdrawal;
-    });
-}
-
-async function rejectWithdrawal({ adminId, transactionId, rejectReason = '' }) {
-    if (!adminId || !mongoose.Types.ObjectId.isValid(String(adminId))) {
-        throw new Error('Invalid admin id');
-    }
-
-    const withdrawal = await WalletTransaction.findOne({
-        _id: transactionId,
-        type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
-        status: TRANSACTION_STATUS.PENDING,
-    });
-
-    if (!withdrawal) {
-        throw new Error('Pending withdrawal not found');
-    }
-
-    return WalletTransaction.findOneAndUpdate(
-        { _id: withdrawal._id, status: TRANSACTION_STATUS.PENDING },
-        {
-            $set: {
-                status: TRANSACTION_STATUS.REJECTED,
-                verifiedBy: adminId,
-                reviewedAt: new Date(),
-                rejectReason: String(rejectReason || ''),
+        const rejected = await WalletTransaction.findOneAndUpdate(
+            {
+                _id: withdrawal._id,
+                type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
+                status: TRANSACTION_STATUS.PENDING,
+                isDeleted: { $ne: true },
             },
-        },
-        { new: true }
-    );
+            {
+                $set: {
+                    status: TRANSACTION_STATUS.REJECTED,
+                    verifiedBy: adminId,
+                    reviewedAt: new Date(),
+                    rejectReason: reason,
+                },
+            },
+            { new: true, session, runValidators: true }
+        ).lean();
+
+        if (!rejected) {
+            throw createWalletError('Withdrawal could not be rejected', 409);
+        }
+        return rejected;
+    });
 }
 
 module.exports = {
-    withWalletSession,
-    getOrCreateWallet,
     getWalletByUserId,
     getWalletTransactions,
+    getAllWalletTransactions,
     createDepositRequest,
-    completeDeposit,
+    cancelWalletTransaction,
+    approveDeposit,
     rejectDeposit,
-    deductWalletForOrder,
-    refundOrderPayment,
     createWithdrawalRequest,
     approveWithdrawal,
-    completeWithdrawal,
     rejectWithdrawal,
 };

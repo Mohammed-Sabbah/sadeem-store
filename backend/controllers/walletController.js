@@ -1,14 +1,14 @@
+const crypto = require('crypto');
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
 const walletService = require('../services/walletService');
 const { success, error } = require('../utils/responses');
-const { TRANSACTION_STATUS } = require('../constants/enums');
+const { ROLE } = require('../constants/enums');
 
 const getWalletFilter = (req) => ({
     isFrozen: false,
     userId: req.user._id,
 })
-
 
 async function getWallet(req, res, next) {
     try {
@@ -44,18 +44,74 @@ async function getWalletTransactions(req, res, next) {
     }
 }
 
+async function getWalletTransaction(req, res, next) {
+    try {
+        const query = {
+            _id: req.params.id,
+            isDeleted: { $ne: true },
+        };
+        if (req.user.role !== ROLE.ADMIN) {
+            query.userId = req.user._id;
+        }
+
+        const transaction = await WalletTransaction.findOne(query)
+            .populate('userId', 'name phoneNumber email')
+            .lean();
+        if (!transaction) {
+            return error(res, 404, 'Transaction not found');
+        }
+        return success(res, 200, { transaction });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function listTransactions(req, res, next) {
+    try {
+        const result = await walletService.getAllWalletTransactions(req.query, {
+            offset: Number(req.query.offset || 0),
+            limit: Number(req.query.limit || 20),
+        });
+        return success(res, 200, result);
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function cancelTransaction(req, res, next) {
+    try {
+        const transaction = await walletService.cancelWalletTransaction({
+            userId: req.user._id,
+            transactionId: req.params.id,
+            idempotencyKey: req.get('Idempotency-Key'),
+        });
+
+        return success(res, 200, {
+            message: 'Transaction cancelled successfully',
+            transaction,
+        });
+    } catch (err) {
+        return next(err);
+    }
+}
+
 async function createDepositRequest(req, res, next) {
     try {
-        const wallet = await Wallet.findOne(getWalletFilter(req)).lean()
-        if (!wallet) return error(res, 404, "Wallet not found")
-
         const transaction = await walletService.createDepositRequest({
-            walletId: wallet._id,
             userId: req.user._id,
             amount: req.body.amount,
             proofImage: req.body.proofImage,
             referenceId: req.body.referenceId,
             description: req.body.description,
+            idempotencyKey: req.get('Idempotency-Key'),
+            idempotencyPayload: {
+                amount: Number(req.body.amount),
+                proofImage: req.file
+                    ? crypto.createHash('sha256').update(req.file.buffer).digest('hex')
+                    : String(req.body.proofImage || '').trim(),
+                referenceId: String(req.body.referenceId || '').trim(),
+                description: String(req.body.description || 'Deposit request').trim(),
+            },
         });
 
         return success(res, 201, {
@@ -67,103 +123,17 @@ async function createDepositRequest(req, res, next) {
     }
 }
 
-async function listTransactions(req, res, next) {
+async function approveDeposit(req, res, next) {
     try {
-        const { type, status, balanceType, createdFrom, createdTo, userId, walletId } = req.query;
-        const offset = Number(req.query.offset || 0);
-        const limit = Number(req.query.limit || 20);
-        const query = { isDeleted: { $ne: true } };
-
-        if (type) query.type = type;
-        if (status) query.status = status;
-        if (balanceType) query.balanceType = balanceType;
-        if (userId) query.userId = userId;
-        if (walletId) query.walletId = walletId;
-        if (createdFrom || createdTo) {
-            query.createdAt = {};
-            if (createdFrom) query.createdAt.$gte = new Date(createdFrom);
-            if (createdTo) query.createdAt.$lte = new Date(createdTo);
-        }
-
-        const [transactions, total] = await Promise.all([
-            WalletTransaction.find(query)
-                .sort({ createdAt: -1 })
-                .skip(offset)
-                .limit(limit)
-                .lean(),
-            WalletTransaction.countDocuments(query),
-        ]);
-
-        return success(res, 200, {
-            transactions,
-            total,
-            page: Math.max(1, Math.floor(offset / limit) + 1),
-            limit,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function getWalletTransaction(req, res, next) {
-    try {
-        const transaction = await WalletTransaction.findOne({
-            _id: req.params.id,
-            isDeleted: { $ne: true },
-        }).lean();
-        if (!transaction) {
-            return error(res, 404, 'Transaction not found');
-        }
-        return success(res, 200, { transaction });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function cancelTransaction(req, res, next) {
-    try {
-        const transaction = await WalletTransaction.findOneAndUpdate(
-            {
-                _id: req.params.id,
-                userId: req.user._id,
-                status: TRANSACTION_STATUS.PENDING,
-                isDeleted: { $ne: true },
-            },
-            { $set: { status: TRANSACTION_STATUS.CANCELLED } },
-            { new: true }
-        ).lean();
-
-        if (!transaction) {
-            const existingTransaction = await WalletTransaction.findOne({
-                _id: req.params.id,
-                userId: req.user._id,
-                isDeleted: { $ne: true },
-            }).select('status').lean();
-
-            if (!existingTransaction) {
-                return error(res, 404, 'Transaction not found');
-            }
-
-            return error(res, 400, 'Only pending transactions can be cancelled');
-        }
-
-        return success(res, 200, {
-            message: 'Transaction cancelled successfully',
-            transaction,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function completeDeposit(req, res, next) {
-    try {
-        const result = await walletService.completeDeposit({
+        const result = await walletService.approveDeposit({
             adminId: req.user._id,
             transactionId: req.params.id,
+            amount: req.body.amount,
+            proofReviewed: req.body.proofReviewed,
+            idempotencyKey: req.get('Idempotency-Key'),
         });
         return success(res, 200, {
-            message: 'Deposit completed successfully',
+            message: 'Deposit approved successfully',
             ...result,
         });
     } catch (err) {
@@ -177,6 +147,7 @@ async function rejectDeposit(req, res, next) {
             adminId: req.user._id,
             transactionId: req.params.id,
             rejectReason: req.body.rejectReason,
+            idempotencyKey: req.get('Idempotency-Key'),
         });
 
         return success(res, 200, {
@@ -194,6 +165,7 @@ async function createWithdrawalRequest(req, res, next) {
             userId: req.user._id,
             amount: req.body.amount,
             payoutDetails: req.body.payoutDetails || {},
+            idempotencyKey: req.get('Idempotency-Key'),
         });
 
         return success(res, 201, {
@@ -210,27 +182,12 @@ async function approveWithdrawal(req, res, next) {
         const transaction = await walletService.approveWithdrawal({
             adminId: req.user._id,
             transactionId: req.params.id,
+            payoutReference: req.body.payoutReference,
+            idempotencyKey: req.get('Idempotency-Key'),
         });
 
         return success(res, 200, {
             message: 'Withdrawal approved successfully',
-            transaction,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function completeWithdrawal(req, res, next) {
-    try {
-        const transaction = await walletService.completeWithdrawal({
-            adminId: req.user._id,
-            transactionId: req.params.id,
-            payoutReference: req.body.payoutReference,
-        });
-
-        return success(res, 200, {
-            message: 'Withdrawal completed successfully',
             transaction,
         });
     } catch (err) {
@@ -244,6 +201,7 @@ async function rejectWithdrawal(req, res, next) {
             adminId: req.user._id,
             transactionId: req.params.id,
             rejectReason: req.body.rejectReason,
+            idempotencyKey: req.get('Idempotency-Key'),
         });
 
         return success(res, 200, {
@@ -262,10 +220,9 @@ module.exports = {
     listTransactions,
     getWalletTransaction,
     cancelTransaction,
-    completeDeposit,
+    approveDeposit,
     rejectDeposit,
     createWithdrawalRequest,
     approveWithdrawal,
-    completeWithdrawal,
     rejectWithdrawal,
 };

@@ -11,11 +11,17 @@ const STATUS = {
     PENDING_APPROVAL: 'pendingApproval',
 };
 
-const STORE_APPROVE_STATUS = {
+const APPROVE_STATUS = {
     PENDING: "pending",
     APPROVED: "approved",
     REJECTED: "rejected",
 }
+
+const ATTRIBUTE_VALUE_TYPE = {
+    STRING: 'string',
+    NUMBER: 'number',
+    BOOLEAN: 'boolean',
+};
 
 const WALLET_TRANSACTION_TYPE = {
     DEPOSIT: "deposit",
@@ -32,7 +38,6 @@ const BALANCE_TYPE = {
 
 const TRANSACTION_STATUS = {
     PENDING: "pending",
-    COMPLETED: "completed",
     APPROVED: "approved",
     REJECTED: "rejected",
     CANCELLED: "cancelled",
@@ -46,7 +51,8 @@ const WALLET_STATUS = {
 // General Enums
 const ROLE_VALUES = Object.values(ROLE);
 const STATUS_VALUES = Object.values(STATUS);
-const STORE_APPROVE_STATUS_VALUES = Object.values(STORE_APPROVE_STATUS);
+const APPROVE_STATUS_VALUES = Object.values(APPROVE_STATUS);
+const ATTRIBUTE_VALUE_TYPE_VALUES = Object.values(ATTRIBUTE_VALUE_TYPE);
 
 // Wallet Enums
 const WALLET_TRANSACTION_TYPE_VALUES = Object.values(WALLET_TRANSACTION_TYPE);
@@ -57,14 +63,16 @@ const WALLET_STATUS_VALUES = Object.values(WALLET_STATUS);
 module.exports = {
     ROLE,
     STATUS,
-    STORE_APPROVE_STATUS,
+    APPROVE_STATUS,
+    ATTRIBUTE_VALUE_TYPE,
     WALLET_STATUS,
     WALLET_TRANSACTION_TYPE,
     BALANCE_TYPE,
     TRANSACTION_STATUS,
     ROLE_VALUES,
     STATUS_VALUES,
-    STORE_APPROVE_STATUS_VALUES,
+    APPROVE_STATUS_VALUES,
+    ATTRIBUTE_VALUE_TYPE_VALUES,
     WALLET_STATUS_VALUES,
     WALLET_TRANSACTION_TYPE_VALUES,
     BALANCE_TYPE_VALUES,

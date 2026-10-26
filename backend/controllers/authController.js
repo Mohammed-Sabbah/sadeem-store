@@ -31,7 +31,18 @@ async function checkRegistrationConflicts(email, phoneNumber) {
 async function createUserWithWallet(userData, session) {
     const options = session ? { session } : {};
     const [user] = await User.create([userData], options);
-    await Wallet.create([{ userId: user._id, balance: 0, currency: 'ILS' }], options);
+
+    if (user.role === ROLE.USER) {
+        await Wallet.create([{
+            userId: user._id,
+            withdrawableBalance: 0,
+            storeCreditBalance: 0,
+            balance: 0,
+            currency: 'ILS',
+            status: STATUS.ACTIVE,
+        }], options);
+    }
+
     return user;
 }
 
@@ -87,7 +98,7 @@ async function registerSeller(req, res, next) {
                     password: hashedPassword,
                     addresses: userInput.addresses,
                     role: ROLE.SELLER,
-                    status: STATUS.IN_ACTIVE,
+                    status: STATUS.PENDING_APPROVAL,
                 },
                 session
             );

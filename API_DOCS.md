@@ -7,6 +7,24 @@
 
 ---
 
+## Wallet Deposit Workflow (MVP)
+
+All wallet endpoints require authentication. User routes require the `user` role; review routes require the `admin` role.
+
+Every wallet mutation and wallet-backed order payment/refund requires an `Idempotency-Key` header (a unique random value per action, maximum 128 characters), for example `Idempotency-Key: 8e03978e-40d5-43e8-bc93-6894a57f9324`. Retry the same request with the same key after a timeout to receive the original result without applying the balance change again. Reusing a key with a different operation or payload returns `409`; use a new key for a new action. The transaction's `idempotencyKey` field records its creation key; separate operation keys and cached results are stored in the idempotency collection. Order payment and refund service callers must pass this key as `idempotencyKey` and keep the idempotency helper in the same MongoDB session as their surrounding transaction. Because these writes must be atomic, MongoDB must run as a replica set or sharded cluster that supports transactions.
+
+| Method | Endpoint | Role | Purpose |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/wallet/deposits` | User | Submit `amount` and a required `proofImage` file (`multipart/form-data`) or image URL (`application/json`). |
+| `GET` | `/wallet/transactions?type=deposit&status=pending` | Admin | List deposits with the requesting user and proof image. |
+| `GET` | `/wallet/transactions/:id` | Admin / owner | View transaction details and proof; users can view only their own transactions. |
+| `PATCH` | `/wallet/deposits/:id/approve` | Admin | Approve after reviewing the proof. Send `{"proofReviewed": true}` and optionally `{"amount": 12.50}` if correcting the requested amount. |
+| `PATCH` | `/wallet/deposits/:id/reject` | Admin | Reject a pending deposit, optionally with `rejectReason`. |
+
+New requests start as `pending`. The original submitted amount is retained as `requestedAmount`; an optional corrected `amount` is recorded on approval. Approval marks the transaction `approved` and credits the approved amount to the user's withdrawable balance atomically in a MongoDB transaction. Rejected or already reviewed transactions cannot be approved.
+
+---
+
 ## 1. الفلسفة المعمارية لمنظومة المنتجات والأصناف (Product Architecture)
 تعتمد المنصة على نمذجة عالية الأداء تدمج بين وضعين تشغيليين:
 1. **نمط الحفظ الجماعي الذري (Atomic Batch Matrix Mode):** مخصص لاستوديو التاجر (`POST /products` أو `PATCH /products/:id`) لحفظ مصفوفة الخيارات والأصناف دفعة واحدة بمعاملة ذرية (Mongoose Transaction & Automatic Rollback).

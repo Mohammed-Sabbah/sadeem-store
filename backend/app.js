@@ -33,6 +33,7 @@ const variantRoutes = require('./routes/variantRoutes');
 const storeRoutes = require('./routes/storeRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
 const regionRoutes = require('./routes/regionRoutes');
+const walletRoutes = require('./routes/walletRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -42,6 +43,7 @@ app.use('/api/products/:id/variants', variantRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/regions', regionRoutes);
+app.use('/api/wallet', walletRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

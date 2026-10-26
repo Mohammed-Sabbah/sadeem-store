@@ -41,6 +41,9 @@ const uploadImages = (folder) => {
             req.body.uploadedImages = urls;
             if (urls.length > 0) {
                 req.body.proofPhoto = urls[0];
+                if (req.file && req.file.fieldname === "proofImage") {
+                    req.body.proofImage = urls[0];
+                }
             }
             if (!req.body.images || !Array.isArray(req.body.images)) {
                 req.body.images = urls;

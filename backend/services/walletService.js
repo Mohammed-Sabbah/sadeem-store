@@ -1,76 +1,19 @@
 const mongoose = require('mongoose');
-const User = require('../models/User');
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
 const { withWalletIdempotency } = require('./walletIdempotency');
 const {
-    ROLE,
-    STATUS,
+    parsePositiveMoney,
+    createWalletError
+
+} = require("../utils/wallet")
+const {
     BALANCE_TYPE,
     WALLET_TRANSACTION_TYPE,
     TRANSACTION_STATUS,
 } = require('../constants/enums');
 
-function parsePositiveMoney(value, label) {
-    if (value === '' || value === null || value === undefined || typeof value === 'boolean') {
-        const error = new Error(`${label} must be a valid positive amount`);
-        error.statusCode = 400;
-        throw error;
-    }
-
-    const amount = Number(value);
-    if (!Number.isFinite(amount) || amount <= 0 || amount > 100000000 ||
-        Math.round(amount * 100) !== amount * 100) {
-        const error = new Error(`${label} must be a valid positive amount with at most two decimal places`);
-        error.statusCode = 400;
-        throw error;
-    }
-    return Math.round(amount * 100) / 100;
-}
-
-function validatePayoutDetails(value) {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        const error = new Error('Payout details must be an object');
-        error.statusCode = 400;
-        throw error;
-    }
-
-    let serialized;
-    try {
-        serialized = JSON.stringify(value);
-    } catch {
-        serialized = null;
-    }
-    if (!serialized || Buffer.byteLength(serialized, 'utf8') > 2000) {
-        const error = new Error('Payout details are invalid or too large');
-        error.statusCode = 400;
-        throw error;
-    }
-
-    for (const [key, item] of Object.entries(value)) {
-        if (!/^[a-zA-Z0-9_ -]{1,50}$/.test(key) ||
-            !['string', 'number', 'boolean'].includes(typeof item) ||
-            (typeof item === 'string' && item.length > 300) ||
-            (typeof item === 'number' && !Number.isFinite(item))) {
-            const error = new Error('Payout details contain an invalid field');
-            error.statusCode = 400;
-            throw error;
-        }
-    }
-    if (Object.keys(value).length === 0) {
-        const error = new Error('Payout details are required');
-        error.statusCode = 400;
-        throw error;
-    }
-    return value;
-}
-
-function createWalletError(message, statusCode = 400) {
-    const error = new Error(message);
-    error.statusCode = statusCode;
-    return error;
-}
-
+// Helpers
 function buildTransactionQuery(filters = {}, walletId = null) {
     const query = { isDeleted: { $ne: true } };
     if (walletId) {
@@ -95,14 +38,6 @@ function buildTransactionQuery(filters = {}, walletId = null) {
     return query;
 }
 
-async function getWalletByUserId(userId) {
-    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
-        throw new Error('Invalid user id');
-    }
-
-    return Wallet.findOne({ userId }).lean();
-}
-
 async function findWalletTransactions(query, pagination = {}, populateUser = false) {
     const offset = Number(pagination.offset || 0);
     const limit = Number(pagination.limit || 20);
@@ -122,6 +57,15 @@ async function findWalletTransactions(query, pagination = {}, populateUser = fal
         page: Math.max(1, Math.floor(offset / limit) + 1),
         limit,
     };
+}
+
+// List Transactions
+async function getWalletByUserId(userId) {
+    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
+        throw new Error('Invalid user id');
+    }
+
+    return Wallet.findOne({ userId }).lean();
 }
 
 async function getWalletTransactions(walletId, filters = {}, pagination = {}) {
@@ -154,14 +98,12 @@ async function cancelWalletTransaction({ userId, transactionId, idempotencyKey }
             _id: transactionId,
             userId,
             status: TRANSACTION_STATUS.PENDING,
-            isDeleted: { $ne: true },
         }).session(session);
 
         if (!transaction) {
             const existing = await WalletTransaction.findOne({
                 _id: transactionId,
                 userId,
-                isDeleted: { $ne: true },
             }).select('status').session(session).lean();
 
             throw createWalletError(
@@ -177,7 +119,6 @@ async function cancelWalletTransaction({ userId, transactionId, idempotencyKey }
                 {
                     $inc: {
                         withdrawableBalance: transaction.amount,
-                        balance: transaction.amount,
                     },
                 },
                 { session }
@@ -194,12 +135,11 @@ async function cancelWalletTransaction({ userId, transactionId, idempotencyKey }
     });
 }
 
+// Deposits  
 async function createDepositRequest({
     userId,
     amount,
     proofImage,
-    referenceId = '',
-    description = 'Deposit request',
     idempotencyKey,
     idempotencyPayload,
 }) {
@@ -212,9 +152,6 @@ async function createDepositRequest({
         throw createWalletError('Deposit proof image is required');
     }
 
-    const cleanReferenceId = String(referenceId || '').trim().slice(0, 200);
-    const cleanDescription = String(description || 'Deposit request').trim().slice(0, 500);
-
     return withWalletIdempotency({
         userId,
         idempotencyKey,
@@ -222,8 +159,6 @@ async function createDepositRequest({
         payload: idempotencyPayload || {
             amount: numericAmount,
             proofImage: proofImage.trim(),
-            referenceId: cleanReferenceId,
-            description: cleanDescription,
         },
     }, async (session, key) => {
         const wallet = await Wallet.findOne({
@@ -244,8 +179,6 @@ async function createDepositRequest({
             balanceType: BALANCE_TYPE.WITHDRAWABLE,
             createdBy: userId,
             proofImage: proofImage.trim(),
-            referenceId: cleanReferenceId,
-            description: cleanDescription,
             idempotencyKey: key,
         }], { session });
 
@@ -278,7 +211,6 @@ async function approveDeposit({ adminId, transactionId, amount, proofReviewed, i
             _id: transactionId,
             type: WALLET_TRANSACTION_TYPE.DEPOSIT,
             status: TRANSACTION_STATUS.PENDING,
-            isDeleted: { $ne: true },
         }).session(session);
 
         if (!deposit) {
@@ -313,7 +245,6 @@ async function approveDeposit({ adminId, transactionId, amount, proofReviewed, i
                 _id: deposit._id,
                 type: WALLET_TRANSACTION_TYPE.DEPOSIT,
                 status: TRANSACTION_STATUS.PENDING,
-                isDeleted: { $ne: true },
             },
             {
                 $set: {
@@ -360,7 +291,6 @@ async function rejectDeposit({ adminId, transactionId, rejectReason = '', idempo
                 _id: transactionId,
                 type: WALLET_TRANSACTION_TYPE.DEPOSIT,
                 status: TRANSACTION_STATUS.PENDING,
-                isDeleted: { $ne: true },
             },
             {
                 $set: {
@@ -380,19 +310,19 @@ async function rejectDeposit({ adminId, transactionId, rejectReason = '', idempo
     });
 }
 
+// Withdrawals
 async function createWithdrawalRequest({ userId, amount, payoutDetails = {}, idempotencyKey }) {
     if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
         throw createWalletError('Invalid user id');
     }
 
     const numericAmount = parsePositiveMoney(amount, 'Withdrawal amount');
-    const cleanPayoutDetails = validatePayoutDetails(payoutDetails);
 
     return withWalletIdempotency({
         userId,
         idempotencyKey,
         operation: 'create-withdrawal',
-        payload: { amount: numericAmount, payoutDetails: cleanPayoutDetails },
+        payload: { amount: numericAmount, payoutDetails },
     }, async (session, key) => {
         const wallet = await Wallet.findOne({
             userId,
@@ -413,7 +343,6 @@ async function createWithdrawalRequest({ userId, amount, payoutDetails = {}, ide
             {
                 $inc: {
                     withdrawableBalance: -numericAmount,
-                    balance: -numericAmount,
                 },
             },
             { session }
@@ -431,8 +360,7 @@ async function createWithdrawalRequest({ userId, amount, payoutDetails = {}, ide
             amount: numericAmount,
             balanceType: BALANCE_TYPE.WITHDRAWABLE,
             createdBy: userId,
-            payoutDetails: cleanPayoutDetails,
-            description: 'Withdrawal request',
+            payoutDetails,
             idempotencyKey: key,
         }], { session });
 
@@ -449,6 +377,7 @@ async function approveWithdrawal({ adminId, transactionId, payoutReference = '',
     }
 
     const cleanPayoutReference = String(payoutReference || '').trim().slice(0, 200);
+
     return withWalletIdempotency({
         userId: adminId,
         idempotencyKey,
@@ -468,7 +397,6 @@ async function approveWithdrawal({ adminId, transactionId, payoutReference = '',
                     verifiedBy: adminId,
                     reviewedAt: new Date(),
                     referenceId: cleanPayoutReference,
-                    referenceType: cleanPayoutReference ? 'payout' : '',
                 },
             },
             { new: true, session, runValidators: true }
@@ -478,8 +406,6 @@ async function approveWithdrawal({ adminId, transactionId, payoutReference = '',
             throw createWalletError('Pending withdrawal not found', 404);
         }
 
-        // Funds were already reserved when the user created the request.
-        // This operation only records the admin's approval after the real payout has been handled.
         return withdrawal;
     });
 }
@@ -493,6 +419,7 @@ async function rejectWithdrawal({ adminId, transactionId, rejectReason = '', ide
     }
 
     const reason = String(rejectReason || '').trim().slice(0, 500);
+
     return withWalletIdempotency({
         userId: adminId,
         idempotencyKey,
@@ -503,7 +430,6 @@ async function rejectWithdrawal({ adminId, transactionId, rejectReason = '', ide
             _id: transactionId,
             type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
             status: TRANSACTION_STATUS.PENDING,
-            isDeleted: { $ne: true },
         }).session(session);
 
         if (!withdrawal) {
@@ -511,11 +437,13 @@ async function rejectWithdrawal({ adminId, transactionId, rejectReason = '', ide
         }
 
         const refund = await Wallet.updateOne(
-            { _id: withdrawal.walletId, userId: withdrawal.userId },
+            {
+                _id: withdrawal.walletId,
+                userId: withdrawal.userId
+            },
             {
                 $inc: {
                     withdrawableBalance: withdrawal.amount,
-                    balance: withdrawal.amount,
                 },
             },
             { session }
@@ -529,7 +457,6 @@ async function rejectWithdrawal({ adminId, transactionId, rejectReason = '', ide
                 _id: withdrawal._id,
                 type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
                 status: TRANSACTION_STATUS.PENDING,
-                isDeleted: { $ne: true },
             },
             {
                 $set: {

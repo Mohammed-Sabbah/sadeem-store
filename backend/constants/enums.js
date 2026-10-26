@@ -24,11 +24,10 @@ const ATTRIBUTE_VALUE_TYPE = {
 };
 
 const WALLET_TRANSACTION_TYPE = {
-    DEPOSIT: "deposit",
-    ORDER_PAYMENT: "orderPayment",
-    ORDER_REFUND: "orderRefund",
-    ORDER_CANCELLATION_CREDIT: "orderCancellationCredit",
-    WITHDRAWAL: "withdrawal",
+    DEPOSIT: 'deposit',
+    WITHDRAWAL: 'withdrawal',
+    PURCHASE: 'purchase',
+    REFUND: 'refund',
 };
 
 const BALANCE_TYPE = {

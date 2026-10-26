@@ -59,10 +59,21 @@ const walletTransactionSchema = new mongoose.Schema(
                 message: 'Amount must have at most two decimal places',
             },
         },
+        allocations: {
+            storeCreditBalance: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
+            withdrawableBalance: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
+        },
         balanceType: {
             type: String,
             enum: BALANCE_TYPE_VALUES,
-            default: BALANCE_TYPE.WITHDRAWABLE,
             required: true,
         },
         status: {
@@ -89,9 +100,7 @@ const walletTransactionSchema = new mongoose.Schema(
         },
         proofImage: {
             type: String,
-            required: function isDepositProofRequired() {
-                return this.type === 'deposit';
-            },
+            required: () => this.type === 'deposit',
             trim: true,
         },
         isProofReviewed: {
@@ -100,11 +109,9 @@ const walletTransactionSchema = new mongoose.Schema(
         },
         payoutDetails: {
             type: payoutDetailsSchema,
-            default: null,
         },
         reviewedAt: {
             type: Date,
-            default: null,
         },
         idempotencyKey: {
             type: String,
@@ -117,24 +124,7 @@ const walletTransactionSchema = new mongoose.Schema(
             default: '',
             trim: true,
             maxlength: 200,
-        },
-        referenceType: {
-            type: String,
-            default: '',
-            trim: true,
-            maxlength: 50,
-        },
-        description: {
-            type: String,
-            default: '',
-            trim: true,
-            maxlength: 500,
-        },
-        isDeleted: {
-            type: Boolean,
-            default: false,
-            index: true,
-        },
+        }
     },
     {
         versionKey: false,
@@ -143,7 +133,7 @@ const walletTransactionSchema = new mongoose.Schema(
 );
 
 walletTransactionSchema.index({ walletId: 1, createdAt: -1 });
-walletTransactionSchema.index({ status: 1, type: 1, isDeleted: 1 });
+walletTransactionSchema.index({ status: 1, type: 1 });
 walletTransactionSchema.index({ userId: 1, idempotencyKey: 1, type: 1 });
 
 module.exports = mongoose.model('WalletTransaction', walletTransactionSchema);

@@ -95,22 +95,19 @@ async function cancelTransaction(req, res, next) {
     }
 }
 
+// Deposits
 async function createDepositRequest(req, res, next) {
     try {
         const transaction = await walletService.createDepositRequest({
             userId: req.user._id,
             amount: req.body.amount,
             proofImage: req.body.proofImage,
-            referenceId: req.body.referenceId,
-            description: req.body.description,
             idempotencyKey: req.get('Idempotency-Key'),
             idempotencyPayload: {
                 amount: Number(req.body.amount),
                 proofImage: req.file
                     ? crypto.createHash('sha256').update(req.file.buffer).digest('hex')
                     : String(req.body.proofImage || '').trim(),
-                referenceId: String(req.body.referenceId || '').trim(),
-                description: String(req.body.description || 'Deposit request').trim(),
             },
         });
 
@@ -159,6 +156,7 @@ async function rejectDeposit(req, res, next) {
     }
 }
 
+// Withdrawals
 async function createWithdrawalRequest(req, res, next) {
     try {
         const transaction = await walletService.createWithdrawalRequest({

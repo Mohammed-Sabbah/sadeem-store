@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toast';
 import { adminService } from '../services/admin.service';
+import { getProductTotalStock } from '../utils/productAdminFilters';
 import type { AdminOverviewMetrics, AdminStoreItem } from '../types/admin.types';
 
 export const ADMIN_QUERY_KEYS = {
@@ -71,14 +72,23 @@ export function useAdminOverviewQuery() {
   const products = productsQuery.data || [];
   const categories = categoriesQuery.data || [];
 
+  const MIDDLE_CITIES = ['دير البلح', 'مخيم النصيرات', 'الزوايدة', 'مخيم البريج', 'مخيم المغازي'];
+  const storesByCity = MIDDLE_CITIES.map((city) => ({
+    city,
+    count: stores.filter((s: AdminStoreItem) => s.address?.city === city || s.address?.city?.includes(city)).length,
+  }));
+
   const metrics: AdminOverviewMetrics = {
     totalStores: stores.length,
     pendingStores: stores.filter((s: AdminStoreItem) => s.approveStatus === 'pending').length,
     activeStores: stores.filter((s: AdminStoreItem) => s.approveStatus === 'approved' && s.status === 'active').length,
     totalProducts: products.length,
     rejectedProducts: products.filter((p: any) => p.approveStatus === 'rejected').length,
+    outOfStockProducts: products.filter((p: any) => getProductTotalStock(p) === 0).length,
     totalCategories: categories.length,
     activeCategories: categories.filter((c: any) => c.isActive !== false).length,
+    totalPayableBalance: stores.reduce((sum: number, s: AdminStoreItem) => sum + (Number(s.balance) || 0), 0),
+    storesByCity,
   };
 
   const pendingStoresList = stores.filter((s: AdminStoreItem) => s.approveStatus === 'pending');

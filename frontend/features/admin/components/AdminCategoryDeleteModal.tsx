@@ -45,11 +45,21 @@ export const AdminCategoryDeleteModal: React.FC<AdminCategoryDeleteModalProps> =
           </svg>
         </div>
 
-        <div className="text-center space-y-1.5">
+        <div className="text-center space-y-2">
           <h3 className="text-sm font-black text-brand-dark">تأكيد حذف الفئة</h3>
           <p className="text-xs text-brand-muted leading-relaxed">
-            هل أنت متأكد من رغبتك في حذف الفئة &laquo;{categoryTitle}&raquo;؟ لن يتم الحذف إذا كانت هناك أصناف مرتبطة بها في المتجر.
+            هل أنت متأكد من رغبتك في حذف الفئة &laquo;{categoryTitle}&raquo;؟
           </p>
+
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-900 leading-relaxed text-right space-y-1">
+            <span className="font-bold flex items-center gap-1 text-amber-900">
+              <span>⚠️</span>
+              <span>قاعدة حماية الكتالوج (HTTP 409):</span>
+            </span>
+            <p className="text-[11px] text-amber-800/90 leading-normal">
+              يحظر نظام سَدِيم حذف أي فئة تحتوي على منتجات تابعة حفاظاً على سلامة البيانات. إذا كانت الفئة مستخدمة، يمكنك تعطيلها وتجميدها بدلاً من الحذف.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2 pt-2 border-t border-brand-border/60">

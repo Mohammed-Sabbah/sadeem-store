@@ -46,12 +46,20 @@ export interface AdminStoreItem {
   updatedAt?: string;
 }
 
+export interface AdminCityDistribution {
+  city: string;
+  count: number;
+}
+
 export interface AdminOverviewMetrics {
   totalStores: number;
   pendingStores: number;
   activeStores: number;
   totalProducts: number;
   rejectedProducts: number;
+  outOfStockProducts: number;
   totalCategories: number;
   activeCategories: number;
+  totalPayableBalance: number;
+  storesByCity: AdminCityDistribution[];
 }

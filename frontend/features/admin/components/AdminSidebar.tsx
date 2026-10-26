@@ -85,16 +85,21 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
   return (
     <aside
-      className={`h-full flex flex-col bg-brand-card border-l border-brand-border select-none transition-all duration-200 font-almarai ${
-        isCollapsed ? 'w-20' : 'w-64'
+      className={`h-full flex flex-col bg-brand-card border-l border-brand-border select-none transition-all duration-200 font-almarai relative ${
+        isCollapsed ? 'w-20 overflow-visible' : 'w-64 overflow-hidden'
       }`}
     >
       {/* 1. Brand & Header Block */}
-      <div className="h-16 px-4 flex items-center justify-between border-b border-brand-border/70 shrink-0">
+      <div
+        className={`h-16 flex items-center border-b border-brand-border/70 shrink-0 ${
+          isCollapsed ? 'justify-center px-2' : 'justify-between px-4'
+        }`}
+      >
         <Link
           href="/admin"
           onClick={onCloseMobile}
           className="flex items-center gap-2.5 min-w-0 group"
+          title={isCollapsed ? 'سَدِيم — محطة القيادة' : undefined}
         >
           <div className="w-9 h-9 rounded-xl bg-brand-primary text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs group-hover:bg-brand-primary-hover transition-colors">
             س
@@ -112,7 +117,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         </Link>
 
         {/* Mobile Close Button */}
-        {onCloseMobile ? (
+        {onCloseMobile && (
           <button
             type="button"
             onClick={onCloseMobile}
@@ -121,17 +126,19 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           >
             ✕
           </button>
-        ) : (
-          /* Desktop Collapse Trigger */
+        )}
+
+        {/* Desktop Collapse Trigger: when expanded, sits cleanly on the side */}
+        {!onCloseMobile && !isCollapsed && (
           <button
             type="button"
             onClick={onToggleCollapse}
-            className="hidden lg:flex w-7 h-7 rounded-lg text-brand-muted hover:text-brand-dark hover:bg-brand-surface items-center justify-center transition-colors cursor-pointer"
-            title={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
-            aria-label={isCollapsed ? 'توسيع القائمة' : 'طي القائمة'}
+            className="w-7 h-7 rounded-lg border border-brand-border/80 bg-brand-surface text-brand-muted hover:text-brand-dark hover:bg-brand-card flex items-center justify-center transition-all cursor-pointer shadow-2xs active:scale-95"
+            title="طي القائمة الجانبية"
+            aria-label="طي القائمة الجانبية"
           >
             <svg
-              className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`}
+              className="w-3.5 h-3.5"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -142,8 +149,32 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         )}
       </div>
 
-      {/* 2. Navigation Items List */}
-      <nav className="flex-1 overflow-y-auto p-3 space-y-1.5 scrollbar-none">
+      {/* Floating Toggle Pill when collapsed: sits gracefully with full breathing room */}
+      {!onCloseMobile && isCollapsed && (
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          className="absolute -left-3.5 top-5 w-7 h-7 rounded-full border border-brand-border bg-brand-card hover:bg-brand-surface text-brand-muted hover:text-brand-primary flex items-center justify-center shadow-md transition-all cursor-pointer active:scale-95 z-50 group"
+          title="توسيع القائمة الجانبية"
+          aria-label="توسيع القائمة الجانبية"
+        >
+          <svg
+            className="w-3.5 h-3.5 rotate-180 group-hover:scale-110 transition-transform"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      )}
+
+      {/* 2. Navigation Items List: overflow-visible when collapsed to never clip tooltips */}
+      <nav
+        className={`flex-1 p-3 space-y-1.5 scrollbar-none ${
+          isCollapsed ? 'overflow-visible' : 'overflow-y-auto'
+        }`}
+      >
         {ADMIN_NAV_ITEMS.map((item) => {
           const active = isRouteActive(item);
           const isDeferred = item.status === 'deferred';
@@ -169,7 +200,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
                 {/* Instant Floating Tooltip in Collapsed Mode */}
                 {isCollapsed && (
-                  <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-brand-dark text-white text-[11px] font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                  <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-stone-900 text-white text-[11px] font-bold rounded-lg shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
                     <span>{item.label}</span>
                     {item.badge && (
                       <span className="mr-1.5 text-[9px] text-stone-300 font-normal">
@@ -206,7 +237,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 
               {/* Instant Floating Tooltip in Collapsed Mode */}
               {isCollapsed && (
-                <div className="absolute right-full mr-2.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-brand-dark text-white text-[11px] font-bold rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
+                <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-stone-900 text-white text-[11px] font-bold rounded-lg shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
                   {item.label}
                 </div>
               )}

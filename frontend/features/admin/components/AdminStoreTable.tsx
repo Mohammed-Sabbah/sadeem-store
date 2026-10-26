@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import type { AdminStoreItem } from '../types/admin.types';
+import { AdminStoreFreezeModal } from './AdminStoreFreezeModal';
 
 interface AdminStoreTableProps {
   stores: AdminStoreItem[];
@@ -21,16 +22,30 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
   onViewDetails,
   isBusy = false,
 }) => {
+  const [storeToFreeze, setStoreToFreeze] = useState<AdminStoreItem | null>(null);
+
   const handleRejectConfirm = (store: AdminStoreItem) => {
     if (confirm(`هل أنت متأكد من رفض طلب انضمام متجر "${store.name}"؟`)) {
       onReject(store._id);
     }
   };
 
-  const handleToggleConfirm = (store: AdminStoreItem) => {
-    const actionText = store.status === 'active' ? 'تجميد' : 'فك تجميد وتنشيط';
-    if (confirm(`هل أنت متأكد من ${actionText} متجر "${store.name}"؟`)) {
-      onToggleStatus(store._id);
+  const handleToggleClick = (store: AdminStoreItem) => {
+    if (store.status === 'active') {
+      // Freezing requires mandatory reason modal per ADR 0007
+      setStoreToFreeze(store);
+    } else {
+      // Unfreezing
+      if (confirm(`هل أنت متأكد من فك تجميد وتنشيط متجر "${store.name}"؟`)) {
+        onToggleStatus(store._id);
+      }
+    }
+  };
+
+  const handleConfirmFreeze = (_reason: string) => {
+    if (storeToFreeze) {
+      onToggleStatus(storeToFreeze._id);
+      setStoreToFreeze(null);
     }
   };
 
@@ -54,7 +69,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
     <div>
       {/* 1. Desktop High-Density Table */}
       <div className="hidden lg:block overflow-x-auto">
-        <table className="w-full text-right text-xs">
+        <table className="w-full text-right text-xs font-almarai">
           <thead className="bg-brand-surface/80 border-b border-brand-border text-brand-muted font-bold select-none">
             <tr>
               <th className="py-3 px-5 w-20">الشعار</th>
@@ -126,9 +141,9 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                     </span>
                   </td>
 
-                  {/* Balance */}
+                  {/* Balance (₪) */}
                   <td className="py-3.5 px-4">
-                    <span className="text-xs font-black text-brand-dark">
+                    <span className="text-xs font-black text-brand-dark bg-brand-surface px-2.5 py-1 rounded-lg border border-brand-border inline-block">
                       {store.balance ?? 0} ₪
                     </span>
                   </td>
@@ -181,7 +196,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                       ) : isApproved ? (
                         <button
                           type="button"
-                          onClick={() => handleToggleConfirm(store)}
+                          onClick={() => handleToggleClick(store)}
                           disabled={isBusy}
                           className={`px-3 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer active:scale-95 ${
                             isActive
@@ -225,21 +240,21 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
         </table>
       </div>
 
-      {/* 2. Mobile Card List */}
-      <div className="block lg:hidden divide-y divide-brand-border/40">
+      {/* 2. Mobile Responsive Touch Cards (No Horizontal Scroll, < 95px height) */}
+      <div className="block lg:hidden divide-y divide-brand-border/40 font-almarai">
         {stores.map((store) => {
           const city = store.address?.city || 'المحافظة الوسطى';
           const ownerName = store.ownerId?.name || 'غير محدد';
-          const ownerPhone = store.ownerId?.phoneNumber || 'غير محدد';
           const isPending = store.approveStatus === 'pending';
           const isApproved = store.approveStatus === 'approved';
           const isActive = store.status === 'active';
 
           return (
-            <div key={store._id} className="p-4 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="w-12 h-12 rounded-xl bg-brand-surface overflow-hidden border border-brand-border shrink-0 flex items-center justify-center font-black text-xs text-brand-dark shadow-2xs">
+            <div key={store._id} className="p-3.5 space-y-2.5">
+              {/* Row 1: Logo, Name, and Status Badge */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="w-10 h-10 rounded-xl bg-brand-surface overflow-hidden border border-brand-border shrink-0 flex items-center justify-center font-black text-xs text-brand-dark shadow-2xs">
                     {store.logo ? (
                       <img
                         src={store.logo}
@@ -252,7 +267,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                     )}
                   </div>
 
-                  <div className="min-w-0 space-y-0.5">
+                  <div className="min-w-0">
                     <button
                       type="button"
                       onClick={() => onViewDetails(store)}
@@ -260,7 +275,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                     >
                       {store.name}
                     </button>
-                    <div className="flex items-center gap-2 text-[11px] text-brand-muted">
+                    <div className="flex items-center gap-1.5 text-[11px] text-brand-muted">
                       <span>{ownerName}</span>
                       <span>&bull;</span>
                       <span className="text-brand-trust font-bold">{city}</span>
@@ -269,7 +284,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                 </div>
 
                 {/* Status Badge */}
-                <div>
+                <div className="shrink-0">
                   {isPending ? (
                     <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-primary-soft text-brand-primary border border-brand-primary-border">
                       معلق
@@ -286,13 +301,13 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                 </div>
               </div>
 
-              {/* Mobile Actions Strip */}
+              {/* Row 2: Financial Dues Highlight + Quick Touch Buttons */}
               <div className="flex items-center justify-between gap-2 pt-2 border-t border-brand-border/40">
                 <span className="text-xs font-bold text-brand-muted">
-                  المستحقات: <strong className="text-brand-dark">{store.balance ?? 0} ₪</strong>
+                  المستحقات: <strong className="text-brand-dark font-black">{store.balance ?? 0} ₪</strong>
                 </span>
 
-                <div className="flex items-center gap-1.5 flex-wrap">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {isPending ? (
                     <>
                       <button
@@ -315,7 +330,7 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
                   ) : isApproved ? (
                     <button
                       type="button"
-                      onClick={() => handleToggleConfirm(store)}
+                      onClick={() => handleToggleClick(store)}
                       disabled={isBusy}
                       className={`px-3 py-1.5 rounded-lg text-xs font-bold active:scale-95 ${
                         isActive
@@ -350,6 +365,15 @@ export const AdminStoreTable: React.FC<AdminStoreTableProps> = ({
           );
         })}
       </div>
+
+      {/* Mandatory Freeze Reason Modal per ADR 0007 */}
+      <AdminStoreFreezeModal
+        isOpen={Boolean(storeToFreeze)}
+        onClose={() => setStoreToFreeze(null)}
+        onConfirm={handleConfirmFreeze}
+        storeName={storeToFreeze?.name || ''}
+        isSubmitting={isBusy}
+      />
     </div>
   );
 };

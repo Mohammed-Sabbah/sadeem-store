@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   useAdminCategoriesQuery,
   useAdminCategoryMutations,
 } from '@/features/admin/queries/useAdminQueries';
 import { AdminCategoryGrid } from '@/features/admin/components/AdminCategoryGrid';
+import { AdminCategoryTable } from '@/features/admin/components/AdminCategoryTable';
 import { AdminCategoryModal } from '@/features/admin/components/AdminCategoryModal';
 import { AdminCategoryDeleteModal } from '@/features/admin/components/AdminCategoryDeleteModal';
 
@@ -22,9 +23,30 @@ export default function AdminCategoriesPage() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
   const [categoryToDelete, setCategoryToDelete] = useState<{ id: string; title: string } | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sadeem_category_view_mode');
+      if (saved === 'table' || saved === 'grid') {
+        setViewMode(saved);
+      }
+    } catch {
+      // Ignore localStorage access errors
+    }
+  }, []);
+
+  const handleViewModeChange = (mode: 'grid' | 'table') => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem('sadeem_category_view_mode', mode);
+    } catch {
+      // Ignore localStorage errors
+    }
+  };
 
   const filteredCategories = useMemo(() => {
     return categories.filter((c: any) => {
@@ -123,8 +145,8 @@ export default function AdminCategoriesPage() {
         </div>
       </div>
 
-      {/* 2. Search & Filter Strip */}
-      <div className="bg-brand-card rounded-2xl border border-brand-border p-4 shadow-2xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      {/* 2. Search, Filter & View Toggle Strip */}
+      <div className="bg-brand-card rounded-2xl border border-brand-border p-4 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="relative flex-1">
           <input
             type="text"
@@ -143,49 +165,96 @@ export default function AdminCategoriesPage() {
           </svg>
         </div>
 
-        <div className="flex items-center gap-1.5 self-end sm:self-auto text-xs">
-          <button
-            type="button"
-            onClick={() => setFilterActive('all')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-              filterActive === 'all'
-                ? 'bg-brand-dark text-white'
-                : 'bg-brand-surface text-brand-muted hover:text-brand-dark'
-            }`}
-          >
-            الكل ({categories.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterActive('active')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-              filterActive === 'active'
-                ? 'bg-brand-dark text-white'
-                : 'bg-brand-surface text-brand-muted hover:text-brand-dark'
-            }`}
-          >
-            نشطة
-          </button>
-          <button
-            type="button"
-            onClick={() => setFilterActive('inactive')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-              filterActive === 'inactive'
-                ? 'bg-brand-dark text-white'
-                : 'bg-brand-surface text-brand-muted hover:text-brand-dark'
-            }`}
-          >
-            معطلة
-          </button>
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 text-xs">
+          {/* Active status filter */}
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setFilterActive('all')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                filterActive === 'all'
+                  ? 'bg-brand-dark text-white'
+                  : 'bg-brand-surface text-brand-muted hover:text-brand-dark'
+              }`}
+            >
+              الكل ({categories.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterActive('active')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                filterActive === 'active'
+                  ? 'bg-brand-dark text-white'
+                  : 'bg-brand-surface text-brand-muted hover:text-brand-dark'
+              }`}
+            >
+              نشطة
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterActive('inactive')}
+              className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+                filterActive === 'inactive'
+                  ? 'bg-brand-dark text-white'
+                  : 'bg-brand-surface text-brand-muted hover:text-brand-dark'
+              }`}
+            >
+              معطلة
+            </button>
+          </div>
+
+          <div className="h-5 w-px bg-brand-border hidden sm:block mx-1" />
+
+          {/* View Mode Toggle (Grid vs Table) */}
+          <div className="flex items-center gap-1 p-1 bg-brand-surface rounded-xl border border-brand-border">
+            <button
+              type="button"
+              onClick={() => handleViewModeChange('grid')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'grid'
+                  ? 'bg-brand-card text-brand-dark shadow-2xs'
+                  : 'text-brand-muted hover:text-brand-dark'
+              }`}
+              title="عرض شبكة البطاقات"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+              </svg>
+              <span>بطاقات</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleViewModeChange('table')}
+              className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-brand-card text-brand-dark shadow-2xs'
+                  : 'text-brand-muted hover:text-brand-dark'
+              }`}
+              title="عرض الجدول المضغوط"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <span>جدول</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* 3. Categories Grid */}
+      {/* 3. Categories Content (Table vs Grid) */}
       {isLoading ? (
         <div className="py-20 flex flex-col items-center justify-center space-y-3">
           <div className="w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
           <p className="text-xs font-bold text-brand-muted">جارٍ تحميل الفئات والتصنيفات...</p>
         </div>
+      ) : viewMode === 'table' ? (
+        <AdminCategoryTable
+          categories={filteredCategories}
+          onEdit={handleOpenEdit}
+          onDelete={(id, title) => setCategoryToDelete({ id, title })}
+          onToggleActive={handleToggleActive}
+          isBusy={isBusy}
+        />
       ) : (
         <AdminCategoryGrid
           categories={filteredCategories}

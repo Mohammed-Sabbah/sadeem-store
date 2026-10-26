@@ -10,6 +10,23 @@ import {
 import { getProductTotalStock } from '@/features/admin/utils/productAdminFilters';
 import { AdminProductRejectModal } from '@/features/admin/components/AdminProductRejectModal';
 
+function getProductPrice(p: any): string {
+  const variants = p.variants || [];
+  if (variants.length > 0) {
+    const prices = variants
+      .map((v: any) => Number(v.price) || 0)
+      .filter((pr: number) => pr > 0);
+    if (prices.length > 0) {
+      const min = Math.min(...prices);
+      const max = Math.max(...prices);
+      return min === max ? `${min} ₪` : `${min} – ${max} ₪`;
+    }
+  }
+  const minPrice = Number(p.minPrice ?? p.price ?? 0);
+  const maxPrice = Number(p.maxPrice ?? p.price ?? 0);
+  return minPrice === maxPrice ? `${minPrice} ₪` : `${minPrice} – ${maxPrice} ₪`;
+}
+
 export default function AdminProductDetailsPage() {
   const params = useParams();
   const router = useRouter();
@@ -54,6 +71,7 @@ export default function AdminProductDetailsPage() {
   const isRejected = product.approveStatus === 'rejected';
   const variants = product.variants || [];
   const totalStock = getProductTotalStock(product);
+  const priceDisplay = getProductPrice(product);
   const store = product.storeId && typeof product.storeId === 'object' ? product.storeId : null;
   const category = product.categoryId && typeof product.categoryId === 'object' ? product.categoryId : null;
 
@@ -86,10 +104,9 @@ export default function AdminProductDetailsPage() {
 
   return (
     <div className="space-y-6 font-almarai text-right select-none pb-16">
-      {/* 1. Header & Navigation Bar */}
-      <div className="bg-brand-card p-5 sm:p-6 rounded-2xl border border-brand-border shadow-2xs space-y-4">
-        {/* Breadcrumb */}
-        <div className="flex items-center justify-between gap-4 border-b border-brand-border/60 pb-3.5">
+      {/* 1. Header Navigation & Breadcrumb */}
+      <div className="bg-brand-card p-5 sm:p-6 rounded-2xl border border-brand-border shadow-2xs">
+        <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-xs font-bold text-brand-muted">
             <Link href="/admin" className="hover:text-brand-dark transition-colors">
               لوحة الإدارة
@@ -112,159 +129,94 @@ export default function AdminProductDetailsPage() {
             <span className="text-xs">&rarr;</span>
           </Link>
         </div>
-
-        {/* Title, Badges, and Action Bar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              {isRejected ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-red-50 text-red-700 border border-red-200 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
-                  <span>موقوف إدارياً عن العرض</span>
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
-                  <span className="w-2 h-2 rounded-full bg-brand-trust" />
-                  <span>معتمد ومقبول بالمتجر</span>
-                </span>
-              )}
-
-              {store && (
-                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-brand-surface text-brand-primary border border-brand-border">
-                  متجر: {store.name}
-                </span>
-              )}
-
-              {category && (
-                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-brand-surface text-brand-dark border border-brand-border">
-                  قسم: {category.title}
-                </span>
-              )}
-            </div>
-
-            <h1 className="text-xl sm:text-2xl font-black text-brand-dark tracking-tight leading-snug">
-              {product.title}
-            </h1>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-            <Link
-              href={`/product/${product._id}`}
-              target="_blank"
-              className="px-3.5 py-2 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-card text-xs font-bold text-brand-dark transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-95"
-            >
-              <span>معاينة كزبون في المتجر</span>
-              <span className="text-xs">↗</span>
-            </Link>
-
-            {isRejected ? (
-              <button
-                type="button"
-                onClick={handleActivate}
-                disabled={isUpdating}
-                className="px-4 py-2 rounded-xl bg-brand-trust text-white text-xs font-black hover:bg-emerald-700 transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
-              >
-                تنشيط وفك التجميد
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsRejectModalOpen(true)}
-                disabled={isUpdating}
-                className="px-4 py-2 rounded-xl bg-red-50 text-red-700 border border-red-200 hover:bg-red-100 text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
-              >
-                إيقاف الصنف إدارياً
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Rejection Alert Box */}
-        {isRejected && product.rejectReason && (
-          <div className="p-3.5 rounded-xl bg-red-50/80 border border-red-200 text-xs space-y-1">
-            <span className="font-black text-red-800 block">سبب الإيقاف الإداري:</span>
-            <p className="text-red-700 font-medium leading-relaxed m-0">
-              {product.rejectReason}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* 2. Main 12-Column Grid */}
+      {/* 2. Main 12-Column Grid (Canvas & Inspector per ADR 0009) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Main Content Area (8 Cols) */}
+        {/* Right Area: Product Canvas (8 Cols) */}
         <div className="lg:col-span-8 space-y-6">
-          {/* Gallery & Description Card */}
-          <div className="bg-brand-card rounded-2xl border border-brand-border p-5 sm:p-6 space-y-5 shadow-2xs">
+          {/* Gallery Card */}
+          <div className="bg-brand-card rounded-2xl border border-brand-border p-5 sm:p-6 space-y-4 shadow-2xs">
             <h3 className="text-sm font-black text-brand-dark border-b border-brand-border/60 pb-3">
-              معرض الصور والمواصفات الأساسية
+              معرض صور الصنف
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-start">
-              {/* Main Image */}
-              <div className="sm:col-span-5 space-y-3">
-                <div className="aspect-square rounded-2xl bg-brand-surface border border-brand-border overflow-hidden flex items-center justify-center shadow-2xs">
-                  <img
-                    src={activeImage}
-                    alt={product.title}
-                    className="w-full h-full object-cover transition-opacity duration-200"
-                  />
-                </div>
-
-                {/* Thumbnails */}
-                {images.length > 1 && (
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                    {images.map((img: string, idx: number) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setSelectedImage(img)}
-                        className={`w-14 h-14 rounded-xl border overflow-hidden shrink-0 transition-all cursor-pointer ${
-                          activeImage === img
-                            ? 'border-brand-primary ring-2 ring-brand-primary/20 scale-95 shadow-xs'
-                            : 'border-brand-border hover:border-brand-dark/40 opacity-70 hover:opacity-100'
-                        }`}
-                      >
-                        <img src={img} alt="" className="w-full h-full object-cover" />
-                      </button>
-                    ))}
-                  </div>
-                )}
+            <div className="space-y-3">
+              <div className="aspect-square sm:aspect-[16/10] max-h-[360px] rounded-2xl bg-brand-surface border border-brand-border overflow-hidden flex items-center justify-center shadow-2xs">
+                <img
+                  src={activeImage}
+                  alt={product.title}
+                  className="w-full h-full object-contain transition-opacity duration-200"
+                />
               </div>
 
-              {/* Description & Overview */}
-              <div className="sm:col-span-7 space-y-4">
-                <div className="space-y-1.5">
-                  <span className="text-[11px] font-bold text-brand-muted block">
-                    الوصف المعروض للزبائن
+              {/* Thumbnails Strip */}
+              {images.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                  {images.map((img: string, idx: number) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setSelectedImage(img)}
+                      className={`w-16 h-16 rounded-xl border overflow-hidden shrink-0 transition-all cursor-pointer ${
+                        activeImage === img
+                          ? 'border-brand-primary ring-2 ring-brand-primary/20 scale-95 shadow-xs'
+                          : 'border-brand-border hover:border-brand-dark/40 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Description & Overview Card */}
+          <div className="bg-brand-card rounded-2xl border border-brand-border p-5 sm:p-6 space-y-4 shadow-2xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-brand-border/60 pb-3">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-brand-muted block">عنوان المنتج</span>
+                <h1 className="text-lg sm:text-xl font-black text-brand-dark tracking-tight leading-snug">
+                  {product.title}
+                </h1>
+              </div>
+
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="text-left sm:text-right">
+                  <span className="text-[10px] font-bold text-brand-muted block">السعر للزبائن</span>
+                  <span className="text-lg font-black text-brand-dark bg-brand-surface px-3 py-1 rounded-xl border border-brand-border inline-block">
+                    {priceDisplay}
                   </span>
-                  <p className="text-xs sm:text-sm text-brand-dark/90 leading-relaxed font-medium bg-brand-surface/40 p-4 rounded-xl border border-brand-border/60 whitespace-pre-line m-0">
-                    {product.description || 'لا يوجد وصف مدخل لهذا المنتج.'}
-                  </p>
                 </div>
+              </div>
+            </div>
 
-                {/* Quick Info Grid */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="p-3 rounded-xl bg-brand-surface border border-brand-border">
-                    <span className="text-[10px] font-bold text-brand-muted block">إجمالي المخزون</span>
-                    <span className="text-sm font-black text-brand-dark block mt-0.5">
-                      {totalStock} قطعة
-                    </span>
-                  </div>
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-brand-muted block">الوصف المعتمد بالمتجر</span>
+              <p className="text-xs sm:text-sm text-brand-dark leading-relaxed font-medium bg-brand-surface/40 p-4 rounded-xl border border-brand-border/60 whitespace-pre-line m-0">
+                {product.description || 'لا يوجد وصف مدخل لهذا الصنف.'}
+              </p>
+            </div>
 
-                  <div className="p-3 rounded-xl bg-brand-surface border border-brand-border">
-                    <span className="text-[10px] font-bold text-brand-muted block">عدد المتغيرات</span>
-                    <span className="text-sm font-black text-brand-dark block mt-0.5">
-                      {variants.length} خيارات
-                    </span>
-                  </div>
-                </div>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="p-3 rounded-xl bg-brand-surface border border-brand-border">
+                <span className="text-[10px] font-bold text-brand-muted block">إجمالي المخزون المتاح</span>
+                <span className="text-base font-black text-brand-dark block mt-0.5">
+                  {totalStock} قطعة
+                </span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-brand-surface border border-brand-border">
+                <span className="text-[10px] font-bold text-brand-muted block">عدد الخيارات والبدائل</span>
+                <span className="text-base font-black text-brand-dark block mt-0.5">
+                  {variants.length} خيارات
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Variants Table Card */}
+          {/* Variants Matrix Table Card */}
           <div className="bg-brand-card rounded-2xl border border-brand-border p-5 sm:p-6 space-y-4 shadow-2xs">
             <div className="flex items-center justify-between border-b border-brand-border/60 pb-3">
               <div>
@@ -283,7 +235,7 @@ export default function AdminProductDetailsPage() {
 
             {variants.length === 0 ? (
               <div className="py-8 text-center text-xs text-brand-muted bg-brand-surface/40 rounded-xl border border-brand-border/60">
-                لا توجد متغيرات مسجلة لهذا الصنف.
+                صنف قياسي موحد بدون متغيرات فرعية.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -306,7 +258,6 @@ export default function AdminProductDetailsPage() {
 
                       return (
                         <tr key={v._id} className="hover:bg-brand-surface/40 transition-colors">
-                          {/* Image */}
                           <td className="py-3 px-3">
                             <div className="w-10 h-10 rounded-lg bg-brand-surface border border-brand-border overflow-hidden shrink-0 flex items-center justify-center text-[9px] text-brand-muted">
                               {v.image ? (
@@ -317,7 +268,6 @@ export default function AdminProductDetailsPage() {
                             </div>
                           </td>
 
-                          {/* Attributes */}
                           <td className="py-3 px-3">
                             {attrEntries.length > 0 ? (
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -335,12 +285,10 @@ export default function AdminProductDetailsPage() {
                             )}
                           </td>
 
-                          {/* SKU */}
                           <td className="py-3 px-3 font-mono text-[11px] text-brand-dark">
                             {v.sku || 'بدون SKU'}
                           </td>
 
-                          {/* Price */}
                           <td className="py-3 px-3 font-bold text-brand-dark">
                             <span>{v.price} ₪</span>
                             {v.compareAtPrice && v.compareAtPrice > v.price && (
@@ -350,21 +298,19 @@ export default function AdminProductDetailsPage() {
                             )}
                           </td>
 
-                          {/* Stock */}
                           <td className="py-3 px-3">
                             <span
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold ${
                                 hasStock
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                                   : 'bg-red-50 text-red-700 border border-red-200'
                               }`}
                             >
                               <span className={`w-1.5 h-1.5 rounded-full ${hasStock ? 'bg-brand-trust' : 'bg-red-500'}`} />
-                              <span>{vStock} ق</span>
+                              <span>{hasStock ? `${vStock} قطعة` : 'نافد'}</span>
                             </span>
                           </td>
 
-                          {/* Status */}
                           <td className="py-3 px-3">
                             {v.status === 'inActive' || v.isDeleted ? (
                               <span className="text-[10px] font-bold text-brand-muted bg-brand-surface px-2 py-0.5 rounded">
@@ -386,11 +332,76 @@ export default function AdminProductDetailsPage() {
           </div>
         </div>
 
-        {/* Sidebar Info Area (4 Cols) */}
+        {/* Left Area: The Governance Inspector (4 Cols) */}
         <div className="lg:col-span-4 space-y-6">
+          {/* Governance Action Card */}
+          <div className="bg-brand-card rounded-2xl border border-brand-border p-5 space-y-4 shadow-2xs">
+            <h3 className="text-xs font-black text-brand-dark border-b border-brand-border/60 pb-2.5">
+              لوحة الرقابة الإدارية
+            </h3>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-brand-muted">حالة الصنف:</span>
+                {isRejected ? (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-red-50 text-red-700 border border-red-200 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse" />
+                    <span>موقوف إدارياً</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-black bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-brand-trust" />
+                    <span>معتمد بالمتجر</span>
+                  </span>
+                )}
+              </div>
+
+              {isRejected && product.rejectReason && (
+                <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs space-y-1">
+                  <span className="font-black text-red-800 block text-[11px]">سبب الإيقاف الميداني:</span>
+                  <p className="text-red-700 font-medium leading-relaxed m-0 text-xs">
+                    {product.rejectReason}
+                  </p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2 border-t border-brand-border/60">
+                {isRejected ? (
+                  <button
+                    type="button"
+                    onClick={handleActivate}
+                    disabled={isUpdating}
+                    className="w-full h-10 rounded-xl bg-brand-trust text-white text-xs font-black hover:bg-emerald-700 transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+                  >
+                    تنشيط وفك التجميد عن الصنف
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsRejectModalOpen(true)}
+                    disabled={isUpdating}
+                    className="w-full h-10 rounded-xl bg-red-600 text-white hover:bg-red-700 text-xs font-black transition-all cursor-pointer shadow-xs active:scale-95 disabled:opacity-50"
+                  >
+                    إيقاف وتجميد الصنف إدارياً
+                  </button>
+                )}
+
+                <Link
+                  href={`/product/${product._id}`}
+                  target="_blank"
+                  className="w-full h-10 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-card text-xs font-bold text-brand-dark transition-all cursor-pointer shadow-2xs flex items-center justify-center gap-1.5 active:scale-95"
+                >
+                  <span>معاينة كزبون في المتجر العام</span>
+                  <span className="text-xs">↗</span>
+                </Link>
+              </div>
+            </div>
+          </div>
+
           {/* Partner Store Card */}
           <div className="bg-brand-card rounded-2xl border border-brand-border p-5 space-y-3.5 shadow-2xs">
-            <h3 className="text-xs font-black text-brand-muted border-b border-brand-border/60 pb-2.5">
+            <h3 className="text-xs font-black text-brand-dark border-b border-brand-border/60 pb-2.5">
               بيانات المتجر الشريك
             </h3>
 
@@ -409,22 +420,22 @@ export default function AdminProductDetailsPage() {
                     <h4 className="text-sm font-black text-brand-dark truncate m-0">
                       {store.name}
                     </h4>
-                    <span className="text-[11px] font-bold text-brand-muted block">
+                    <span className="text-[11px] font-bold text-brand-trust block">
                       {store.address?.city || 'المحافظة الوسطى'}
                     </span>
                   </div>
                 </div>
 
                 <div className="pt-2 border-t border-brand-border/40 flex items-center justify-between text-xs">
-                  <span className="text-brand-muted font-bold">حالة المتجر:</span>
+                  <span className="text-brand-muted font-bold">حالة نشاط المتجر:</span>
                   <span className="font-bold text-brand-dark">
-                    {store.status === 'active' ? 'نشط ومعتمد' : 'معطل'}
+                    {store.status === 'active' ? 'نشط ومعتمد' : 'مجمد'}
                   </span>
                 </div>
 
                 <Link
                   href={`/admin/stores?search=${encodeURIComponent(store.name || '')}`}
-                  className="w-full py-2 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-card text-center text-xs font-bold text-brand-dark transition-colors block shadow-2xs"
+                  className="w-full py-2.5 rounded-xl border border-brand-border bg-brand-surface hover:bg-brand-card text-center text-xs font-bold text-brand-dark transition-colors block shadow-2xs"
                 >
                   عرض ملف المتجر في شبكة المتاجر &larr;
                 </Link>
@@ -436,7 +447,7 @@ export default function AdminProductDetailsPage() {
 
           {/* Category Architecture Card */}
           <div className="bg-brand-card rounded-2xl border border-brand-border p-5 space-y-3 shadow-2xs">
-            <h3 className="text-xs font-black text-brand-muted border-b border-brand-border/60 pb-2.5">
+            <h3 className="text-xs font-black text-brand-dark border-b border-brand-border/60 pb-2.5">
               التصنيف المعتمد
             </h3>
 
@@ -452,7 +463,7 @@ export default function AdminProductDetailsPage() {
                     <span className="text-[10px] font-bold text-brand-muted block">
                       السمات والقيم المصرحة للفئة:
                     </span>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {category.variantAttributes.map((attr: any, idx: number) => (
                         <div
                           key={idx}
@@ -475,32 +486,6 @@ export default function AdminProductDetailsPage() {
             ) : (
               <p className="text-xs text-brand-muted m-0">صنف عام بدون فئة مرتبطة.</p>
             )}
-          </div>
-
-          {/* Future Scope Placeholders */}
-          <div className="bg-brand-card rounded-2xl border border-brand-border p-5 space-y-3 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-brand-border/60 pb-2.5">
-              <h3 className="text-xs font-black text-brand-dark">سجلات التتبع والمبيعات</h3>
-              <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-stone-100 text-stone-600 border border-stone-200">
-                المرحلة 2
-              </span>
-            </div>
-
-            <div className="space-y-2">
-              <div className="p-3 rounded-xl bg-brand-surface/50 border border-brand-border/60 space-y-1">
-                <span className="text-xs font-bold text-brand-dark block">حركات الطلبات والتوصيل</span>
-                <p className="text-[10px] text-brand-muted m-0">
-                  سيتم ربط سجل الطلبات والمبيعات الفعلية بعد إطلاق موديول الطلبات الموحد.
-                </p>
-              </div>
-
-              <div className="p-3 rounded-xl bg-brand-surface/50 border border-brand-border/60 space-y-1">
-                <span className="text-xs font-bold text-brand-dark block">سجل التدقيق الرقابي</span>
-                <p className="text-[10px] text-brand-muted m-0">
-                  سجل تاريخي يوضح من قام بتجميد أو تنشيط الصنف وتواريخ المراجعة الميدانية.
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>

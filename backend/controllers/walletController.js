@@ -1,4 +1,3 @@
-const crypto = require('crypto');
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
 const walletService = require('../services/walletService');
@@ -95,132 +94,10 @@ async function cancelTransaction(req, res, next) {
     }
 }
 
-// Deposits
-async function createDepositRequest(req, res, next) {
-    try {
-        const transaction = await walletService.createDepositRequest({
-            userId: req.user._id,
-            amount: req.body.amount,
-            proofImage: req.body.proofImage,
-            idempotencyKey: req.get('Idempotency-Key'),
-            idempotencyPayload: {
-                amount: Number(req.body.amount),
-                proofImage: req.file
-                    ? crypto.createHash('sha256').update(req.file.buffer).digest('hex')
-                    : String(req.body.proofImage || '').trim(),
-            },
-        });
-
-        return success(res, 201, {
-            message: 'Deposit request created successfully',
-            transaction,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function approveDeposit(req, res, next) {
-    try {
-        const result = await walletService.approveDeposit({
-            adminId: req.user._id,
-            transactionId: req.params.id,
-            amount: req.body.amount,
-            proofReviewed: req.body.proofReviewed,
-            idempotencyKey: req.get('Idempotency-Key'),
-        });
-        return success(res, 200, {
-            message: 'Deposit approved successfully',
-            ...result,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function rejectDeposit(req, res, next) {
-    try {
-        const transaction = await walletService.rejectDeposit({
-            adminId: req.user._id,
-            transactionId: req.params.id,
-            rejectReason: req.body.rejectReason,
-            idempotencyKey: req.get('Idempotency-Key'),
-        });
-
-        return success(res, 200, {
-            message: 'Deposit rejected successfully',
-            transaction,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-// Withdrawals
-async function createWithdrawalRequest(req, res, next) {
-    try {
-        const transaction = await walletService.createWithdrawalRequest({
-            userId: req.user._id,
-            amount: req.body.amount,
-            payoutDetails: req.body.payoutDetails || {},
-            idempotencyKey: req.get('Idempotency-Key'),
-        });
-
-        return success(res, 201, {
-            message: 'Withdrawal request created successfully',
-            transaction,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function approveWithdrawal(req, res, next) {
-    try {
-        const transaction = await walletService.approveWithdrawal({
-            adminId: req.user._id,
-            transactionId: req.params.id,
-            payoutReference: req.body.payoutReference,
-            idempotencyKey: req.get('Idempotency-Key'),
-        });
-
-        return success(res, 200, {
-            message: 'Withdrawal approved successfully',
-            transaction,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
-async function rejectWithdrawal(req, res, next) {
-    try {
-        const transaction = await walletService.rejectWithdrawal({
-            adminId: req.user._id,
-            transactionId: req.params.id,
-            rejectReason: req.body.rejectReason,
-            idempotencyKey: req.get('Idempotency-Key'),
-        });
-
-        return success(res, 200, {
-            message: 'Withdrawal rejected successfully',
-            transaction,
-        });
-    } catch (err) {
-        return next(err);
-    }
-}
-
 module.exports = {
     getWallet,
     getWalletTransactions,
-    createDepositRequest,
     listTransactions,
     getWalletTransaction,
     cancelTransaction,
-    approveDeposit,
-    rejectDeposit,
-    createWithdrawalRequest,
-    approveWithdrawal,
-    rejectWithdrawal,
 };

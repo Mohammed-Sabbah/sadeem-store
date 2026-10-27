@@ -4,12 +4,11 @@ const { ROLE } = require("../constants/enums")
 // Controller
 const {
     createWithdrawalRequest,
-    approveWithdrawal,
-    rejectWithdrawal
+    approveWithdrawalRequest,
+    rejectWithdrawalRequest
 } = require("../controllers/withdrawal.controller")
 
 // Schema
-const { validateIdempotencyKey } = require("../schemas/walletSchema")
 const {
     validateWithdrawalRequest,
     validateWithdrawalAction
@@ -23,7 +22,6 @@ router.use(authenticate)
 // Create Withdrawal - User
 router.post('/',
     authorize(ROLE.USER),
-    validateIdempotencyKey,
     validateWithdrawalRequest,
     createWithdrawalRequest
 );
@@ -31,16 +29,14 @@ router.post('/',
 // Change Withdrawal Request - Admin
 router.patch('/:id/approve',
     authorize(ROLE.ADMIN),
-    validateIdempotencyKey,
     validateWithdrawalAction,
-    approveWithdrawal
+    approveWithdrawalRequest
 );
 
 router.patch('/:id/reject',
     authorize(ROLE.ADMIN),
-    validateIdempotencyKey,
     validateWithdrawalAction,
-    rejectWithdrawal
+    rejectWithdrawalRequest
 );
 
 module.exports = router

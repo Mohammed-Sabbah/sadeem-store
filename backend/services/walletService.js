@@ -162,9 +162,6 @@ const decreaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0
     const withdrawableBalanceAmount = parsePositiveMoney(withdrawableBalance)
     const storeCreditBalanceAmount = parsePositiveMoney(storeCreditBalance)
 
-    if (!WALLET_TRANSACTION_TYPE_VALUES.includes(type))
-        throw error("Invalid Transaction Type", 400)
-
     const wallet = await Wallet.findOne({ _id: walletId, userId, isFrozen: false }).session(session)
     if (!wallet) throw error("Wallet Not Found", 404)
 
@@ -184,7 +181,7 @@ const decreaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0
         { session }
     )
 
-    if (!updatedWallet.modifiedCount != 1)
+    if (updatedWallet.modifiedCount !== 1)
         throw error("Cant Update this wallet")
 
     return { updatedWallet }

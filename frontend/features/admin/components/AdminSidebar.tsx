@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { AdminNavItem, AdminNavSectionId } from '../types/admin.types';
 import { ADMIN_NAV_ITEMS } from '../utils/adminNavigation';
+import { useAdminWalletPendingCountQuery } from '../queries/useAdminQueries';
 
 interface AdminSidebarProps {
   isCollapsed: boolean;
@@ -38,6 +39,12 @@ function getNavIcon(id: AdminNavSectionId, isActive: boolean) {
       return (
         <svg className={`w-5 h-5 shrink-0 ${strokeClass}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+        </svg>
+      );
+    case 'wallet':
+      return (
+        <svg className={`w-5 h-5 shrink-0 ${strokeClass}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
         </svg>
       );
     case 'orders':
@@ -75,6 +82,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   onCloseMobile,
 }) => {
   const pathname = usePathname();
+  const { data: walletStats } = useAdminWalletPendingCountQuery();
+  const pendingWalletCount = walletStats?.totalPendingCount || 0;
 
   const isRouteActive = (item: AdminNavItem) => {
     if (item.href === '/admin') {
@@ -98,15 +107,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         <Link
           href="/admin"
           onClick={onCloseMobile}
-          className="flex items-center gap-2.5 min-w-0 group"
-          title={isCollapsed ? 'سَدِيم — محطة القيادة' : undefined}
+          className="flex items-center gap-2.5 min-w-0 no-underline cursor-pointer group"
+          title="سَدِيم — محطة القيادة"
         >
-          <div className="w-9 h-9 rounded-xl bg-brand-primary text-white flex items-center justify-center font-black text-sm shrink-0 shadow-xs group-hover:bg-brand-primary-hover transition-colors">
+          <div className="w-9 h-9 rounded-xl bg-brand-primary flex items-center justify-center text-white font-black text-base shadow-xs shrink-0 group-hover:scale-102 transition-transform">
             س
           </div>
           {!isCollapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-sm font-black text-brand-dark tracking-tight leading-tight">
+              <span className="font-black text-sm text-brand-dark tracking-tight leading-tight">
                 سَدِيم
               </span>
               <span className="text-[10px] font-bold text-brand-primary">
@@ -178,6 +187,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
         {ADMIN_NAV_ITEMS.map((item) => {
           const active = isRouteActive(item);
           const isDeferred = item.status === 'deferred';
+          const isWallet = item.id === 'wallet';
+          const walletBadgeCount = isWallet ? pendingWalletCount : 0;
 
           if (isDeferred) {
             return (
@@ -227,18 +238,38 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  {getNavIcon(item.id, active)}
+                  <div className="relative">
+                    {getNavIcon(item.id, active)}
+                    {isCollapsed && walletBadgeCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 border border-brand-card" />
+                    )}
+                  </div>
                   {!isCollapsed && <span className="truncate">{item.label}</span>}
                 </div>
-                {!isCollapsed && active && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand-primary shrink-0" />
+
+                {!isCollapsed && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {walletBadgeCount > 0 && (
+                      <span className="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200/60 leading-none">
+                        {walletBadgeCount}
+                      </span>
+                    )}
+                    {active && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand-primary shrink-0" />
+                    )}
+                  </div>
                 )}
               </Link>
 
               {/* Instant Floating Tooltip in Collapsed Mode */}
               {isCollapsed && (
-                <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-stone-900 text-white text-[11px] font-bold rounded-lg shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap">
-                  {item.label}
+                <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-2.5 py-1.5 bg-stone-900 text-white text-[11px] font-bold rounded-lg shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-150 z-50 whitespace-nowrap flex items-center gap-1.5">
+                  <span>{item.label}</span>
+                  {walletBadgeCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-red-500 text-white text-[9px] font-black">
+                      {walletBadgeCount}
+                    </span>
+                  )}
                 </div>
               )}
             </div>

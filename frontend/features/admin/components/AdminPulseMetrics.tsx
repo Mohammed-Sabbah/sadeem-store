@@ -16,8 +16,8 @@ export const AdminPulseMetrics: React.FC<AdminPulseMetricsProps> = ({
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
             <div
               key={i}
               className="h-32 rounded-2xl bg-brand-card border border-brand-border p-5 flex flex-col justify-between animate-pulse"
@@ -34,8 +34,8 @@ export const AdminPulseMetrics: React.FC<AdminPulseMetricsProps> = ({
 
   return (
     <div className="space-y-4 font-almarai select-none">
-      {/* 1. Core Pillar Metrics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* 1. Core Pillar Metrics Grid (4 Cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Stores Card */}
         <Link
           href="/admin/stores"
@@ -159,6 +159,49 @@ export const AdminPulseMetrics: React.FC<AdminPulseMetricsProps> = ({
             </span>
             <span className="text-brand-muted group-hover:text-brand-primary transition-colors font-bold">
               تهيئة &larr;
+            </span>
+          </div>
+        </Link>
+
+        {/* Wallet & Financial Deposits Card */}
+        <Link
+          href="/admin/wallet"
+          className="bg-brand-card hover:bg-brand-surface/70 rounded-2xl border border-brand-border p-5 flex flex-col justify-between transition-all duration-150 active:scale-98 shadow-2xs hover:shadow-xs group"
+        >
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-xs font-bold text-brand-muted">
+              المحفظة والتحويلات
+            </span>
+            <div className="w-9 h-9 rounded-xl bg-brand-surface border border-brand-border text-brand-muted group-hover:text-brand-primary group-hover:bg-brand-primary-soft flex items-center justify-center transition-colors shadow-2xs">
+              <svg className="w-4 h-4 stroke-[1.8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="my-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-brand-dark tracking-tight">
+                {metrics.pendingWalletRequestsCount}
+              </span>
+              <span className="text-xs font-bold text-brand-muted">طلب بانتظار التدقيق</span>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-brand-border/60 flex items-center justify-between text-[11px]">
+            {metrics.pendingWalletRequestsCount > 0 ? (
+              <span className="inline-flex items-center gap-1.5 font-black text-amber-700">
+                <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
+                <span>{metrics.pendingWalletAmount.toLocaleString()} ₪ معلق</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 font-bold text-brand-trust">
+                <span className="w-2 h-2 rounded-full bg-brand-trust" />
+                <span>كافة الحسابات مدققة ومعتمدة</span>
+              </span>
+            )}
+            <span className="text-brand-muted group-hover:text-brand-primary transition-colors font-bold">
+              تدقيق &larr;
             </span>
           </div>
         </Link>

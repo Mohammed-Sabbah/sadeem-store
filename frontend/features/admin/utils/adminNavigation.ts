@@ -26,6 +26,12 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     status: 'active',
   },
   {
+    id: 'wallet',
+    label: 'المحفظة والمالية',
+    href: '/admin/wallet',
+    status: 'active',
+  },
+  {
     id: 'orders',
     label: 'الطلبات والتوزيع',
     href: '/admin/orders',

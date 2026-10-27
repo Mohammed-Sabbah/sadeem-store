@@ -4,13 +4,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/toast';
 import { adminService } from '../services/admin.service';
 import { getProductTotalStock } from '../utils/productAdminFilters';
-import type { AdminOverviewMetrics, AdminStoreItem } from '../types/admin.types';
+import type { AdminOverviewMetrics, AdminStoreItem, AdminWalletTransactionItem } from '../types/admin.types';
 
 export const ADMIN_QUERY_KEYS = {
   stores: ['admin', 'stores'] as const,
   products: ['admin', 'products'] as const,
   product: (id: string) => ['admin', 'product', id] as const,
   categories: ['admin', 'categories'] as const,
+  walletTransactions: (params?: any) => ['admin', 'wallet', 'transactions', params] as const,
+  walletPending: ['admin', 'wallet', 'pending'] as const,
 };
 
 export function useAdminStoresQuery() {
@@ -61,16 +63,63 @@ export function useAdminCategoriesQuery() {
   });
 }
 
+export function useAdminWalletTransactionsQuery(params?: {
+  status?: string;
+  type?: string;
+  offset?: number;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: ADMIN_QUERY_KEYS.walletTransactions(params),
+    queryFn: async () => {
+      const res = await adminService.getWalletTransactions(params);
+      return res;
+    },
+    staleTime: 1000 * 20,
+  });
+}
+
+export function useAdminWalletPendingCountQuery() {
+  return useQuery({
+    queryKey: ADMIN_QUERY_KEYS.walletPending,
+    queryFn: async () => {
+      const res = await adminService.getWalletTransactions({ status: 'pending', limit: 100 });
+      const items: AdminWalletTransactionItem[] = res.data || [];
+      const pendingDeposits = items.filter((t) => t.type === 'deposit');
+      const pendingWithdrawals = items.filter((t) => t.type === 'withdrawal');
+      const totalPendingAmount = items.reduce(
+        (sum, t) => sum + (Number(t.amount) || Number(t.requestedAmount) || 0),
+        0
+      );
+      return {
+        totalPendingCount: items.length,
+        pendingDepositsCount: pendingDeposits.length,
+        pendingWithdrawalsCount: pendingWithdrawals.length,
+        totalPendingAmount,
+        pendingItems: items,
+      };
+    },
+    staleTime: 1000 * 30,
+    refetchInterval: 1000 * 60,
+  });
+}
+
 export function useAdminOverviewQuery() {
   const storesQuery = useAdminStoresQuery();
   const productsQuery = useAdminProductsQuery();
   const categoriesQuery = useAdminCategoriesQuery();
+  const walletPendingQuery = useAdminWalletPendingCountQuery();
 
-  const isLoading = storesQuery.isLoading || productsQuery.isLoading || categoriesQuery.isLoading;
+  const isLoading =
+    storesQuery.isLoading ||
+    productsQuery.isLoading ||
+    categoriesQuery.isLoading ||
+    walletPendingQuery.isLoading;
 
   const stores = storesQuery.data || [];
   const products = productsQuery.data || [];
   const categories = categoriesQuery.data || [];
+  const walletStats = walletPendingQuery.data;
 
   const MIDDLE_CITIES = ['دير البلح', 'مخيم النصيرات', 'الزوايدة', 'مخيم البريج', 'مخيم المغازي'];
   const storesByCity = MIDDLE_CITIES.map((city) => ({
@@ -89,6 +138,8 @@ export function useAdminOverviewQuery() {
     activeCategories: categories.filter((c: any) => c.isActive !== false).length,
     totalPayableBalance: stores.reduce((sum: number, s: AdminStoreItem) => sum + (Number(s.balance) || 0), 0),
     storesByCity,
+    pendingWalletRequestsCount: walletStats?.totalPendingCount || 0,
+    pendingWalletAmount: walletStats?.totalPendingAmount || 0,
   };
 
   const pendingStoresList = stores.filter((s: AdminStoreItem) => s.approveStatus === 'pending');
@@ -101,6 +152,7 @@ export function useAdminOverviewQuery() {
       storesQuery.refetch();
       productsQuery.refetch();
       categoriesQuery.refetch();
+      walletPendingQuery.refetch();
     },
   };
 }
@@ -143,10 +195,10 @@ export function useAdminStoreMutations() {
     mutationFn: (storeId: string) => adminService.toggleStoreStatus(storeId),
     onSuccess: (res) => {
       if (res.success) {
-        toast.success('تم تحديث حالة نشاط المتجر');
+        toast.success('تم تحديث حالة المتجر بنجاح');
         queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.stores });
       } else {
-        toast.error(res.message || 'تعذر تغيير حالة المتجر');
+        toast.error(res.message || 'تعذر تعديل حالة المتجر');
       }
     },
     onError: () => {
@@ -164,7 +216,7 @@ export function useAdminStoreMutations() {
   };
 }
 
-export function useAdminProductMutations() {
+export function useAdminProductApprovalMutation() {
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -180,13 +232,9 @@ export function useAdminProductMutations() {
     }) => adminService.updateProductApproval(productId, approveStatus, rejectReason),
     onSuccess: (res, vars) => {
       if (res.success) {
-        toast.success(
-          vars.approveStatus === 'approved'
-            ? 'تم تنشيط وفك تجميد الصنف بنجاح'
-            : 'تم إيقاف الصنف إدارياً'
-        );
+        toast.success(vars.approveStatus === 'approved' ? 'تم اعتماد الصنف بنجاح' : 'تم إيقاف الصنف وتوثيق السبب');
         queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.products });
-        queryClient.invalidateQueries({ queryKey: ['admin', 'product', vars.productId] });
+        queryClient.invalidateQueries({ queryKey: ADMIN_QUERY_KEYS.product(vars.productId) });
       } else {
         toast.error(res.message || 'تعذر تحديث حالة الصنف');
       }
@@ -201,6 +249,8 @@ export function useAdminProductMutations() {
     isUpdating: approvalMutation.isPending,
   };
 }
+
+export const useAdminProductMutations = useAdminProductApprovalMutation;
 
 export function useAdminCategoryMutations() {
   const queryClient = useQueryClient();
@@ -274,4 +324,102 @@ export function useAdminCategoryMutations() {
   };
 }
 
+export function useAdminWalletMutations() {
+  const queryClient = useQueryClient();
+  const toast = useToast();
 
+  const approveDepositMutation = useMutation({
+    mutationFn: ({
+      transactionId,
+      amount,
+    }: {
+      transactionId: string;
+      amount?: number;
+    }) => adminService.approveDeposit(transactionId, { amount }),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('تم اعتماد شحن الرصيد وإيداعه بنجاح');
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'] });
+      } else {
+        toast.error(res.message || 'تعذر اعتماد الشحن');
+      }
+    },
+    onError: () => {
+      toast.error('حدث خطأ أثناء اعتماد الإيداع');
+    },
+  });
+
+  const rejectDepositMutation = useMutation({
+    mutationFn: ({
+      transactionId,
+      rejectReason,
+    }: {
+      transactionId: string;
+      rejectReason: string;
+    }) => adminService.rejectDeposit(transactionId, rejectReason),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('تم رفض طلب الشحن وتوثيق السبب');
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'] });
+      } else {
+        toast.error(res.message || 'تعذر رفض الشحن');
+      }
+    },
+    onError: () => {
+      toast.error('حدث خطأ أثناء رفض الإيداع');
+    },
+  });
+
+  const approveWithdrawalMutation = useMutation({
+    mutationFn: ({
+      transactionId,
+      payoutReference,
+    }: {
+      transactionId: string;
+      payoutReference?: string;
+    }) => adminService.approveWithdrawal(transactionId, payoutReference),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('تم اعتماد السحب وتوثيق مرجع الحوالة');
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'] });
+      } else {
+        toast.error(res.message || 'تعذر اعتماد السحب');
+      }
+    },
+    onError: () => {
+      toast.error('حدث خطأ أثناء اعتماد السحب');
+    },
+  });
+
+  const rejectWithdrawalMutation = useMutation({
+    mutationFn: ({
+      transactionId,
+      rejectReason,
+    }: {
+      transactionId: string;
+      rejectReason: string;
+    }) => adminService.rejectWithdrawal(transactionId, rejectReason),
+    onSuccess: (res) => {
+      if (res.success) {
+        toast.success('تم رفض طلب السحب واسترداد الرصيد للمستخدم');
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'] });
+      } else {
+        toast.error(res.message || 'تعذر رفض السحب');
+      }
+    },
+    onError: () => {
+      toast.error('حدث خطأ أثناء رفض السحب');
+    },
+  });
+
+  return {
+    approveDeposit: approveDepositMutation.mutate,
+    isApprovingDeposit: approveDepositMutation.isPending,
+    rejectDeposit: rejectDepositMutation.mutate,
+    isRejectingDeposit: rejectDepositMutation.isPending,
+    approveWithdrawal: approveWithdrawalMutation.mutate,
+    isApprovingWithdrawal: approveWithdrawalMutation.isPending,
+    rejectWithdrawal: rejectWithdrawalMutation.mutate,
+    isRejectingWithdrawal: rejectWithdrawalMutation.isPending,
+  };
+}

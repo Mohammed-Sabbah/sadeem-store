@@ -5,10 +5,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
+import { useUserWalletQuery } from '@/features/wallet/hooks/useUserWallet';
 
 export function Header() {
   const { totalItems } = useCart();
   const { user, isAuthenticated } = useAuth();
+  const { data: walletData } = useUserWalletQuery({ enabled: Boolean(isAuthenticated) });
+  const displayWalletBalance = walletData?.balance ?? user?.walletBalance ?? 0;
   const pathname = usePathname();
   const isCheckout = pathname === '/checkout';
   const isOrderSuccess = pathname === '/order-success';
@@ -114,7 +117,7 @@ export function Header() {
         <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
           {/* Desktop-Only Wallet Badge (Hidden on mobile per GEMINI.md) */}
           <Link
-            href={isAuthenticated ? "/account" : "/auth/login?redirect=/account"}
+            href={isAuthenticated ? "/account/wallet" : "/auth/login?redirect=/account/wallet"}
             className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-surface border border-brand-border text-xs font-bold text-brand-dark hover:border-brand-primary cursor-pointer transition-colors no-underline"
             title="رصيد محفظة سديم"
           >
@@ -135,7 +138,7 @@ export function Header() {
             </svg>
             <span className="text-brand-muted">المحفظة:</span>
             <span className="font-extrabold text-brand-primary">
-              {isAuthenticated ? `${user?.walletBalance ?? 0} ₪` : 'شحن المحفظة'}
+              {isAuthenticated ? `${displayWalletBalance} ₪` : 'شحن المحفظة'}
             </span>
             <span className="w-4 h-4 rounded-full bg-brand-primary/10 text-brand-primary flex items-center justify-center font-bold text-xs leading-none">+</span>
           </Link>

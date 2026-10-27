@@ -3,6 +3,7 @@ export type AdminNavSectionId =
   | 'stores'
   | 'products'
   | 'categories'
+  | 'wallet'
   | 'orders'
   | 'couriers'
   | 'customers'
@@ -62,4 +63,34 @@ export interface AdminOverviewMetrics {
   activeCategories: number;
   totalPayableBalance: number;
   storesByCity: AdminCityDistribution[];
+  pendingWalletRequestsCount: number;
+  pendingWalletAmount: number;
+}
+
+export interface AdminWalletTransactionItem {
+  _id: string;
+  walletId: string;
+  userId?: {
+    _id: string;
+    name: string;
+    phoneNumber?: string;
+    email?: string;
+  };
+  type: 'deposit' | 'withdrawal' | 'purchase' | 'refund';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  amount: number;
+  requestedAmount?: number;
+  balanceType: 'withdrawable' | 'storeCredit';
+  proofImage?: string;
+  proofReviewed?: boolean;
+  rejectReason?: string;
+  referenceId?: string;
+  payoutDetails?: {
+    method?: string;
+    accountNumber?: string;
+    accountName?: string;
+    notes?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
 }

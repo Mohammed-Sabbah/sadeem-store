@@ -1,5 +1,12 @@
 import { getRequest, postRequest, patchRequest, deleteRequest } from '@/shared/lib/coreApi';
-import type { AdminStoreItem, AdminOverviewMetrics } from '../types/admin.types';
+import type { AdminStoreItem, AdminWalletTransactionItem } from '../types/admin.types';
+
+export function generateIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'idemp_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+}
 
 export const adminService = {
   /**
@@ -54,9 +61,6 @@ export const adminService = {
   },
 
   /**
-   * جلب كافة المنتجات للإدارة
-   */
-    /**
    * جلب تفاصيل صنف مفرد للإدارة
    */
   async getProductById(id: string): Promise<{ success: boolean; data?: any; message?: string }> {
@@ -71,6 +75,9 @@ export const adminService = {
     }
   },
 
+  /**
+   * جلب كافة المنتجات للإدارة
+   */
   async getProducts(): Promise<{ success: boolean; data: any[]; count: number }> {
     try {
       const res = await getRequest<{ products: any[]; count: number }>('/api/products/admin');
@@ -161,6 +168,119 @@ export const adminService = {
       return { success: res.success, message: res.message };
     } catch (err: any) {
       return { success: false, message: err?.message || 'تعذر حذف الفئة' };
+    }
+  },
+
+  /**
+   * جلب حركات المحفظة للإدارة مع الفلاتر والترقيم
+   */
+  async getWalletTransactions(params?: {
+    status?: string;
+    type?: string;
+    offset?: number;
+    limit?: number;
+  }): Promise<{ success: boolean; data: AdminWalletTransactionItem[]; total: number; message?: string }> {
+    try {
+      const query = new URLSearchParams();
+      if (params?.status && params.status !== 'all') query.set('status', params.status);
+      if (params?.type && params.type !== 'all') query.set('type', params.type);
+      if (params?.offset !== undefined) query.set('offset', String(params.offset));
+      if (params?.limit !== undefined) query.set('limit', String(params.limit));
+
+      const qs = query.toString() ? `?${query.toString()}` : '';
+      const res = await getRequest<{ transactions: AdminWalletTransactionItem[]; total: number }>(
+        `/api/wallet/transactions${qs}`
+      );
+      if (res.success && res.data) {
+        return {
+          success: true,
+          data: res.data.transactions || [],
+          total: res.data.total || (res.data.transactions ? res.data.transactions.length : 0),
+        };
+      }
+      return { success: false, data: [], total: 0, message: res.message };
+    } catch (err: any) {
+      return { success: false, data: [], total: 0, message: err?.message || 'تعذر جلب معاملات المحفظة' };
+    }
+  },
+
+  /**
+   * اعتماد طلب إيداع وشحن رصيد
+   */
+  async approveDeposit(
+    transactionId: string,
+    data: { amount?: number },
+    idempotencyKey: string = generateIdempotencyKey()
+  ): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await patchRequest(
+        `/api/wallet/deposits/${transactionId}/approve`,
+        { proofReviewed: true, ...(data.amount !== undefined ? { amount: data.amount } : {}) },
+        { headers: { 'Idempotency-Key': idempotencyKey } }
+      );
+      return { success: res.success, message: res.message, data: res.data };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر اعتماد الإيداع' };
+    }
+  },
+
+  /**
+   * رفض طلب إيداع
+   */
+  async rejectDeposit(
+    transactionId: string,
+    rejectReason: string,
+    idempotencyKey: string = generateIdempotencyKey()
+  ): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await patchRequest(
+        `/api/wallet/deposits/${transactionId}/reject`,
+        { rejectReason },
+        { headers: { 'Idempotency-Key': idempotencyKey } }
+      );
+      return { success: res.success, message: res.message, data: res.data };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر رفض الإيداع' };
+    }
+  },
+
+  /**
+   * اعتماد طلب سحب رصيد
+   */
+  async approveWithdrawal(
+    transactionId: string,
+    payoutReference?: string,
+    idempotencyKey: string = generateIdempotencyKey()
+  ): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await patchRequest(
+        `/api/wallet/withdrawals/${transactionId}/approve`,
+        { payoutReference: payoutReference || '' },
+        { headers: { 'Idempotency-Key': idempotencyKey } }
+      );
+      return { success: res.success, message: res.message, data: res.data };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر اعتماد السحب' };
+    }
+  },
+
+  /**
+   * رفض طلب سحب رصيد
+   */
+  async rejectWithdrawal(
+    transactionId: string,
+    rejectReason: string,
+    idempotencyKey: string = generateIdempotencyKey()
+  ): Promise<{ success: boolean; message?: string; data?: any }> {
+    try {
+      const res = await patchRequest(
+        `/api/wallet/withdrawals/${transactionId}/reject`,
+        { rejectReason },
+        { headers: { 'Idempotency-Key': idempotencyKey } }
+      );
+      return { success: res.success, message: res.message, data: res.data };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'تعذر رفض السحب' };
     }
   },
 };

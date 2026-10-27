@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
+import { useUserWalletQuery } from '@/features/wallet/hooks/useUserWallet';
 
 interface OrderHistoryItem {
   id: string;
@@ -18,6 +19,8 @@ interface OrderHistoryItem {
 export default function AccountPage() {
   const { user, isAuthenticated, logout, updateUser } = useAuth();
   const { totalItems } = useCart();
+  const { data: walletData } = useUserWalletQuery({ enabled: Boolean(isAuthenticated) });
+  const currentBalance = walletData?.balance ?? user?.walletBalance ?? 0;
 
   const [topupModalOpen, setTopupModalOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState('50');
@@ -266,22 +269,21 @@ export default function AccountPage() {
                     <div>
                       <span className="text-xs text-white/80 block mb-1">الرصيد المتاح للاستخدام</span>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-3xl font-black">{user.walletBalance ?? 0}</span>
+                        <span className="text-3xl font-black">{currentBalance}</span>
                         <span className="text-base font-bold text-white/80">₪</span>
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setTopupModalOpen(true)}
-                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-primary hover:brightness-110 text-white text-xs sm:text-sm font-extrabold shadow-md transition-colors border-0 cursor-pointer"
+                    <Link
+                      href="/account/wallet"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-primary hover:brightness-110 text-white text-xs sm:text-sm font-extrabold shadow-md transition-colors no-underline cursor-pointer"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <line x1="12" y1="5" x2="12" y2="19" />
                         <line x1="5" y1="12" x2="19" y2="12" />
                       </svg>
-                      <span>شحن الرصيد</span>
-                    </button>
+                      <span>إدارة وشحن المحفظة ←</span>
+                    </Link>
                   </div>
 
                   <div className="relative mt-4 pt-3 border-t border-white/10 text-xs text-white/80 leading-relaxed">

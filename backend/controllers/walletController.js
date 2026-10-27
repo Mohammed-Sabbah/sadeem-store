@@ -82,7 +82,6 @@ async function cancelTransaction(req, res, next) {
         const transaction = await walletService.cancelWalletTransaction({
             userId: req.user._id,
             transactionId: req.params.id,
-            idempotencyKey: req.get('Idempotency-Key'),
         });
 
         return success(res, 200, {

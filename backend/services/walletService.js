@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
 const { withWalletIdempotency } = require('./walletIdempotency');
-const { createTransaction } = require("./transaction.service")
+const { createTransaction, updateTransaction } = require("./transaction.service")
 const {
     parsePositiveMoney,
 } = require("../utils/wallet")
@@ -80,59 +80,41 @@ async function getAllWalletTransactions(filters = {}, pagination = {}) {
     return findWalletTransactions(buildTransactionQuery(filters), pagination, true);
 }
 
-async function cancelWalletTransaction({ userId, transactionId, idempotencyKey }) {
-    if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
-        throw error('Invalid user id');
-    }
-    if (!mongoose.Types.ObjectId.isValid(String(transactionId))) {
-        throw error('Invalid transaction id');
-    }
-
-    return withWalletIdempotency({
-        userId,
-        idempotencyKey,
-        operation: 'cancel-wallet-transaction',
-        payload: { transactionId: String(transactionId) },
-    }, async (session) => {
-        const transaction = await WalletTransaction.findOne({
-            _id: transactionId,
-            userId,
-            status: TRANSACTION_STATUS.PENDING,
-        }).session(session);
-
-        if (!transaction) {
-            const existing = await WalletTransaction.findOne({
+async function cancelWalletTransaction({ userId, transactionId }) {
+    const session = await mongoose.startSession()
+    try {
+        let cancelledTransaction;
+        await session.withTransaction(async () => {
+            const transaction = await WalletTransaction.findOne({
                 _id: transactionId,
                 userId,
-            }).select('status').session(session).lean();
+                status: TRANSACTION_STATUS.PENDING
+            }).session(session)
+            if (!transaction) throw error("Transaction Not Found")
 
-            throw error(
-                existing ? 'Only pending transactions can be cancelled' : 'Transaction not found',
-                existing ? 409 : 404
-            );
-        }
-
-        // A withdrawal reserves funds when requested, so cancellation must release that reservation.
-        if (transaction.type === WALLET_TRANSACTION_TYPE.WITHDRAWAL) {
-            const refund = await Wallet.updateOne(
-                { _id: transaction.walletId, userId },
-                {
-                    $inc: {
-                        withdrawableBalance: transaction.amount,
-                    },
-                },
-                { session }
-            );
-            if (refund.modifiedCount !== 1) {
-                throw error('Reserved withdrawal funds could not be released', 500);
+            if (transaction.type === WALLET_TRANSACTION_TYPE.WITHDRAWAL) {
+                // increase Wallet Balance
+                await increaseWalletBalance({
+                    userId,
+                    walletId: transaction.walletId,
+                    withdrawableBalance: transaction.amount,
+                }, session)
             }
-        }
 
-        transaction.status = TRANSACTION_STATUS.CANCELLED;
-        transaction.reviewedAt = new Date();
-        await transaction.save({ session });
-        return transaction.toObject();
-    });
+            // update wallet
+            const updates = {
+                status: TRANSACTION_STATUS.CANCELLED
+            }
+            const updatedTransaction = await updateTransaction({
+                transactionId,
+                updates
+            }, session)
+            cancelledTransaction = updatedTransaction
+        })
+        return cancelledTransaction
+    } finally {
+        session.endSession()
+    }
 }
 
 const increaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0, storeCreditBalance = 0 }, session) => {

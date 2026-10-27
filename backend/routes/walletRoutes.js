@@ -38,7 +38,6 @@ router.get('/transactions/:id',
 // Cancel Transaction Request
 router.patch('/transactions/:id/cancel',
     authorize(ROLE.USER),
-    validateIdempotencyKey,
     validateWalletTransactionId,
     cancelTransaction
 );

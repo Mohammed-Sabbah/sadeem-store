@@ -19,6 +19,12 @@ function errorHandler(err, req, res, next) {
         return error(res, 409, message);
     }
 
+    if (err.name === 'ValidationError') {
+        const messages = Object.values(err.errors || {}).map((e) => e.message);
+        const message = messages.length > 0 ? messages.join('، ') : 'بيانات الإدخال غير صالحة';
+        return error(res, 400, message);
+    }
+
     const statusCode = err.statusCode || 500;
     const message = statusCode === 500 ? 'Something went wrong' : err.message;
 

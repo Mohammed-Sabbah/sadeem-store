@@ -26,6 +26,7 @@ export function useRegister() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       name: '',
+      phoneNumber: '',
       email: '',
       password: '',
       confirmPassword: '',
@@ -36,6 +37,7 @@ export function useRegister() {
     // We send name, email, password to backend cleanly
     const res = await authService.register({
       name: data.name,
+      phoneNumber: data.phoneNumber,
       email: data.email,
       password: data.password,
     });

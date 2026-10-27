@@ -22,6 +22,11 @@ export const registerSchema = z
       .string()
       .trim()
       .min(2, 'الاسم الكامل يجب ألا يقل عن حرفين'),
+    phoneNumber: z
+      .string()
+      .trim()
+      .min(1, 'يرجى إدخال رقم الجوال للتواصل عند التوصيل')
+      .regex(palestinianPhoneRegex, 'يرجى إدخال رقم جوال فلسطيني صالح (مثال: 0599123456 أو 056xxxxxxx)'),
     email: z
       .string()
       .trim()

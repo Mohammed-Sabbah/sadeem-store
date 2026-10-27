@@ -91,6 +91,26 @@ function RegisterForm() {
               )}
             </div>
 
+            {/* Phone Number Field */}
+            <div>
+              <label className="block text-xs sm:text-sm font-bold text-brand-dark mb-1.5">
+                رقم الجوال للتوصيل الميداني
+              </label>
+              <input
+                type="tel"
+                placeholder="0599123456 أو 056xxxxxxx"
+                {...register('phoneNumber')}
+                className={`w-full h-12 px-4 rounded-lg border bg-white text-sm text-brand-dark outline-none transition-all font-almarai placeholder:text-brand-subtle ${
+                  errors.phoneNumber ? 'border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-400' : 'border-brand-border focus:border-brand-primary focus:ring-1 focus:ring-brand-primary'
+                }`}
+                dir="ltr"
+                autoComplete="tel"
+              />
+              {errors.phoneNumber && (
+                <p className="text-[11px] text-red-600 mt-1 font-bold m-0">{errors.phoneNumber.message}</p>
+              )}
+            </div>
+
             {/* Email Field */}
             <div>
               <label className="block text-xs sm:text-sm font-bold text-brand-dark mb-1.5">

@@ -45,7 +45,7 @@ export const authService = {
   /**
    * تسجيل حساب زبون جديد مع إنشاء محفظة إلكترونية فورية
    */
-  register: (data: RegisterFormValues | { name: string; email: string; password: string }) =>
+  register: (data: RegisterFormValues | { name: string; email: string; password: string; phoneNumber?: string }) =>
     postRequest<UserResponse>('/api/auth/register', data),
 
   /**

@@ -10,13 +10,12 @@ const validateRegisterUser = [
         .isLength({ min: 2, max: 100 })
         .withMessage('Name must be between 2 and 100 characters'),
 
-    body('phoneNumber').default(''),
-
     body('phoneNumber')
-        .optional({ checkFalsy: true })
         .trim()
-        .matches(/^\+?[0-9\s()-]{8,20}$/)
-        .withMessage('Phone number is invalid'),
+        .notEmpty()
+        .withMessage('Phone number is required')
+        .matches(/^(\+?970|0)?5[96]\d{7}$/)
+        .withMessage('Phone number must be a valid Palestinian mobile number (059 or 056)'),
 
     body('email')
         .trim()

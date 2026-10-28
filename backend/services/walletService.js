@@ -293,5 +293,7 @@ module.exports = {
     getAllWalletTransactions,
     cancelWalletTransaction,
     increaseWalletBalance,
-    decreaseWalletBalance
+    decreaseWalletBalance,
+    payForOrder,
+    refundOrder
 };

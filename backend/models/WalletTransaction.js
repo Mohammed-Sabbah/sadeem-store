@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const {
     WALLET_TRANSACTION_TYPE_VALUES,
-    BALANCE_TYPE,
     BALANCE_TYPE_VALUES,
     TRANSACTION_STATUS,
     TRANSACTION_STATUS_VALUES,
@@ -62,19 +61,16 @@ const walletTransactionSchema = new mongoose.Schema(
         allocations: {
             storeCreditBalance: {
                 type: Number,
-                required: true,
                 min: 0,
             },
             withdrawableBalance: {
                 type: Number,
-                required: true,
                 min: 0,
             },
         },
         balanceType: {
             type: String,
             enum: BALANCE_TYPE_VALUES,
-            required: true,
         },
         status: {
             type: String,

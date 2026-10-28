@@ -17,14 +17,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Pre-register all models to ensure Mongoose populate works reliably everywhere
-require('./models/User');
-require('./models/Store');
-require('./models/Category');
-require('./models/Product');
-require('./models/Variant');
-require('./models/Region');
-
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require("./routes/user.route")
 const categoryRoutes = require('./routes/categoryRoutes');
@@ -36,6 +28,7 @@ const regionRoutes = require('./routes/regionRoutes');
 const walletRoutes = require('./routes/walletRoutes');
 const withDrawalRoutes = require('./routes/withdrawal.route');
 const depositRoutes = require('./routes/deposit.route');
+const orderRoutes = require("./routes/order.route")
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -48,6 +41,7 @@ app.use('/api/regions', regionRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/withdrawals', withDrawalRoutes);
 app.use('/api/deposits', depositRoutes);
+app.use('/api/order', orderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

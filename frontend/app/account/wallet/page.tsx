@@ -83,8 +83,9 @@ export default function CustomerWalletPage() {
       {
         amount: amt,
         payoutDetails: {
-          method: 'محفظة جوال باي',
+          bankName: 'محفظة جوال باي (Jawwal Pay)',
           accountNumber: withdrawPhone || user?.phone || '',
+          accountName: user?.name || 'مستفيد سَدِيم',
           notes: withdrawNotes,
         },
       },

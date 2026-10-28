@@ -214,7 +214,7 @@ export const adminService = {
   ): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
       const res = await patchRequest(
-        `/api/wallet/deposits/${transactionId}/approve`,
+        `/api/deposits/${transactionId}/approve`,
         { proofReviewed: true, ...(data.amount !== undefined ? { amount: data.amount } : {}) },
         { headers: { 'Idempotency-Key': idempotencyKey } }
       );
@@ -234,7 +234,7 @@ export const adminService = {
   ): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
       const res = await patchRequest(
-        `/api/wallet/deposits/${transactionId}/reject`,
+        `/api/deposits/${transactionId}/reject`,
         { rejectReason },
         { headers: { 'Idempotency-Key': idempotencyKey } }
       );
@@ -254,7 +254,7 @@ export const adminService = {
   ): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
       const res = await patchRequest(
-        `/api/wallet/withdrawals/${transactionId}/approve`,
+        `/api/withdrawals/${transactionId}/approve`,
         { payoutReference: payoutReference || '' },
         { headers: { 'Idempotency-Key': idempotencyKey } }
       );
@@ -274,7 +274,7 @@ export const adminService = {
   ): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
       const res = await patchRequest(
-        `/api/wallet/withdrawals/${transactionId}/reject`,
+        `/api/withdrawals/${transactionId}/reject`,
         { rejectReason },
         { headers: { 'Idempotency-Key': idempotencyKey } }
       );

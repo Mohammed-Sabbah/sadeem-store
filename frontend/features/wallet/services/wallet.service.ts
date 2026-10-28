@@ -97,7 +97,7 @@ export const walletService = {
         };
       }
 
-      const res = await postRequest('/api/wallet/deposits', body, {
+      const res = await postRequest('/api/deposits', body, {
         headers: {
           'Idempotency-Key': idempotencyKey,
         },
@@ -114,12 +114,12 @@ export const walletService = {
   async submitWithdrawal(
     data: {
       amount: number;
-      payoutDetails?: { method?: string; accountNumber?: string; accountName?: string; notes?: string };
+      payoutDetails: { bankName: string; accountNumber: string; accountName: string; notes?: string };
     },
     idempotencyKey: string = generateIdempotencyKey()
   ): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
-      const res = await postRequest('/api/wallet/withdrawals', data, {
+      const res = await postRequest('/api/withdrawals', data, {
         headers: {
           'Idempotency-Key': idempotencyKey,
         },

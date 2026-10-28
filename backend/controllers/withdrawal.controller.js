@@ -22,6 +22,7 @@ async function approveWithdrawalRequest(req, res, next) {
         const transaction = await approveWithdrawal({
             adminId: req.user._id,
             transactionId: req.params.id,
+            payoutReference: req.body.payoutReference,
         });
 
         return success(res, 200, {

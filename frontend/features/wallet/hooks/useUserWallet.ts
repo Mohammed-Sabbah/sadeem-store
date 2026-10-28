@@ -55,7 +55,7 @@ export function useUserWalletOperations() {
   const withdrawalMutation = useMutation({
     mutationFn: (data: {
       amount: number;
-      payoutDetails?: { method?: string; accountNumber?: string; accountName?: string; notes?: string };
+      payoutDetails: { bankName: string; accountNumber: string; accountName: string; notes?: string };
     }) => walletService.submitWithdrawal(data),
     onSuccess: (res) => {
       if (res.success) {

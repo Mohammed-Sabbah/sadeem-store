@@ -46,11 +46,12 @@ const createWithdrawal = async ({ userId, amount, payoutDetails }) => {
     }
 }
 
-const approveWithdrawal = async ({ transactionId, adminId }) => {
+const approveWithdrawal = async ({ transactionId, adminId, payoutReference }) => {
     const updates = {
         status: TRANSACTION_STATUS.APPROVED,
         verifiedBy: adminId,
-        reviewedAt: new Date()
+        reviewedAt: new Date(),
+        ...(payoutReference ? { referenceId: String(payoutReference).trim() } : {})
     }
     const transaction = await updateTransaction({
         transactionId,

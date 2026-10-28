@@ -1,13 +1,123 @@
 const mongoose = require("mongoose");
 const Order = require("../models/order.model");
+const Product = require("../models/Product")
+const Variant = require("../models/Variant")
+const User = require("../models/User")
+const Store = require("../models/Store")
 const error = require("../utils/error");
-const { ORDER_STATUS_VALUES } = require("../constants/enums")
+const { ORDER_STATUS_VALUES, STATUS, APPROVE_STATUS, PAYMENT_METHODS_VALUES, PAYMENT_METHODS } = require("../constants/enums")
 const { ROLE } = require("../constants/enums")
+const { escapeRegex } = require("../utils")
+const { payForOrder } = require("../services/walletService");
+const { updateVariantStock } = require("./variant.service");
 
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
 
-const escapeRegex = (value) =>
-    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+// Helpers
+const payWithJawwalPay = () => {
+
+}
+
+const payWithWallet = async (order, session) => {
+    await payForOrder({
+        orderId: order._id,
+        userId: order.userId,
+        amount: order.totalAmount
+    }, session)
+}
+
+const validateOrderItems = async (items, session) => {
+    if (!Array.isArray(items) || items.length === 0) {
+        throw error("Can't create an empty order");
+    }
+
+    const filters = {
+        isDeleted: false,
+        status: STATUS.ACTIVE,
+        approveStatus: APPROVE_STATUS.APPROVED,
+    };
+
+    const validatedItems = await Promise.all(
+        items.map(async ({ productId, variantId, quantity }) => {
+            const product = await Product.findOne({
+                _id: productId,
+                ...filters,
+            }).session(session);
+
+            if (!product) {
+                throw error("Invalid Order Items");
+            }
+
+            const variant = await Variant.findOne({
+                _id: variantId,
+                productId: product._id,
+                ...filters,
+            }).session(session);
+
+            if (!variant) {
+                throw error("Invalid Order Items");
+            }
+
+            if (variant.stock < quantity) {
+                throw error("Insufficient Stock");
+            }
+
+            return {
+                product,
+                variant,
+                quantity,
+                unitPrice: variant.price,
+                subtotal: variant.price * quantity,
+            };
+        })
+    );
+
+    return validatedItems;
+};
+
+const validateUserAndStore = async ({ userId, storeId }, session) => {
+    const user = await User.findOne({ _id: userId, status: STATUS.ACTIVE, isDeleted: false }).session(session)
+    if (!user)
+        throw error("User not Found")
+    const store = await Store.findOne({ _id: storeId, status: STATUS.ACTIVE, approveStatus: APPROVE_STATUS.APPROVED, isDeleted: false }).session(session)
+    if (!store)
+        throw error("Store not Found")
+    return { store, user }
+}
+
+const calculateOrderTotalAmount = (items) => {
+    return items.reduce((total, item) => total + item.subtotal, 0);
+}
+
+const proccessPayment = async (order, session) => {
+    if (!PAYMENT_METHODS_VALUES.includes(order.paymentMethod))
+        throw error("Invalid Payment Method")
+
+    switch (order.paymentMethod) {
+        case PAYMENT_METHODS.WALLET:
+            await payWithWallet(order, session)
+            break;
+        case PAYMENT_METHODS.JAWWALPAY:
+            payWithJawwalPay()
+            break;
+        default: throw error("Invalid Payment Method")
+    }
+}
+
+const decreaseVariantStock = async (item, session) => {
+    const itemStock = item.quantity
+    const newStock = item.variant.stock - itemStock
+    await updateVariantStock({ variantId: item.variant._id, newStock }, session)
+}
+
+const decreaseVariantsStock = async (items, session) => {
+    await Promise.all(
+        items.map(async (item) => {
+            await decreaseVariantStock(item, session)
+        })
+    )
+
+}
 
 const listOrders = async ({
     actor,
@@ -202,8 +312,45 @@ const listOrder = async ({ orderId, actor, storeId }) => {
     return order;
 };
 
-const createOrder = () => {
+const createOrder = async ({ userId, storeId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
+    const session = await mongoose.startSession()
+    try {
+        let createdOrder;
+        await session.withTransaction(async () => {
+            // validate order items
+            const orderItems = await validateOrderItems(items, session)
 
+            // validate user and store
+            const { user, store } = await validateUserAndStore({ userId, storeId }, session)
+
+            //  calculate Total Amount 
+            const totalAmount = calculateOrderTotalAmount(orderItems)
+
+            // create Order
+            const [order] = await Order.create(
+                [{
+                    userId: user._id,
+                    storeId: store._id,
+                    items: orderItems,
+                    deliveryAddress,
+                    deliveryPhone,
+                    paymentMethod,
+                    totalAmount,
+                }],
+                { session }
+            );
+
+            // complete Payment
+            await proccessPayment(order, session)
+
+            // decrease item stock
+            await decreaseVariantsStock(orderItems, session)
+            createdOrder = order
+        })
+        return createdOrder
+    } finally {
+        await session.endSession()
+    }
 }
 
 module.exports = {

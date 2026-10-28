@@ -1,6 +1,6 @@
 const { body, param, query } = require("express-validator");
 const validateRequest = require("./validateRequest");
-const { ORDER_STATUS_VALUES } = require("../constants/enums")
+const { ORDER_STATUS_VALUES, PAYMENT_METHODS_VALUES } = require("../constants/enums")
 
 // Validate order ID
 const validateOrderId = [
@@ -93,7 +93,9 @@ const validateCreateOrder = [
         .bail()
         .matches(/^\+?[0-9\s()-]{8,20}$/)
         .withMessage("Delivery phone number is invalid"),
-
+    body("paymentMethod")
+        .isIn(PAYMENT_METHODS_VALUES)
+        .withMessage(`Payment method must be one of: ${PAYMENT_METHODS_VALUES.join(", ")}`),
     validateRequest,
 ];
 

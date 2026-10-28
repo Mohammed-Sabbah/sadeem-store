@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const Wallet = require('../models/Wallet');
 const WalletTransaction = require('../models/WalletTransaction');
-const { updateTransaction } = require("./transaction.service")
+const { updateTransaction, createTransaction } = require("./transaction.service")
 const {
     parsePositiveMoney,
 } = require("../utils/wallet")
@@ -57,6 +57,23 @@ async function findWalletTransactions(query, pagination = {}, populateUser = fal
     };
 }
 
+const getSpendableBalance = async (wallet) => {
+    return wallet.storeCreditBalance + wallet.withdrawableBalance
+}
+
+const calculateWalletBalanceDeduction = (wallet, amount) => {
+    const storeCreditDeduction = Math.min(
+        amount,
+        wallet.storeCreditBalance
+    );
+
+    const withdrawableDeduction = amount - wallet.storeCreditDeduction;
+
+    return {
+        storeCreditDeduction,
+        withdrawableDeduction
+    };
+}
 // List Transactions
 async function getWalletByUserId(userId) {
     if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
@@ -100,11 +117,15 @@ async function cancelWalletTransaction({ userId, transactionId }) {
             }
 
             // update wallet
+            const query = {
+                status: TRANSACTION_STATUS.PENDING
+            }
             const updates = {
                 status: TRANSACTION_STATUS.CANCELLED
             }
             const updatedTransaction = await updateTransaction({
                 transactionId,
+                query,
                 updates
             }, session)
             cancelledTransaction = updatedTransaction
@@ -118,22 +139,23 @@ async function cancelWalletTransaction({ userId, transactionId }) {
 const increaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0, storeCreditBalance = 0 }, session) => {
     const withdrawableBalanceAmount = parsePositiveMoney(withdrawableBalance)
     const storeCreditBalanceAmount = parsePositiveMoney(storeCreditBalance)
-    const wallet = await Wallet.findOne({ _id: walletId, userId, isFrozen: false }).session(session)
-    if (!wallet) throw error("Wallet Not Found", 404)
 
     const updatedWallet = await Wallet.updateOne(
-        { _id: walletId, isFrozen: false },
+        {
+            _id: walletId,
+            userId,
+            isFrozen: false
+        },
         {
             $inc: {
-                withdrawableBalance: +withdrawableBalanceAmount,
-                storeCreditBalance: +storeCreditBalanceAmount
+                withdrawableBalance: withdrawableBalanceAmount,
+                storeCreditBalance: storeCreditBalanceAmount
             }
         },
-        { session, new: true }
+        { session }
     )
 
-    if (updatedWallet.modifiedCount !== 1)
-        throw error("Cant update this wallet")
+    if (updatedWallet.matchedCount === 0) throw error("Wallet Not Found", 404)
 
     return { updatedWallet }
 }
@@ -142,12 +164,10 @@ const decreaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0
     const withdrawableBalanceAmount = parsePositiveMoney(withdrawableBalance)
     const storeCreditBalanceAmount = parsePositiveMoney(storeCreditBalance)
 
-    const wallet = await Wallet.findOne({ _id: walletId, userId, isFrozen: false }).session(session)
-    if (!wallet) throw error("Wallet Not Found", 404)
-
     const updatedWallet = await Wallet.updateOne(
         {
             _id: walletId,
+            userId,
             isFrozen: false,
             withdrawableBalance: { $gte: withdrawableBalanceAmount },
             storeCreditBalance: { $gte: storeCreditBalanceAmount }
@@ -159,12 +179,112 @@ const decreaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0
             }
         },
         { session }
-    )
+    );
 
-    if (updatedWallet.modifiedCount !== 1)
-        throw error("Cant Update this wallet")
+    if (updatedWallet.matchedCount === 0)
+        throw error(
+            "Wallet not found, frozen, or insufficient balance",
+            400
+        );
 
     return { updatedWallet }
+}
+
+const payForOrder = async ({ amount, userId, orderId }, session) => {
+    if (!session)
+        throw error("A session is required for wallet payment");
+
+    const pureAmount = parsePositiveMoney(amount)
+    const wallet = await Wallet.findOne({ userId, isFrozen: false }).session(session)
+    if (!wallet)
+        throw error("Wallet Not Found")
+
+    const walletBalance = getSpendableBalance(wallet)
+    if (pureAmount > walletBalance)
+        throw error("You dont have enough balance")
+
+    // decrease wallet
+    const allocations = calculateWalletBalanceDeduction(wallet, pureAmount)
+    await decreaseWalletBalance({
+        userId,
+        walletId: wallet._id,
+        withdrawableBalance: allocations.withdrawableDeduction,
+        storeCreditBalance: allocations.storeCreditDeduction
+    }, session)
+
+    // create trasnaction record
+    await createTransaction({
+        userId,
+        walletId: wallet._id,
+        amount: pureAmount,
+        status: TRANSACTION_STATUS.APPROVED,
+        type: WALLET_TRANSACTION_TYPE.PURCHASE,
+        referenceId: orderId,
+        allocations: {
+            storeCreditBalance: allocations.storeCreditDeduction,
+            withdrawableBalance: allocations.withdrawableDeduction
+        },
+    }, session)
+
+    return {
+        amount: pureAmount,
+        allocations: {
+            storeCreditBalance: allocations.storeCreditDeduction,
+            withdrawableBalance: allocations.withdrawableDeduction
+        }
+    };
+}
+
+const refundOrder = async ({ orderId, userId }, session) => {
+    if (!session)
+        throw error("A session is required for wallet payment");
+
+    const transaction = await WalletTransaction.findOne({
+        referenceId: orderId,
+        userId,
+        status: TRANSACTION_STATUS.APPROVED,
+        type: WALLET_TRANSACTION_TYPE.PURCHASE
+    }).session(session)
+    if (!transaction)
+        throw error("Transaction not found")
+
+    const allocations = transaction.allocations
+    const walletId = transaction.walletId
+
+    // update original transaction
+    const query = {
+        userId,
+        status: TRANSACTION_STATUS.APPROVED,
+        type: WALLET_TRANSACTION_TYPE.PURCHASE
+    }
+    const updates = {
+        status: TRANSACTION_STATUS.REFUNDED
+    }
+    await updateTransaction({
+        transactionId: transaction._id,
+        query,
+        updates
+    }, session)
+
+    // increase wallet balance
+    await increaseWalletBalance({
+        userId,
+        walletId,
+        storeCreditBalance: allocations.storeCreditBalance,
+        withdrawableBalance: allocations.withdrawableBalance
+    }, session)
+
+    // create refund transaction
+    await createTransaction({
+        userId,
+        walletId,
+        status: TRANSACTION_STATUS.APPROVED,
+        type: WALLET_TRANSACTION_TYPE.REFUND,
+        allocations,
+        amount: transaction.amount,
+        referenceId: orderId
+    }, session)
+
 }
 
 module.exports = {

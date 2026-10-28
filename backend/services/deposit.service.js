@@ -45,13 +45,17 @@ const approveDeposit = async ({ transactionId, amount, verifiedBy }) => {
             }, session)
 
             // Update Transaction
-            const transactionUpdates = {
+            const query = {
+                status: TRANSACTION_STATUS.PENDING
+            }
+            const updates = {
                 status: TRANSACTION_STATUS.APPROVED,
                 verifiedBy
             }
             const updatedDeposit = await updateTransaction({
                 transactionId: deposit._id,
-                updates: transactionUpdates,
+                query,
+                updates
             }, session)
             approvedDeposit = updatedDeposit
         })
@@ -77,14 +81,18 @@ const rejectDeposit = async ({ transactionId, verifiedBy, rejectReason }) => {
                 throw error("Deposit Transaction not found", 404)
 
             // Update Transaction
-            const transactionUpdates = {
+            const query = {
+                status: TRANSACTION_STATUS.PENDING
+            }
+            const updates = {
                 status: TRANSACTION_STATUS.REJECTED,
                 verifiedBy,
                 rejectReason
             }
             const updatedDeposit = await updateTransaction({
                 transactionId: deposit._id,
-                updates: transactionUpdates,
+                query,
+                updates
             }, session)
             rejectedDeposit = updatedDeposit
         })

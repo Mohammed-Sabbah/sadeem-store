@@ -47,6 +47,9 @@ const createWithdrawal = async ({ userId, amount, payoutDetails }) => {
 }
 
 const approveWithdrawal = async ({ transactionId, adminId }) => {
+    const query = {
+        status: TRANSACTION_STATUS.PENDING
+    }
     const updates = {
         status: TRANSACTION_STATUS.APPROVED,
         verifiedBy: adminId,
@@ -54,6 +57,7 @@ const approveWithdrawal = async ({ transactionId, adminId }) => {
     }
     const transaction = await updateTransaction({
         transactionId,
+        query,
         updates
     })
     if (!transaction) throw error("Transaction not found")
@@ -79,6 +83,9 @@ const rejectWithdrawal = async ({ transactionId, adminId, rejectReason }) => {
             }, session)
 
             // update the transaction
+            const query = {
+                status: TRANSACTION_STATUS.PENDING
+            }
             const updates = {
                 status: TRANSACTION_STATUS.REJECTED,
                 verifiedBy: adminId,
@@ -87,6 +94,7 @@ const rejectWithdrawal = async ({ transactionId, adminId, rejectReason }) => {
             }
             const updatedTransaction = await updateTransaction({
                 transactionId: transaction._id,
+                query,
                 updates
             }, session)
             rejectedWithdrawal = updatedTransaction

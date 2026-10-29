@@ -11,11 +11,11 @@ const createTransaction = async (transactionData, session = null) => {
     return transaction;
 };
 
-const updateTransaction = async ({ transactionId, updates }, session) => {
+const updateTransaction = async ({ transactionId, updates, query = {} }, session) => {
     const updatedTransaction = await walletTransaction.findOneAndUpdate(
         {
             _id: transactionId,
-            status: TRANSACTION_STATUS.PENDING
+            ...query
         },
         updates,
         { session, new: true })

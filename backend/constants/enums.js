@@ -40,6 +40,7 @@ const TRANSACTION_STATUS = {
     APPROVED: "approved",
     REJECTED: "rejected",
     CANCELLED: "cancelled",
+    REFUNDED: "refunded"
 };
 
 const WALLET_STATUS = {

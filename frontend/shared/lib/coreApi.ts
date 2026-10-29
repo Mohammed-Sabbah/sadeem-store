@@ -53,7 +53,7 @@ async function handleSilentRefresh(): Promise<boolean> {
  * دالة مركزية لإرسال الطلبات للباك إند ومعالجة الاستجابة والتجديد الصامت للتوكن
  */
 export async function sendRequest<T>(path: string, options: RequestOptions = {}): Promise<ServiceResult<T>> {
-  const { timeoutMs = DEFAULT_TIMEOUT_MS, _retry = false, ...fetchOptions } = options;
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, _retry = false, headers: customHeaders, ...fetchOptions } = options;
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -64,13 +64,18 @@ export async function sendRequest<T>(path: string, options: RequestOptions = {})
       ? { Accept: 'application/json' }
       : { 'Content-Type': 'application/json', Accept: 'application/json' };
 
+    const mergedHeaders: Record<string, string> = {
+      ...defaultHeaders,
+      ...((customHeaders as Record<string, string>) || {}),
+    };
+
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
     const url = BASE_URL ? `${BASE_URL}${cleanPath}` : cleanPath;
 
     const res = await fetch(url, {
       credentials: 'include',
-      headers: { ...defaultHeaders, ...(fetchOptions.headers as Record<string, string> || {}) },
       ...fetchOptions,
+      headers: mergedHeaders,
       signal: controller.signal,
     });
 

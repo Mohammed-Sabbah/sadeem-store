@@ -90,7 +90,7 @@ const orderSchema = new mongoose.Schema({
     },
     deliveryFee: {
         type: Number,
-        required: true,
+        // required: true,
         min: 0,
         default: 0,
     },

@@ -2,30 +2,14 @@ const mongoose = require("mongoose");
 const Order = require("../models/order.model");
 const Product = require("../models/Product")
 const Variant = require("../models/Variant")
-const User = require("../models/User")
-const Store = require("../models/Store")
 const error = require("../utils/error");
 const { ORDER_STATUS_VALUES, STATUS, APPROVE_STATUS, PAYMENT_METHODS_VALUES, PAYMENT_METHODS } = require("../constants/enums")
 const { ROLE } = require("../constants/enums")
 const { escapeRegex } = require("../utils")
 const { payForOrder } = require("../services/walletService");
-const { updateVariantStock } = require("./variant.service");
-
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
 
 // Helpers
-const payWithJawwalPay = () => {
-
-}
-
-const payWithWallet = async (order, session) => {
-    await payForOrder({
-        orderId: order._id,
-        userId: order.userId,
-        amount: order.totalAmount
-    }, session)
-}
-
 const validateOrderItems = async (items, session) => {
     if (!Array.isArray(items) || items.length === 0) {
         throw error("Can't create an empty order");
@@ -37,20 +21,14 @@ const validateOrderItems = async (items, session) => {
         approveStatus: APPROVE_STATUS.APPROVED,
     };
 
+    let storeId = null;
+
     const validatedItems = await Promise.all(
-        items.map(async ({ productId, variantId, quantity }) => {
-            const product = await Product.findOne({
-                _id: productId,
-                ...filters,
-            }).session(session);
+        items.map(async ({ variantId, quantity }) => {
 
-            if (!product) {
-                throw error("Invalid Order Items");
-            }
-
+            // 1. Find the variant
             const variant = await Variant.findOne({
                 _id: variantId,
-                productId: product._id,
                 ...filters,
             }).session(session);
 
@@ -58,13 +36,33 @@ const validateOrderItems = async (items, session) => {
                 throw error("Invalid Order Items");
             }
 
+            // 2. Find the product associated with the variant
+            const product = await Product.findOne({
+                _id: variant.productId,
+                ...filters,
+            }).session(session);
+
+            if (!product) {
+                throw error("Invalid Order Items");
+            }
+
+            // 3. Ensure all products belong to the same store
+            if (storeId && !storeId.equals(product.storeId)) {
+                throw error("All products must belong to the same store");
+            }
+
+            storeId = product.storeId;
+
+            // 4. Validate stock
             if (variant.stock < quantity) {
                 throw error("Insufficient Stock");
             }
 
             return {
-                product,
-                variant,
+                productId: product._id,
+                variantId: variant._id,
+                productTitle: product.title,
+                image: variant.image,
                 quantity,
                 unitPrice: variant.price,
                 subtotal: variant.price * quantity,
@@ -72,21 +70,55 @@ const validateOrderItems = async (items, session) => {
         })
     );
 
-    return validatedItems;
+    return {
+        storeId,
+        orderItems: validatedItems,
+    };
 };
-
-const validateUserAndStore = async ({ userId, storeId }, session) => {
-    const user = await User.findOne({ _id: userId, status: STATUS.ACTIVE, isDeleted: false }).session(session)
-    if (!user)
-        throw error("User not Found")
-    const store = await Store.findOne({ _id: storeId, status: STATUS.ACTIVE, approveStatus: APPROVE_STATUS.APPROVED, isDeleted: false }).session(session)
-    if (!store)
-        throw error("Store not Found")
-    return { store, user }
-}
 
 const calculateOrderTotalAmount = (items) => {
     return items.reduce((total, item) => total + item.subtotal, 0);
+}
+
+const decreaseVariantStock = async (item, session) => {
+    const variant = await Variant.findOneAndUpdate(
+        {
+            _id: item.variantId,
+            productId: item.productId,
+            status: STATUS.ACTIVE,
+            approveStatus: APPROVE_STATUS.APPROVED,
+            isDeleted: false,
+            stock: { $gte: item.quantity },
+        },
+        {
+            $inc: { stock: -item.quantity },
+        },
+        { session, new: true }
+    );
+
+    if (!variant) {
+        throw error("Insufficient Stock or invalid variant");
+    }
+};
+
+const decreaseVariantsStock = async (items, session) => {
+    await Promise.all(
+        items.map(async (item) => {
+            await decreaseVariantStock(item, session)
+        })
+    )
+}
+
+const payWithJawwalPay = () => {
+
+}
+
+const payWithWallet = async (order, session) => {
+    await payForOrder({
+        orderId: order._id,
+        userId: order.userId,
+        amount: order.totalAmount
+    }, session)
 }
 
 const proccessPayment = async (order, session) => {
@@ -102,21 +134,6 @@ const proccessPayment = async (order, session) => {
             break;
         default: throw error("Invalid Payment Method")
     }
-}
-
-const decreaseVariantStock = async (item, session) => {
-    const itemStock = item.quantity
-    const newStock = item.variant.stock - itemStock
-    await updateVariantStock({ variantId: item.variant._id, newStock }, session)
-}
-
-const decreaseVariantsStock = async (items, session) => {
-    await Promise.all(
-        items.map(async (item) => {
-            await decreaseVariantStock(item, session)
-        })
-    )
-
 }
 
 const listOrders = async ({
@@ -312,16 +329,13 @@ const listOrder = async ({ orderId, actor, storeId }) => {
     return order;
 };
 
-const createOrder = async ({ userId, storeId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
+const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
     const session = await mongoose.startSession()
     try {
         let createdOrder;
         await session.withTransaction(async () => {
             // validate order items
-            const orderItems = await validateOrderItems(items, session)
-
-            // validate user and store
-            const { user, store } = await validateUserAndStore({ userId, storeId }, session)
+            const { orderItems, storeId } = await validateOrderItems(items, session)
 
             //  calculate Total Amount 
             const totalAmount = calculateOrderTotalAmount(orderItems)
@@ -329,9 +343,10 @@ const createOrder = async ({ userId, storeId, items, deliveryAddress, deliveryPh
             // create Order
             const [order] = await Order.create(
                 [{
-                    userId: user._id,
-                    storeId: store._id,
+                    userId,
+                    storeId,
                     items: orderItems,
+                    subtotal: totalAmount,
                     deliveryAddress,
                     deliveryPhone,
                     paymentMethod,

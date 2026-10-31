@@ -41,7 +41,7 @@ app.use('/api/regions', regionRoutes);
 app.use('/api/wallet', walletRoutes);
 app.use('/api/withdrawals', withDrawalRoutes);
 app.use('/api/deposits', depositRoutes);
-app.use('/api/order', orderRoutes);
+app.use('/api/orders', orderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

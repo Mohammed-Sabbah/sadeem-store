@@ -1,4 +1,4 @@
-const { listOrders, listOrder } = require("../services/order.service")
+const { listOrders, listOrder, createOrder } = require("../services/order.service")
 const { success } = require("../utils/responses")
 
 const getOrders = async (req, res, next) => {
@@ -28,8 +28,24 @@ const getStoreOrders = async (req, res, next) => {
     }
 }
 
+const placeOrder = async (req, res, next) => {
+    try {
+        const order = await createOrder({
+            userId: req.user._id,
+            items: req.body.items,
+            deliveryAddress: req.body.deliveryAddress,
+            deliveryPhone: req.body.deliveryPhone,
+            paymentMethod: req.body.paymentMethod
+        })
+        return success(res, 201, { order })
+    } catch (err) {
+        next(err)
+    }
+}
+
 module.exports = {
     getOrders,
     getOrderById,
-    getStoreOrders
+    getStoreOrders,
+    placeOrder
 }

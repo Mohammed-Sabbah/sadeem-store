@@ -22,6 +22,7 @@ const validateCreateOrder = [
             "items",
             "deliveryAddress",
             "deliveryPhone",
+            "paymentMethod"
         ];
 
         if (Object.keys(value).some((field) => !allowedFields.includes(field))) {

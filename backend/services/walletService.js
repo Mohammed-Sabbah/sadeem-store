@@ -66,8 +66,7 @@ const calculateWalletBalanceDeduction = (wallet, amount) => {
         amount,
         wallet.storeCreditBalance
     );
-
-    const withdrawableDeduction = amount - wallet.storeCreditDeduction;
+    const withdrawableDeduction = amount - storeCreditDeduction;
 
     return {
         storeCreditDeduction,
@@ -163,7 +162,6 @@ const increaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0
 const decreaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0, storeCreditBalance = 0 }, session) => {
     const withdrawableBalanceAmount = parsePositiveMoney(withdrawableBalance)
     const storeCreditBalanceAmount = parsePositiveMoney(storeCreditBalance)
-
     const updatedWallet = await Wallet.updateOne(
         {
             _id: walletId,
@@ -193,7 +191,6 @@ const decreaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0
 const payForOrder = async ({ amount, userId, orderId }, session) => {
     if (!session)
         throw error("A session is required for wallet payment");
-
     const pureAmount = parsePositiveMoney(amount)
     const wallet = await Wallet.findOne({ userId, isFrozen: false }).session(session)
     if (!wallet)

@@ -19,6 +19,7 @@ const updateVariantStock = async ({ variantId, newStock }, session) => {
     if (!updatedVariant) throw error("Cant update this variant stock")
 }
 
+
 module.exports = {
     updateVariantStock
 }

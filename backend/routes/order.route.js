@@ -2,14 +2,14 @@ const router = require("express").Router()
 const { ROLE } = require("../constants/enums")
 
 // Controller
-const { getOrders, getOrderById, getStoreOrders } = require("../controllers/order.controller")
+const { getOrders, getOrderById, getStoreOrders, placeOrder } = require("../controllers/order.controller")
 
 // Middlewares
 const { authenticate, authorize } = require("../middleware/auth")
 router.use(authenticate)
 
 // Schema
-const { validateOrderId, validateListOrders } = require("../schemas/orderSchema")
+const { validateOrderId, validateListOrders, validateCreateOrder } = require("../schemas/orderSchema")
 
 // Get User Orders
 router.get("/", authorize(ROLE.USER), validateListOrders, getOrders)
@@ -22,5 +22,8 @@ router.get("/store", authorize(ROLE.SELLER), validateListOrders, getStoreOrders)
 
 // Get Admin Orders
 router.get("/admin", authorize(ROLE.ADMIN), validateListOrders, getOrders)
+
+// create Order
+router.post("/", authorize(ROLE.USER), validateCreateOrder, placeOrder)
 
 module.exports = router

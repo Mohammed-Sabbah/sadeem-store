@@ -3,10 +3,11 @@ const Order = require("../models/order.model");
 const Product = require("../models/Product")
 const Variant = require("../models/Variant")
 const error = require("../utils/error");
-const { ORDER_STATUS_VALUES, STATUS, APPROVE_STATUS, PAYMENT_METHODS_VALUES, PAYMENT_METHODS } = require("../constants/enums")
+const { ORDER_STATUS_VALUES, STATUS, APPROVE_STATUS, PAYMENT_METHODS_VALUES, PAYMENT_METHODS, ORDER_STATUS, TRANSACTION_STATUS, PAYMENT_STATUS } = require("../constants/enums")
 const { ROLE } = require("../constants/enums")
 const { escapeRegex } = require("../utils")
-const { payForOrder } = require("../services/walletService");
+const { payForOrder, refundOrder } = require("../services/walletService");
+const WalletTransaction = require("../models/WalletTransaction");
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
 
 // Helpers
@@ -368,8 +369,37 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
     }
 }
 
+// here only the customer can cancel the order
+// the next update, make the admin and store owner to cancel the order and refund the user money
+const cancelOrder = async ({ user, orderId }) => {
+    const session = await mongoose.startSession()
+    try {
+        let cancelledOrder;
+        await session.withTransaction(async () => {
+
+            // Update Order
+            const order = await Order.findOneAndUpdate(
+                { _id: orderId, status: ORDER_STATUS.PENDING, userId: user._id },
+                { status: ORDER_STATUS.CANCELLED, paymentStatus: PAYMENT_STATUS.REFUNDED },
+                { session, new: true }
+            )
+
+            if (!order)
+                throw error("Order Not Found")
+
+            // refund order
+            await refundOrder({ orderId, userId: user._id }, session)
+            cancelledOrder = order
+        })
+        return cancelledOrder;
+    } finally {
+        session.endSession()
+    }
+}
+
 module.exports = {
     listOrders,
     listOrder,
-    createOrder
+    createOrder,
+    cancelOrder
 }

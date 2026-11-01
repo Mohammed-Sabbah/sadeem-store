@@ -191,6 +191,7 @@ const decreaseWalletBalance = async ({ userId, walletId, withdrawableBalance = 0
 const payForOrder = async ({ amount, userId, orderId }, session) => {
     if (!session)
         throw error("A session is required for wallet payment");
+
     const pureAmount = parsePositiveMoney(amount)
     const wallet = await Wallet.findOne({ userId, isFrozen: false }).session(session)
     if (!wallet)
@@ -281,7 +282,6 @@ const refundOrder = async ({ orderId, userId }, session) => {
         amount: transaction.amount,
         referenceId: orderId
     }, session)
-
 }
 
 module.exports = {

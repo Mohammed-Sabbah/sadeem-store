@@ -115,7 +115,7 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ORDER_STATUS_VALUES,
         required: true,
-        default: ORDER_STATUS.CONFIRMED,
+        default: ORDER_STATUS.PENDING,
         index: true,
     },
     cancellationReason: {

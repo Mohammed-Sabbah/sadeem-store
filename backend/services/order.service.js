@@ -3,11 +3,10 @@ const Order = require("../models/order.model");
 const Product = require("../models/Product")
 const Variant = require("../models/Variant")
 const error = require("../utils/error");
-const { ORDER_STATUS_VALUES, STATUS, APPROVE_STATUS, PAYMENT_METHODS_VALUES, PAYMENT_METHODS, ORDER_STATUS, TRANSACTION_STATUS, PAYMENT_STATUS } = require("../constants/enums")
+const { ORDER_STATUS_VALUES, STATUS, APPROVE_STATUS, PAYMENT_METHODS_VALUES, PAYMENT_METHODS, ORDER_STATUS, PAYMENT_STATUS } = require("../constants/enums")
 const { ROLE } = require("../constants/enums")
 const { escapeRegex } = require("../utils")
 const { payForOrder, refundOrder } = require("../services/walletService");
-const WalletTransaction = require("../models/WalletTransaction");
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
 
 // Helpers
@@ -81,33 +80,63 @@ const calculateOrderTotalAmount = (items) => {
     return items.reduce((total, item) => total + item.subtotal, 0);
 }
 
-const decreaseVariantStock = async (item, session) => {
-    const variant = await Variant.findOneAndUpdate(
-        {
-            _id: item.variantId,
-            productId: item.productId,
-            status: STATUS.ACTIVE,
-            approveStatus: APPROVE_STATUS.APPROVED,
-            isDeleted: false,
-            stock: { $gte: item.quantity },
-        },
-        {
-            $inc: { stock: -item.quantity },
-        },
-        { session, new: true }
-    );
 
-    if (!variant) {
-        throw error("Insufficient Stock or invalid variant");
-    }
-};
 
 const decreaseVariantsStock = async (items, session) => {
+    const decreaseVariantStock = async (item, session) => {
+        const variant = await Variant.findOneAndUpdate(
+            {
+                _id: item.variantId,
+                productId: item.productId,
+                status: STATUS.ACTIVE,
+                approveStatus: APPROVE_STATUS.APPROVED,
+                isDeleted: false,
+                stock: { $gte: item.quantity },
+            },
+            {
+                $inc: { stock: -item.quantity },
+            },
+            { session, new: true }
+        );
+
+        if (!variant) {
+            throw error("Insufficient Stock or invalid variant");
+        }
+    };
     await Promise.all(
         items.map(async (item) => {
             await decreaseVariantStock(item, session)
         })
     )
+}
+
+const increaseVariantsStock = async (items, session) => {
+    const increaseVariantStock = async (item, session) => {
+        const variant = await Variant.findOneAndUpdate(
+            {
+                _id: item.variantId,
+                productId: item.productId,
+                status: STATUS.ACTIVE,
+                approveStatus: APPROVE_STATUS.APPROVED,
+                isDeleted: false,
+            },
+            {
+                $inc: { stock: +item.quantity },
+            },
+            { session, new: true }
+        );
+
+        if (!variant) {
+            throw error("Insufficient Stock or invalid variant");
+        }
+    }
+
+    await Promise.all(
+        items.map(async (item) => {
+            await increaseVariantStock(item, session)
+        })
+    )
+
 }
 
 const payWithJawwalPay = () => {
@@ -371,15 +400,40 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
 
 // here only the customer can cancel the order
 // the next update, make the admin and store owner to cancel the order and refund the user money
-const cancelOrder = async ({ user, orderId }) => {
+const cancelOrder = async ({ user, orderId, store = null }) => {
     const session = await mongoose.startSession()
     try {
         let cancelledOrder;
         await session.withTransaction(async () => {
+            const userRole = user?.role
+
+            let userId;
+            let storeId;
+            switch (userRole) {
+                case ROLE.ADMIN:
+                    break;
+                case ROLE.SELLER:
+                    if (!store) {
+                        throw error("Store not found", 404);
+                    }
+                    storeId = store
+                    break;
+                case ROLE.USER:
+                    userId = user._id
+                    break;
+                default:
+                    throw error("Invalid User Role", 400)
+            }
 
             // Update Order
+            const orderFilters = {
+                _id: orderId,
+                status: ORDER_STATUS.PENDING,
+                ...(storeId ? { storeId } : {}),
+                ...(userId ? { userId } : {}),
+            }
             const order = await Order.findOneAndUpdate(
-                { _id: orderId, status: ORDER_STATUS.PENDING, userId: user._id },
+                orderFilters,
                 { status: ORDER_STATUS.CANCELLED, paymentStatus: PAYMENT_STATUS.REFUNDED },
                 { session, new: true }
             )
@@ -388,7 +442,11 @@ const cancelOrder = async ({ user, orderId }) => {
                 throw error("Order Not Found")
 
             // refund order
-            await refundOrder({ orderId, userId: user._id }, session)
+            await refundOrder({ orderId, userId: order.userId }, session)
+
+            // update variants stock
+            await increaseVariantsStock(order.items, session)
+
             cancelledOrder = order
         })
         return cancelledOrder;

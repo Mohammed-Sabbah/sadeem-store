@@ -1,6 +1,8 @@
 const router = require("express").Router()
 const { ROLE } = require("../constants/enums")
 
+const allowAll = [ROLE.ADMIN, ROLE.SELLER, ROLE.USER]
+
 // Controller
 const {
     getOrders,
@@ -27,12 +29,16 @@ router.get("/store", authorize(ROLE.SELLER), validateListOrders, getStoreOrders)
 router.get("/admin", authorize(ROLE.ADMIN), validateListOrders, getOrders)
 
 // Get Order By Id
-router.get("/:id", validateOrderId, getOrderById)
+router.get("/:id", authorize(...allowAll), validateOrderId, getOrderById)
 
 // Create Order
 router.post("/", authorize(ROLE.USER), validateCreateOrder, placeOrder)
 
 // Cancel Order
-router.patch("/:id/cancel", authorize(ROLE.USER), validateOrderId, cancelOrder)
+router.patch("/:id/cancel",
+    authorize(...allowAll),
+    validateOrderId,
+    cancelOrder
+)
 
 module.exports = router

@@ -149,15 +149,15 @@ const validateCreateVariant = [
 const validateVariantPatch = [
     body().custom((updates, { req }) => {
         validateArrayOfObjects(updates, 'Variant updates must be a non-empty array');
-        const allowedFields = ['variantId', 'price', 'stock', 'attributes', 'image', 'status'];
+        const allowedFields = ['_id', 'price', 'stock', 'attributes', 'image', 'status'];
         const withoutImageUrl = updates.filter((variant) => variant.image === undefined).length;
         if (req.files?.length > withoutImageUrl) {
             throw new Error('Provide no more than one uploaded image per variant without an image URL');
         }
 
         for (const variant of updates) {
-            if (typeof variant.variantId !== 'string' || !/^[a-f\d]{24}$/i.test(variant.variantId)) {
-                throw new Error('Each variant update must have a valid variantId');
+            if (typeof variant._id !== 'string' || !/^[a-f\d]{24}$/i.test(variant._id)) {
+                throw new Error('Each variant update must have a valid _id');
             }
             if (Object.keys(variant).some((field) => !allowedFields.includes(field))) {
                 throw new Error('Variant update contains unsupported fields');

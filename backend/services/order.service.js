@@ -80,8 +80,6 @@ const calculateOrderTotalAmount = (items) => {
     return items.reduce((total, item) => total + item.subtotal, 0);
 }
 
-
-
 const decreaseVariantsStock = async (items, session) => {
     const decreaseVariantStock = async (item, session) => {
         const variant = await Variant.findOneAndUpdate(
@@ -398,8 +396,6 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
     }
 }
 
-// here only the customer can cancel the order
-// the next update, make the admin and store owner to cancel the order and refund the user money
 const cancelOrder = async ({ user, orderId, store = null }) => {
     const session = await mongoose.startSession()
     try {

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const {
     WALLET_TRANSACTION_TYPE_VALUES,
+    WALLET_TRANSFER_PROVIDER_VALUES,
     BALANCE_TYPE_VALUES,
     TRANSACTION_STATUS,
     TRANSACTION_STATUS_VALUES,
@@ -8,11 +9,11 @@ const {
 
 const payoutDetailsSchema = new mongoose.Schema(
     {
-        bankName: {
+        transferProvider: {
             type: String,
             required: true,
+            enum: WALLET_TRANSFER_PROVIDER_VALUES,
             trim: true,
-            maxlength: 100,
         },
         accountNumber: {
             type: String,
@@ -96,8 +97,17 @@ const walletTransactionSchema = new mongoose.Schema(
         },
         proofImage: {
             type: String,
-            required: () => this.type === 'deposit',
+            required: function () {
+                return this.type === 'deposit';
+            },
             trim: true,
+        },
+        transferProvider: {
+            type: String,
+            enum: WALLET_TRANSFER_PROVIDER_VALUES,
+            required: function () {
+                return this.type === 'deposit';
+            },
         },
         isProofReviewed: {
             type: Boolean,

@@ -1,6 +1,7 @@
 const { body, param } = require("express-validator")
 const validateRequest = require("./validateRequest")
 const { moneyField } = require("./walletSchema")
+const { WALLET_TRANSFER_PROVIDER_VALUES } = require("../constants/enums")
 
 const validateDepositAction = [
     param('id')
@@ -19,6 +20,16 @@ const validateDepositAction = [
 
 const validateDepositRequest = [
     moneyField('amount', 'Deposit amount'),
+    body('transferProvider')
+        .exists()
+        .withMessage('Transfer destination is required')
+        .bail()
+        .isString()
+        .withMessage('Transfer destination must be a string')
+        .bail()
+        .trim()
+        .isIn(WALLET_TRANSFER_PROVIDER_VALUES)
+        .withMessage('Unsupported transfer destination'),
     body('proofImage')
         .custom((value, { req }) => (
             Boolean(req.file) || (typeof value === 'string' && value.trim().length > 0)

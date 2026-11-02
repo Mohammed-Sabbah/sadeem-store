@@ -15,11 +15,12 @@ Every wallet mutation and wallet-backed order payment/refund requires an `Idempo
 
 | Method | Endpoint | Role | Purpose |
 | :--- | :--- | :--- | :--- |
-| `POST` | `/wallet/deposits` | User | Submit `amount` and a required `proofImage` file (`multipart/form-data`) or image URL (`application/json`). |
+| `POST` | `/deposits` | User | Submit `amount`, required `transferProvider` (`palestine`, `jawwalpay`, or `palpay`), and a required `proofImage` file (`multipart/form-data`) or image URL (`application/json`). The selected destination is saved on the deposit transaction. |
+| `POST` | `/withdrawals` | User | Submit `amount` and `payoutDetails` with `transferProvider` (`palestine`, `jawwalpay`, or `palpay`), `accountNumber`, and `accountName`. |
 | `GET` | `/wallet/transactions?type=deposit&status=pending` | Admin | List deposits with the requesting user and proof image. |
 | `GET` | `/wallet/transactions/:id` | Admin / owner | View transaction details and proof; users can view only their own transactions. |
-| `PATCH` | `/wallet/deposits/:id/approve` | Admin | Approve after reviewing the proof. Send `{"proofReviewed": true}` and optionally `{"amount": 12.50}` if correcting the requested amount. |
-| `PATCH` | `/wallet/deposits/:id/reject` | Admin | Reject a pending deposit, optionally with `rejectReason`. |
+| `PATCH` | `/deposits/:id/approve` | Admin | Approve after reviewing the proof. Send `{"proofReviewed": true}` and optionally `{"amount": 12.50}` if correcting the requested amount. |
+| `PATCH` | `/deposits/:id/reject` | Admin | Reject a pending deposit, optionally with `rejectReason`. |
 
 New requests start as `pending`. The original submitted amount is retained as `requestedAmount`; an optional corrected `amount` is recorded on approval. Approval marks the transaction `approved` and credits the approved amount to the user's withdrawable balance atomically in a MongoDB transaction. Rejected or already reviewed transactions cannot be approved.
 

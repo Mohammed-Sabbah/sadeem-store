@@ -1,6 +1,7 @@
 const { body, param } = require("express-validator")
 const validateRequest = require("./validateRequest")
 const { moneyField } = require("./walletSchema")
+const { WALLET_TRANSFER_PROVIDER_VALUES } = require("../constants/enums")
 
 const validateWithdrawalRequest = [
     moneyField('amount', 'Withdrawal amount'),
@@ -16,19 +17,16 @@ const validateWithdrawalRequest = [
             return Buffer.byteLength(JSON.stringify(value), 'utf8') <= 2000;
         })
         .withMessage('Payout details are invalid or too large'),
-    body('payoutDetails.bankName')
+    body('payoutDetails.transferProvider')
         .exists()
-        .withMessage('Bank name is required')
+        .withMessage('Transfer provider is required')
         .bail()
         .isString()
-        .withMessage('Bank name must be a string')
+        .withMessage('Transfer provider must be a string')
         .bail()
         .trim()
-        .notEmpty()
-        .withMessage('Bank name cannot be empty')
-        .bail()
-        .isLength({ max: 100 })
-        .withMessage('Bank name must not exceed 100 characters'),
+        .isIn(WALLET_TRANSFER_PROVIDER_VALUES)
+        .withMessage('Unsupported transfer provider'),
     body('payoutDetails.accountNumber')
         .exists()
         .withMessage('Account number is required')

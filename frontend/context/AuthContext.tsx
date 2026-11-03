@@ -7,6 +7,7 @@ export interface UserProfile {
   id: string;
   name: string;
   phone: string;
+  backupPhone?: string;
   email?: string;
   city?: string;
   address?: string;
@@ -18,7 +19,11 @@ export interface UserProfile {
     detailedAddress: string;
     phone?: string;
     isDefault?: boolean;
+    landmark?: string;
+    notes?: string;
   }>;
+  jawwalPayNumber?: string;
+  notificationChannel?: 'whatsapp' | 'sms';
   role: 'customer' | 'merchant' | 'seller' | 'courier' | 'admin';
   status: 'active' | 'pending_approval' | 'suspended';
   walletBalance: number;

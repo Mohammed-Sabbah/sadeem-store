@@ -97,8 +97,8 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
 
   if (pendingTransactions.length === 0) {
     return (
-      <div className="bg-brand-card rounded-2xl border border-brand-border p-12 text-center space-y-3 shadow-2xs font-almarai">
-        <div className="w-16 h-16 rounded-2xl bg-brand-trust-soft text-brand-trust border border-[var(--brand-trust-border)] flex items-center justify-center mx-auto shadow-2xs">
+      <div className="bg-brand-card rounded-[14px] border border-brand-border p-12 text-center space-y-3 shadow-2xs font-almarai">
+        <div className="w-16 h-16 rounded-[14px] bg-brand-trust-soft text-brand-trust border border-[var(--brand-trust-border)] flex items-center justify-center mx-auto shadow-2xs">
           <svg className="w-8 h-8 stroke-[2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
@@ -118,7 +118,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
       {/* =====================================================================
           RIGHT PANE: Master List of Pending Requests (5 cols)
           ===================================================================== */}
-      <div className="lg:col-span-5 bg-brand-card rounded-2xl border border-brand-border shadow-2xs overflow-hidden flex flex-col max-h-[820px]">
+      <div className="lg:col-span-5 bg-brand-card rounded-[14px] border border-brand-border shadow-2xs overflow-hidden flex flex-col max-h-[820px]">
         {/* List Header & Search */}
         <div className="p-4 border-b border-brand-border/70 space-y-3 bg-brand-surface/40">
           <div className="flex items-center justify-between">
@@ -137,7 +137,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="بحث بالاسم أو رقم الهاتف..."
-              className="w-full h-9 pr-8 pl-3 text-xs font-medium rounded-xl border border-brand-border bg-brand-card text-brand-dark placeholder:text-brand-muted/60 focus:outline-none focus:border-brand-primary transition-all"
+              className="w-full h-9 pr-8 pl-3 text-xs font-medium rounded-[8px] border border-brand-border bg-brand-card text-brand-dark placeholder:text-brand-muted/60 focus:outline-none focus:border-brand-primary transition-all"
             />
             <svg
               className="w-3.5 h-3.5 text-brand-muted absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -243,6 +243,14 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
                   </div>
                 </div>
 
+                {item.referenceId && (
+                  <div className="flex items-center gap-1 text-[10px] text-brand-dark font-bold">
+                    <span className="px-1.5 py-0.5 rounded bg-brand-surface border border-brand-border text-[9px]">
+                      {item.referenceId}
+                    </span>
+                  </div>
+                )}
+
                 {isDeposit && item.proofImage && (
                   <div className="flex items-center gap-1 text-[10px] text-brand-primary font-bold">
                     <span>📎 يتوفر إشعار تحويل مرفق</span>
@@ -257,7 +265,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
       {/* =====================================================================
           LEFT PANE: Interactive Detail Inspector (7 cols)
           ===================================================================== */}
-      <div className="lg:col-span-7 bg-brand-card rounded-2xl border border-brand-border p-6 shadow-2xs space-y-5">
+      <div className="lg:col-span-7 bg-brand-card rounded-[14px] border border-brand-border p-6 shadow-2xs space-y-5">
         {selectedItem ? (
           <>
             {/* Top Inspector Header */}
@@ -291,6 +299,15 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
               </div>
             </div>
 
+            {selectedItem.referenceId && (
+              <div className="p-3 rounded-[10px] bg-brand-surface border border-brand-border flex items-center justify-between text-xs">
+                <span className="text-brand-muted font-bold">قناة التحويل المحددة:</span>
+                <span className="font-black text-brand-dark bg-white px-2.5 py-1 rounded-[6px] border border-brand-border shadow-2xs">
+                  {selectedItem.referenceId}
+                </span>
+              </div>
+            )}
+
             {/* Proof of Transfer / Lightbox */}
             {selectedItem.type === 'deposit' && (
               <div className="space-y-2">
@@ -315,7 +332,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
                 {selectedItem.proofImage ? (
                   <div
                     onClick={() => setIsZoomOpen(true)}
-                    className="relative rounded-2xl overflow-hidden border border-brand-border bg-stone-900 group cursor-zoom-in max-h-72 flex items-center justify-center shadow-inner"
+                    className="relative rounded-[14px] overflow-hidden border border-brand-border bg-stone-900 group cursor-zoom-in max-h-72 flex items-center justify-center shadow-inner"
                   >
                     <img
                       src={selectedItem.proofImage}
@@ -330,7 +347,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
                     </div>
                   </div>
                 ) : (
-                  <div className="p-6 rounded-2xl bg-brand-surface border border-brand-border text-center text-xs text-brand-muted">
+                  <div className="p-6 rounded-[14px] bg-brand-surface border border-brand-border text-center text-xs text-brand-muted">
                     لم يتم إرفاق صورة إشعار بهذا الطلب
                   </div>
                 )}
@@ -339,7 +356,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
 
             {/* Payout Details for Withdrawals */}
             {selectedItem.type === 'withdrawal' && (
-              <div className="p-4 rounded-xl bg-brand-surface border border-brand-border space-y-3">
+              <div className="p-4 rounded-[8px] bg-brand-surface border border-brand-border space-y-3">
                 <span className="text-xs font-bold text-brand-dark block">
                   بيانات وجهة سحب الرصيد
                 </span>
@@ -367,14 +384,14 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
                     value={payoutRef}
                     onChange={(e) => setPayoutRef(e.target.value)}
                     placeholder="رقم عملية التحويل في جوال باي / البنك..."
-                    className="w-full h-9 px-3 rounded-xl border border-brand-border bg-brand-card text-xs font-medium text-brand-dark focus:outline-none focus:border-brand-primary"
+                    className="w-full h-9 px-3 rounded-[8px] border border-brand-border bg-brand-card text-xs font-medium text-brand-dark focus:outline-none focus:border-brand-primary"
                   />
                 </div>
               </div>
             )}
 
             {/* Amount Verification / Correction Field */}
-            <div className="space-y-1.5 p-4 rounded-xl bg-brand-surface/70 border border-brand-border">
+            <div className="space-y-1.5 p-4 rounded-[8px] bg-brand-surface/70 border border-brand-border">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-brand-dark">
                   المبلغ المعتمد للإيداع (شيكل)
@@ -389,7 +406,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
                   step="0.01"
                   value={correctedAmount}
                   onChange={(e) => setCorrectedAmount(e.target.value)}
-                  className="w-full h-11 pr-4 pl-10 text-base font-black rounded-xl border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-mono transition-all"
+                  className="w-full h-11 pr-4 pl-10 text-base font-black rounded-[8px] border border-brand-border bg-brand-card text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-mono transition-all"
                 />
                 <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-brand-muted pointer-events-none">
                   ₪
@@ -408,7 +425,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
                 type="button"
                 onClick={() => setItemToReject(selectedItem)}
                 disabled={isBusy}
-                className="h-11 px-5 rounded-xl border border-brand-border text-xs font-bold text-brand-muted hover:text-red-700 hover:bg-red-50 hover:border-red-200 transition-all cursor-pointer disabled:opacity-40"
+                className="h-11 px-5 rounded-[8px] border border-brand-border text-xs font-bold text-brand-muted hover:text-red-700 hover:bg-red-50 hover:border-red-200 transition-all cursor-pointer disabled:opacity-40"
               >
                 رفض الطلب
               </button>
@@ -416,7 +433,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
                 type="button"
                 onClick={handleApprove}
                 disabled={isBusy || Number(correctedAmount) <= 0}
-                className="flex-1 h-11 rounded-xl bg-brand-trust text-white text-xs font-black hover:bg-emerald-800 active:scale-98 transition-all cursor-pointer shadow-xs disabled:opacity-40 flex items-center justify-center gap-1.5"
+                className="flex-1 h-11 rounded-[8px] bg-brand-trust text-white text-xs font-black hover:bg-emerald-800 active:scale-95 transition-all cursor-pointer shadow-xs disabled:opacity-40 flex items-center justify-center gap-1.5"
               >
                 <svg className="w-4 h-4 stroke-[2]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -443,7 +460,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
           onClick={() => setIsZoomOpen(false)}
         >
           <div
-            className="max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl relative"
+            className="max-w-4xl max-h-[90vh] overflow-hidden rounded-[14px] relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -456,7 +473,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
             <img
               src={selectedItem.proofImage}
               alt="إشعار التحويل بحجم كامل"
-              className="max-h-[85vh] w-auto object-contain rounded-2xl shadow-2xl"
+              className="max-h-[85vh] w-auto object-contain rounded-[14px] shadow-2xl"
             />
           </div>
         </div>

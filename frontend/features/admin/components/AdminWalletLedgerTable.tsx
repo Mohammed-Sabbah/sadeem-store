@@ -81,14 +81,14 @@ export const AdminWalletLedgerTable: React.FC<AdminWalletLedgerTableProps> = ({
   return (
     <div className="space-y-4 font-almarai text-right select-none">
       {/* Search and Filters Bar */}
-      <div className="bg-brand-card rounded-2xl border border-brand-border p-4 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="bg-brand-card rounded-[14px] border border-brand-border p-4 shadow-2xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         <div className="relative flex-1">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="بحث باسم الزبون، الهاتف، أو معرف المعاملة..."
-            className="w-full h-10 pr-9 pl-4 text-xs font-medium rounded-xl border border-brand-border bg-brand-surface text-brand-dark placeholder:text-brand-muted/60 focus:outline-none focus:border-brand-primary transition-all"
+            className="w-full h-10 pr-9 pl-4 text-xs font-medium rounded-[8px] border border-brand-border bg-brand-surface text-brand-dark placeholder:text-brand-muted/60 focus:outline-none focus:border-brand-primary transition-all"
           />
           <svg
             className="w-4 h-4 text-brand-muted absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -147,7 +147,7 @@ export const AdminWalletLedgerTable: React.FC<AdminWalletLedgerTableProps> = ({
       </div>
 
       {/* Table Container */}
-      <div className="bg-brand-card rounded-2xl border border-brand-border shadow-2xs overflow-hidden">
+      <div className="bg-brand-card rounded-[14px] border border-brand-border shadow-2xs overflow-hidden">
         {isLoading ? (
           <div className="py-20 text-center space-y-3">
             <div className="w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto" />
@@ -268,7 +268,7 @@ export const AdminWalletLedgerTable: React.FC<AdminWalletLedgerTableProps> = ({
           onClick={() => setActiveProofImage(null)}
         >
           <div
-            className="max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl relative"
+            className="max-w-4xl max-h-[90vh] overflow-hidden rounded-[14px] relative"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -281,7 +281,7 @@ export const AdminWalletLedgerTable: React.FC<AdminWalletLedgerTableProps> = ({
             <img
               src={activeProofImage}
               alt="إشعار التحويل بحجم كامل"
-              className="max-h-[85vh] w-auto object-contain rounded-2xl shadow-2xl"
+              className="max-h-[85vh] w-auto object-contain rounded-[14px] shadow-2xl"
             />
           </div>
         </div>

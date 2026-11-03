@@ -1,34 +1,17 @@
 import { getRequest, postRequest, patchRequest } from '@/shared/lib/coreApi';
+import type {
+  UserWalletData,
+  WalletTransactionItem,
+} from '../types/wallet.types';
+
+export * from '../types/wallet.types';
+export type UserWalletTransaction = WalletTransactionItem;
 
 export function generateIdempotencyKey(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID();
   }
   return 'idemp_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
-}
-
-export interface UserWalletData {
-  _id: string;
-  userId: string;
-  balance: number;
-  withdrawableBalance: number;
-  isFrozen: boolean;
-  status: string;
-}
-
-export interface UserWalletTransaction {
-  _id: string;
-  walletId: string;
-  userId: string;
-  type: 'deposit' | 'withdrawal' | 'purchase' | 'refund';
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
-  amount: number;
-  requestedAmount?: number;
-  balanceType: 'withdrawable' | 'storeCredit';
-  proofImage?: string;
-  rejectReason?: string;
-  referenceId?: string;
-  createdAt: string;
 }
 
 export const walletService = {
@@ -80,7 +63,7 @@ export const walletService = {
    * تقديم طلب شحن رصيد وإرفاق إشعار التحويل
    */
   async submitDeposit(
-    data: { amount: number; proofImage: File | string },
+    data: { amount: number; proofImage: File | string; referenceId?: string },
     idempotencyKey: string = generateIdempotencyKey()
   ): Promise<{ success: boolean; message?: string; data?: any }> {
     try {
@@ -89,11 +72,15 @@ export const walletService = {
         const formData = new FormData();
         formData.append('amount', String(data.amount));
         formData.append('proofImage', data.proofImage);
+        if (data.referenceId) {
+          formData.append('referenceId', data.referenceId);
+        }
         body = formData;
       } else {
         body = {
           amount: data.amount,
           proofImage: data.proofImage,
+          ...(data.referenceId ? { referenceId: data.referenceId } : {}),
         };
       }
 

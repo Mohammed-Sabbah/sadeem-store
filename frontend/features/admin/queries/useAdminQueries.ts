@@ -68,6 +68,7 @@ export function useAdminWalletTransactionsQuery(params?: {
   type?: string;
   offset?: number;
   limit?: number;
+  refetchInterval?: number | false;
 }) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.walletTransactions(params),
@@ -75,11 +76,17 @@ export function useAdminWalletTransactionsQuery(params?: {
       const res = await adminService.getWalletTransactions(params);
       return res;
     },
-    staleTime: 1000 * 20,
+    staleTime: 1000 * 3,
+    refetchInterval: params?.refetchInterval ?? 5000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 }
 
-export function useAdminWalletPendingCountQuery() {
+export function useAdminWalletPendingCountQuery(options?: {
+  enabled?: boolean;
+  refetchInterval?: number | false;
+}) {
   return useQuery({
     queryKey: ADMIN_QUERY_KEYS.walletPending,
     queryFn: async () => {
@@ -99,8 +106,11 @@ export function useAdminWalletPendingCountQuery() {
         pendingItems: items,
       };
     },
-    staleTime: 1000 * 30,
-    refetchInterval: 1000 * 60,
+    enabled: options?.enabled ?? true,
+    staleTime: 1000 * 2,
+    refetchInterval: options?.refetchInterval ?? 3000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -339,7 +349,7 @@ export function useAdminWalletMutations() {
     onSuccess: (res) => {
       if (res.success) {
         toast.success('تم اعتماد شحن الرصيد وإيداعه بنجاح');
-        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'], refetchType: 'all' });
       } else {
         toast.error(res.message || 'تعذر اعتماد الشحن');
       }
@@ -360,7 +370,7 @@ export function useAdminWalletMutations() {
     onSuccess: (res) => {
       if (res.success) {
         toast.success('تم رفض طلب الشحن وتوثيق السبب');
-        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'], refetchType: 'all' });
       } else {
         toast.error(res.message || 'تعذر رفض الشحن');
       }
@@ -381,7 +391,7 @@ export function useAdminWalletMutations() {
     onSuccess: (res) => {
       if (res.success) {
         toast.success('تم اعتماد السحب وتوثيق مرجع الحوالة');
-        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'], refetchType: 'all' });
       } else {
         toast.error(res.message || 'تعذر اعتماد السحب');
       }
@@ -402,7 +412,7 @@ export function useAdminWalletMutations() {
     onSuccess: (res) => {
       if (res.success) {
         toast.success('تم رفض طلب السحب واسترداد الرصيد للمستخدم');
-        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'] });
+        queryClient.invalidateQueries({ queryKey: ['admin', 'wallet'], refetchType: 'all' });
       } else {
         toast.error(res.message || 'تعذر رفض السحب');
       }

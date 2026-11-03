@@ -1,8 +1,7 @@
 const mongoose = require('mongoose');
 const { STATUS, STATUS_VALUES, APPROVE_STATUS_VALUES, APPROVE_STATUS } = require('../constants/enums');
-const { createAddressSchema } = require('./address');
+const { addressSchema } = require('./address');
 
-const addressSchema = createAddressSchema();
 
 const storeSchema = new mongoose.Schema(
     {
@@ -26,7 +25,16 @@ const storeSchema = new mongoose.Schema(
             type: String,
             default: '',
         },
-        address: { type: addressSchema, default: () => ({}) },
+        address: {
+            type: addressSchema,
+            required: true,
+        },
+        regionId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Region',
+            required: true,
+            index: true
+        },
         balance: {
             type: Number,
             default: 0,

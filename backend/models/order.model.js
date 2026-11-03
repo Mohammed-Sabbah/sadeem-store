@@ -7,6 +7,7 @@ const {
     PAYMENT_STATUS_VALUES,
     PAYMENT_STATUS
 } = require("../constants/enums")
+const { addressSchema } = require("./address")
 
 const orderItemSchema = new mongoose.Schema(
     {
@@ -57,6 +58,12 @@ const orderItemSchema = new mongoose.Schema(
 )
 
 const orderSchema = new mongoose.Schema({
+    orderGroupId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "OrderGroup",
+        required: true,
+        index: true
+    },
     storeId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Store",
@@ -74,36 +81,35 @@ const orderSchema = new mongoose.Schema({
         required: true
     },
     deliveryAddress: {
-        type: String,
+        type: addressSchema,
         required: true,
-        trim: true,
     },
     deliveryPhone: {
         type: String,
         required: true,
         trim: true,
     },
+    driverAssignmentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "DriverAssignment",
+        default: null,
+        index: true,
+    },
+    regionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Region",
+        required: true,
+        index: true,
+    },
     subtotal: {
         type: Number,
         required: true,
         min: 0,
     },
-    deliveryFee: {
-        type: Number,
-        // required: true,
-        min: 0,
-        default: 0,
-    },
     totalAmount: {
         type: Number,
         required: true,
         min: 0,
-    },
-    paymentMethod: {
-        type: String,
-        enum: PAYMENT_METHODS_VALUES,
-        required: true,
-        default: PAYMENT_METHODS.WALLET,
     },
     paymentStatus: {
         type: String,

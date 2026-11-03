@@ -58,8 +58,6 @@ const WALLET_STATUS = {
 // Order 
 const ORDER_STATUS = {
     PENDING: "pending",
-    PREPARING: "preparing",
-    SHIPPED: "shipped",
     DELIVERED: "delivered",
     CANCELLED: "cancelled",
 }

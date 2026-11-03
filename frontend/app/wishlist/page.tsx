@@ -37,18 +37,18 @@ export default function WishlistPage() {
     items.forEach((item) => {
       addToCart(item, 1);
     });
-    showToast(`✓ تم نقل جميع المنتجات (${items.length}) إلى سلتك الموحدة بنجاح`);
+    showToast(`تم نقل جميع المنتجات (${items.length}) إلى سلتك الموحدة بنجاح`);
   };
 
   return (
     <>
-      <main className="max-w-[1240px] mx-auto px-4 py-4 sm:py-6 pb-24 text-right font-almarai">
+      <main className="max-w-[1240px] mx-auto px-4 py-5 sm:py-7 pb-24 text-right font-almarai space-y-6">
         {/* 1. Page Header Strip */}
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-brand-border gap-3">
+        <div className="flex items-center justify-between pb-3.5 border-b border-brand-border gap-3">
           <div className="flex flex-col gap-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg sm:text-xl font-extrabold text-brand-dark tracking-tight m-0">قائمة المفضلة</h1>
-              <span className="inline-flex items-center justify-center text-[11px] sm:text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-brand-surface border border-brand-border text-brand-primary whitespace-nowrap flex-shrink-0">
+              <h1 className="text-lg sm:text-xl font-black text-brand-dark tracking-tight m-0">قائمة المفضلة</h1>
+              <span className="inline-flex items-center justify-center text-[11px] sm:text-xs font-black px-2.5 py-0.5 rounded-full bg-brand-surface border border-brand-border text-brand-primary whitespace-nowrap flex-shrink-0">
                 {items.length} {items.length === 1 ? 'مقتنى' : 'مقتنيات'}
               </span>
             </div>
@@ -57,23 +57,25 @@ export default function WishlistPage() {
             </p>
           </div>
 
-          <Link
-            href="/"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-surface border border-brand-border text-xs font-bold text-brand-dark hover:text-brand-primary hover:border-brand-primary transition-colors no-underline flex-shrink-0"
-          >
-            <span>←</span>
-            <span>الرئيسية</span>
-          </Link>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Link
+              href="/account"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-brand-surface border border-brand-border text-xs font-bold text-brand-dark hover:text-brand-primary hover:border-brand-primary transition-colors no-underline active:scale-95"
+            >
+              <span>←</span>
+              <span>العودة لحسابي</span>
+            </Link>
+          </div>
         </div>
 
         {items.length > 0 ? (
-          <div>
+          <div className="space-y-5">
             {/* 2. Integrated Reassurance & Transfer Action Strip */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3 sm:px-4 rounded-xl bg-white border border-brand-border-subtle gap-3 mb-5 shadow-xs">
-              <div className="flex items-center gap-2 min-w-0 justify-center sm:justify-start">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-trust-soft text-brand-trust border border-brand-trust/20 text-xs font-bold whitespace-nowrap flex-shrink-0">
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3.5 sm:px-4 rounded-[14px] bg-white border border-brand-border gap-3 shadow-xs">
+              <div className="flex items-center gap-2.5 min-w-0 justify-center sm:justify-start">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-brand-trust-soft text-brand-trust border border-brand-trust/20 text-xs font-bold whitespace-nowrap flex-shrink-0">
+                  <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
                   <span>طرد موحد 8 ₪</span>
                 </span>
@@ -84,13 +86,13 @@ export default function WishlistPage() {
 
               <button
                 type="button"
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs sm:text-sm font-bold shadow-sm transition-all active:scale-98 whitespace-nowrap cursor-pointer border-0"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:py-2 rounded-[8px] bg-brand-primary hover:bg-brand-primary-hover text-white text-xs sm:text-sm font-black shadow-xs transition-all active:scale-95 whitespace-nowrap cursor-pointer border-0"
                 onClick={handleAddAllToCart}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3">
-                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                  <line x1="3" y1="6" x2="21" y2="6"></line>
-                  <path d="M16 10a4 4 0 0 1-8 0"></path>
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+                  <line x1="3" y1="6" x2="21" y2="6" />
+                  <path d="M16 10a4 4 0 0 1-8 0" />
                 </svg>
                 <span>نقل الكل إلى السلة الموحدة ({items.length})</span>
               </button>
@@ -111,16 +113,16 @@ export default function WishlistPage() {
         ) : (
           /* 4. Serene Empty Wishlist State */
           <section
-            className="py-16 px-6 text-center bg-white border border-brand-border rounded-2xl max-w-lg mx-auto my-8 shadow-xs"
+            className="py-16 px-6 text-center bg-white border border-brand-border rounded-[14px] max-w-lg mx-auto my-8 shadow-xs"
             aria-label="قائمة المفضلة فارغة"
           >
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-surface flex items-center justify-center text-brand-primary">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-brand-surface border border-brand-border flex items-center justify-center text-brand-primary">
+              <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </svg>
             </div>
 
-            <h2 className="text-base sm:text-lg font-extrabold text-brand-dark mb-2 m-0">
+            <h2 className="text-base sm:text-lg font-black text-brand-dark mb-2 m-0">
               قائمتك في انتظار مقتنياتك المفضلة
             </h2>
 
@@ -131,14 +133,14 @@ export default function WishlistPage() {
             <div className="flex items-center justify-center gap-3 flex-wrap">
               <Link
                 href="/"
-                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs sm:text-sm font-bold shadow-sm transition-colors no-underline"
+                className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-[8px] bg-brand-primary hover:bg-brand-primary-hover text-white text-xs sm:text-sm font-black shadow-xs transition-colors no-underline active:scale-95"
               >
                 <span>تصفح الأكثر طلباً</span>
                 <span className="text-sm">←</span>
               </Link>
               <Link
                 href="/explore"
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-brand-surface hover:bg-brand-border/40 border border-brand-border text-brand-dark text-xs sm:text-sm font-bold transition-colors no-underline"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-[8px] bg-brand-surface hover:bg-brand-border/40 border border-brand-border text-brand-dark text-xs sm:text-sm font-bold transition-colors no-underline active:scale-95"
               >
                 <span>دليل المتاجر المعتمدة</span>
               </Link>

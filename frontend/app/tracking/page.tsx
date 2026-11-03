@@ -106,13 +106,15 @@ function TrackingContent() {
           <p className="text-xs text-brand-muted m-0 mt-0.5">رقم الطلب: #{cleanOrderId} · وجهة التسليم: {order.customer.town} (المحافظة الوسطى)</p>
         </div>
 
-        <Link
-          href="/"
-          className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand-surface border border-brand-border text-xs font-bold text-brand-dark hover:text-brand-primary hover:border-brand-primary transition-colors no-underline"
-        >
-          <span>←</span>
-          <span>الرئيسية</span>
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/orders"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-brand-surface border border-brand-border text-xs font-bold text-brand-dark hover:text-brand-primary hover:border-brand-primary transition-colors no-underline active:scale-95"
+          >
+            <span>←</span>
+            <span>العودة للطلبات</span>
+          </Link>
+        </div>
       </div>
 
       {/* 2. UNIFIED THREE-STEP STEPPER (STEP 3 ACTIVE) */}
@@ -251,7 +253,12 @@ function TrackingContent() {
                   <div className="text-[11px] text-brand-muted flex items-center gap-1.5 mt-0.5">
                     <span>مندوب سَدِيم الميداني</span>
                     <span>·</span>
-                    <span className="text-amber-600 font-bold">★ 4.95</span>
+                    <span className="text-amber-700 font-bold flex items-center gap-1">
+                    <svg className="w-3 h-3 text-amber-500 fill-amber-500" viewBox="0 0 24 24">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                    </svg>
+                    <span>4.95</span>
+                  </span>
                   </div>
                 </div>
               </div>

@@ -33,7 +33,18 @@ export function useLogin() {
     const res = await authService.login(data);
 
     if (!res.success) {
-      setError('root', { message: res.message || 'بيانات الدخول غير صحيحة' });
+      const msg = res.message || 'بيانات الدخول غير صحيحة';
+
+      // توجيه التاجر المعلق مباشرة لصفحة الانتظار إذا كان المتجر بانتظار موافقة الإدارة
+      if (
+        res.statusCode === 403 &&
+        (msg.toLowerCase().includes('pending') || msg.includes('بانتظار') || msg.includes('موافقة'))
+      ) {
+        router.push('/merchant/pending-approval');
+        return;
+      }
+
+      setError('root', { message: msg });
       return;
     }
 
@@ -41,7 +52,7 @@ export function useLogin() {
       const loggedUser = res.data.user;
       setSessionUser(loggedUser);
 
-      // Role-based routing: Merchants must land on merchant dashboard, never customer storefront
+      // توجيه التجار للوحة تحكم التاجر، والأدمن للوحة التحكم، والزبائن للرئيسية أو المسار السابق
       const isSeller = loggedUser.role === 'seller' || loggedUser.role === 'merchant';
       if (isSeller) {
         if (redirectUrl.startsWith('/merchant')) {

@@ -27,9 +27,9 @@ export interface UserResponse {
     }>;
     walletBalance?: number;
     ordersCount?: number;
-    merchantId?: any;
+    merchantId?: string | null;
   };
-  store?: any;
+  store?: Record<string, unknown>;
 }
 
 export interface AuthMessageResponse {
@@ -88,6 +88,12 @@ export const authService = {
    * جلب بيانات الجلسة والمستخدم الحالي
    */
   getMe: () => getRequest<UserResponse>('/api/auth/me'),
+
+  /**
+   * تغيير كلمة المرور للمستخدم المسجل دخوله
+   */
+  changePassword: (data: { oldPassword: string; newPassword: string }) =>
+    postRequest<AuthMessageResponse>('/api/auth/change-password', data),
 
   /**
    * طلب إرسال رمز التحقق (OTP) لاستعادة كلمة المرور

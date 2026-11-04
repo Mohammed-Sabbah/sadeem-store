@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
-import { usePathname } from 'next/navigation';
+import React, { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { MerchantProvider } from '@/features/merchant/context/MerchantContext';
 import MerchantSidebar from '@/features/merchant/components/MerchantSidebar';
 import MerchantMobileHeader from '@/features/merchant/components/MerchantMobileHeader';
@@ -10,7 +11,24 @@ import MerchantMobileDrawer from '@/features/merchant/components/MerchantMobileD
 
 function MerchantLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const isIsolatedPage = pathname === '/merchant/pending-approval' || pathname === '/merchant/join';
+
+  // حماية صارمة لصفحات التاجر: تحويل الزائر غير المسجل لصفحة الدخول، والزبون العادي لصفحة الانضمام
+  useEffect(() => {
+    if (isLoading || isIsolatedPage) return;
+
+    if (!isAuthenticated) {
+      router.replace(`/auth/login?redirect=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    const isSeller = user?.role === 'merchant' || user?.role === 'seller';
+    if (!isSeller) {
+      router.replace('/merchant/join');
+    }
+  }, [isLoading, isAuthenticated, user, isIsolatedPage, pathname, router]);
 
   // If merchant is pending approval or joining, keep isolated minimal shell
   if (isIsolatedPage) {
@@ -21,6 +39,21 @@ function MerchantLayoutContent({ children }: { children: React.ReactNode }) {
         </main>
       </div>
     );
+  }
+
+  // شاشة انتظار رشيقة أثناء فحص صلاحيات المتجر
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-brand-bg text-center font-almarai">
+        <div className="w-8 h-8 border-2 border-brand-primary border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs font-bold text-brand-muted">جارٍ التحقق من صلاحيات متجر سَدِيم...</p>
+      </div>
+    );
+  }
+
+  const isSeller = user?.role === 'merchant' || user?.role === 'seller';
+  if (!isAuthenticated || !isSeller) {
+    return null;
   }
 
   return (

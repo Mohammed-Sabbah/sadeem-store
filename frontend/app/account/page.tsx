@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
+import { authService } from '@/features/auth/services/auth.service';
 import { useCart } from '@/context/CartContext';
 import { useUserWalletQuery } from '@/features/wallet/hooks/useUserWallet';
 
@@ -45,6 +46,7 @@ export default function AccountPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   const [isAddAddressOpen, setIsAddAddressOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -117,7 +119,7 @@ export default function AccountPage() {
     showToast('تم حفظ البيانات الشخصية بنجاح');
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError('');
     if (newPassword.length < 8) {
@@ -128,11 +130,28 @@ export default function AccountPage() {
       setPasswordError('كلمة المرور الجديدة غير متطابقة مع التأكيد');
       return;
     }
-    setIsPasswordModalOpen(false);
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
-    showToast('تم تحديث كلمة المرور بنجاح');
+    setIsChangingPassword(true);
+    try {
+      const res = await authService.changePassword({
+        oldPassword: currentPassword,
+        newPassword,
+      });
+
+      if (!res.success) {
+        setPasswordError(res.message || 'تعذر تحديث كلمة المرور');
+        return;
+      }
+
+      setIsPasswordModalOpen(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      showToast('تم تحديث كلمة المرور بنجاح');
+    } catch {
+      setPasswordError('تعذر الاتصال بالخادم، يرجى المحاولة لاحقاً');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleSetDefaultAddress = (id: string) => {
@@ -958,9 +977,10 @@ export default function AccountPage() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-1.5 rounded-[8px] bg-brand-primary text-white text-xs font-black shadow-2xs hover:brightness-105 active:scale-95 cursor-pointer"
+                  disabled={isChangingPassword}
+                  className="px-4 py-1.5 rounded-[8px] bg-brand-primary text-white text-xs font-black shadow-2xs hover:brightness-105 active:scale-95 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  تحديث كلمة المرور
+                  {isChangingPassword ? 'جارٍ التحديث...' : 'تحديث كلمة المرور'}
                 </button>
               </div>
             </form>

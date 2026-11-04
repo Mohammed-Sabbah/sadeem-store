@@ -2,8 +2,6 @@ const mongoose = require("mongoose")
 const {
     ORDER_STATUS,
     ORDER_STATUS_VALUES,
-    PAYMENT_METHODS,
-    PAYMENT_METHODS_VALUES,
     PAYMENT_STATUS_VALUES,
     PAYMENT_STATUS
 } = require("../constants/enums")
@@ -81,7 +79,7 @@ const orderSchema = new mongoose.Schema({
         required: true
     },
     deliveryAddress: {
-        type: addressSchema,
+        type: String,
         required: true,
     },
     deliveryPhone: {
@@ -106,11 +104,6 @@ const orderSchema = new mongoose.Schema({
         required: true,
         min: 0,
     },
-    totalAmount: {
-        type: Number,
-        required: true,
-        min: 0,
-    },
     paymentStatus: {
         type: String,
         enum: PAYMENT_STATUS_VALUES,
@@ -123,6 +116,10 @@ const orderSchema = new mongoose.Schema({
         required: true,
         default: ORDER_STATUS.PENDING,
         index: true,
+    },
+    cancelledBy: {
+        type: String,
+        default: null
     },
     cancellationReason: {
         type: String,

@@ -2,8 +2,18 @@ const mongoose = require("mongoose");
 const Order = require("../models/order.model");
 const Product = require("../models/Product")
 const Variant = require("../models/Variant")
+const Store = require("../models/Store")
+const OrderGroup = require("../models/OrderGroup.model")
 const error = require("../utils/error");
-const { ORDER_STATUS_VALUES, STATUS, APPROVE_STATUS, PAYMENT_METHODS_VALUES, PAYMENT_METHODS, ORDER_STATUS, PAYMENT_STATUS } = require("../constants/enums")
+const {
+    ORDER_STATUS_VALUES,
+    STATUS,
+    APPROVE_STATUS,
+    PAYMENT_METHODS_VALUES,
+    PAYMENT_METHODS,
+    ORDER_STATUS,
+    PAYMENT_STATUS
+} = require("../constants/enums")
 const { ROLE } = require("../constants/enums")
 const { escapeRegex } = require("../utils")
 const { payForOrder, refundOrder } = require("../services/walletService");
@@ -20,8 +30,6 @@ const validateOrderItems = async (items, session) => {
         status: STATUS.ACTIVE,
         approveStatus: APPROVE_STATUS.APPROVED,
     };
-
-    let storeId = null;
 
     const validatedItems = await Promise.all(
         items.map(async ({ variantId, quantity }) => {
@@ -46,13 +54,6 @@ const validateOrderItems = async (items, session) => {
                 throw error("Invalid Order Items");
             }
 
-            // 3. Ensure all products belong to the same store
-            if (storeId && !storeId.equals(product.storeId)) {
-                throw error("All products must belong to the same store");
-            }
-
-            storeId = product.storeId;
-
             // 4. Validate stock
             if (variant.stock < quantity) {
                 throw error("Insufficient Stock");
@@ -62,6 +63,7 @@ const validateOrderItems = async (items, session) => {
                 productId: product._id,
                 variantId: variant._id,
                 productTitle: product.title,
+                storeId: product.storeId,
                 image: variant.image,
                 quantity,
                 unitPrice: variant.price,
@@ -71,13 +73,114 @@ const validateOrderItems = async (items, session) => {
     );
 
     return {
-        storeId,
         orderItems: validatedItems,
     };
 };
 
-const calculateOrderTotalAmount = (items) => {
-    return items.reduce((total, item) => total + item.subtotal, 0);
+const divideByStore = async (items, session) => {
+    const storeMap = new Map();
+
+    // 1. Group items by store
+    for (const item of items) {
+        const storeId = item.storeId.toString();
+
+        if (!storeMap.has(storeId)) {
+            storeMap.set(storeId, {
+                storeId: item.storeId,
+                items: [],
+                subtotal: 0
+            });
+        }
+
+        const storeOrder = storeMap.get(storeId);
+
+        storeOrder.items.push(item);
+        storeOrder.subtotal += item.subtotal;
+    }
+
+    // 2. Verify each unique store
+    const storeIds = [...storeMap.keys()];
+
+    const stores = await Store.find({
+        _id: { $in: storeIds },
+        status: STATUS.ACTIVE,
+    })
+        .select("_id regionId")
+        .session(session)
+        .lean();
+
+    if (stores.length !== storeIds.length) {
+        throw error("One or more stores are invalid or inactive");
+    }
+
+    // 3. Attach regionId to each store order
+    const storeRegionMap = new Map(
+        stores.map(store => [
+            store._id.toString(),
+            store.regionId
+        ])
+    );
+
+    return Array.from(storeMap.values()).map(storeOrder => ({
+        ...storeOrder,
+        regionId: storeRegionMap.get(storeOrder.storeId.toString())
+    }));
+};
+
+const divideByRegion = (storeOrders) => {
+    const regionMap = new Map();
+
+    for (const order of storeOrders) {
+        const regionId = order.regionId.toString();
+
+        if (!regionMap.has(regionId)) {
+            regionMap.set(regionId, {
+                regionId: order.regionId,
+                orders: [],
+                subtotal: 0
+            });
+        }
+
+        const region = regionMap.get(regionId);
+
+        region.orders.push(order);
+        region.subtotal += order.subtotal;
+    }
+
+    return Array.from(regionMap.values());
+};
+
+const createStoresOrders = async ({ orders, userId, orderGroupId, deliveryPhone, deliveryAddress }, session) => {
+    const createdOrders = [];
+
+    for (const order of orders) {
+        const [createdOrder] = await Order.create([{
+            storeId: order.storeId,
+            userId,
+            orderGroupId,
+            items: order.items,
+            subtotal: order.subtotal,
+            deliveryPhone,
+            deliveryAddress,
+            regionId: order.regionId
+        }], { session });
+
+        createdOrders.push(createdOrder);
+    }
+
+    return createdOrders;
+}
+
+const calculateTotalOrdersAmount = (storeOrders, deliveryFee) => {
+    const subtotal = storeOrders.reduce(
+        (total, order) => total + order.subtotal,
+        0
+    );
+
+    return {
+        subtotal,
+        totalAmount: subtotal + deliveryFee
+    };
 }
 
 const decreaseVariantsStock = async (items, session) => {
@@ -158,7 +261,8 @@ const proccessPayment = async (order, session) => {
             await payWithWallet(order, session)
             break;
         case PAYMENT_METHODS.JAWWALPAY:
-            payWithJawwalPay()
+            throw error("JawwalPay is not implemented yet", 501)
+            // payWithJawwalPay()
             break;
         default: throw error("Invalid Payment Method")
     }
@@ -357,42 +461,106 @@ const listOrder = async ({ orderId, actor, storeId }) => {
     return order;
 };
 
+// const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
+//     const session = await mongoose.startSession()
+//     try {
+//         let createdOrder;
+//         await session.withTransaction(async () => {
+//             // validate order items
+//             const { orderItems, storeId } = await validateOrderItems(items, session)
+
+//             //  calculate Total Amount 
+//             const totalAmount = calculateOrderTotalAmount(orderItems)
+
+//             // create Order
+//             const [order] = await Order.create(
+//                 [{
+//                     userId,
+//                     storeId,
+//                     items: orderItems,
+//                     subtotal: totalAmount,
+//                     deliveryAddress,
+//                     deliveryPhone,
+//                     paymentMethod,
+//                     totalAmount,
+//                 }],
+//                 { session }
+//             );
+
+//             // complete Payment
+//             await proccessPayment(order, session)
+
+//             // decrease item stock
+//             await decreaseVariantsStock(orderItems, session)
+//             createdOrder = order
+//         })
+//         return createdOrder
+//     } finally {
+//         await session.endSession()
+//     }
+// }
+
 const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
     const session = await mongoose.startSession()
     try {
-        let createdOrder;
+        let createdOrderGroup;
+        let createdOrders;
         await session.withTransaction(async () => {
-            // validate order items
-            const { orderItems, storeId } = await validateOrderItems(items, session)
+            // validate order items - return validated order items 
+            const { orderItems } = await validateOrderItems(items, session)
 
-            //  calculate Total Amount 
-            const totalAmount = calculateOrderTotalAmount(orderItems)
+            // divide order items by store
+            const storeOrders = await divideByStore(orderItems, session)
 
-            // create Order
-            const [order] = await Order.create(
+            // divide store orders by region
+            const regionOrders = divideByRegion(storeOrders)
+            console.log("regionOrders", regionOrders)
+            
+            // calculate delivery fees - based on the regions and stores of every region
+            const deliveryFee = 10
+
+            // calculate total amount for each region order
+            const { totalAmount, subtotal } = calculateTotalOrdersAmount(storeOrders, deliveryFee)
+
+            // create the order group
+            const [orderGroup] = await OrderGroup.create(
                 [{
                     userId,
-                    storeId,
-                    items: orderItems,
-                    subtotal: totalAmount,
                     deliveryAddress,
                     deliveryPhone,
                     paymentMethod,
-                    totalAmount,
+                    subtotal,
+                    deliveryFee,
+                    totalAmount
                 }],
                 { session }
             );
 
-            // complete Payment
-            await proccessPayment(order, session)
+            // process Payment - with wallet in v1
+            await proccessPayment(orderGroup, session)
 
-            // decrease item stock
+            // create the store orders
+            const subOrders = await createStoresOrders({
+                orders: storeOrders,
+                userId,
+                orderGroupId: orderGroup._id,
+                deliveryAddress,
+                deliveryPhone
+            }, session)
+
+            const subOrdersIds = subOrders.map(subOrder => subOrder._id)
+            orderGroup.orders = subOrdersIds
+            await orderGroup.save({ session })
+
+            // decrease variants stock
             await decreaseVariantsStock(orderItems, session)
-            createdOrder = order
+
+            createdOrderGroup = orderGroup
+            createdOrders = subOrders
         })
-        return createdOrder
+        return { createdOrderGroup, createdOrders }
     } finally {
-        await session.endSession()
+        session.endSession()
     }
 }
 

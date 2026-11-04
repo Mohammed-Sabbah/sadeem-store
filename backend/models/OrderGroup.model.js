@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
-const { PAYMENT_METHODS_VALUES, PAYMENT_STATUS_VALUES, PAYMENT_STATUS, ORDER_STATUS_VALUES, ORDER_STATUS } = require('../constants/enums');
+const {
+    PAYMENT_METHODS_VALUES,
+    PAYMENT_STATUS_VALUES,
+    PAYMENT_STATUS,
+    ORDER_STATUS_VALUES,
+    ORDER_STATUS
+} = require('../constants/enums');
 const { addressSchema } = require('./address');
 
 const orderGroupSchema = new mongoose.Schema(
@@ -17,7 +23,7 @@ const orderGroupSchema = new mongoose.Schema(
             }
         ],
         deliveryAddress: {
-            type: addressSchema,
+            type: String,
             required: true
         },
         deliveryPhone: {

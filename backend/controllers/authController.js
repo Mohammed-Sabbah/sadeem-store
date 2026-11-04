@@ -112,6 +112,7 @@ async function registerSeller(req, res, next) {
                         description: storeInput.description,
                         address: storeInput.address,
                         phoneNumber: storeInput.phoneNumber,
+                        regionId: storeInput.regionId,
                         status: STATUS.ACTIVE,
                         approveStatus: APPROVE_STATUS.PENDING,
                     },

@@ -81,6 +81,8 @@ export function ProductEditor({ mode, productId }: ProductEditorProps) {
           fileInputRef={editor.fileInputRef}
           onFilesSelected={editor.handleFilesSelected}
           onRemoveImage={editor.handleRemoveImage}
+          onMoveImage={editor.handleMoveImage}
+          onSetCoverImage={editor.handleSetCoverImage}
         />
 
         {/* Card 2: Pricing, Stock & Progressive Options */}

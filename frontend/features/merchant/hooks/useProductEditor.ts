@@ -434,6 +434,8 @@ export function useProductEditor({ mode, productId }: UseProductEditorOptions) {
     fileInputRef: mediaHook.fileInputRef,
     handleFilesSelected: mediaHook.handleFilesSelected,
     handleRemoveImage: mediaHook.handleRemoveImage,
+    handleMoveImage: mediaHook.handleMoveImage,
+    handleSetCoverImage: mediaHook.handleSetCoverImage,
     matrix: matrixHook,
     handleRemoveVariantRow,
     handleClearAllVariantRows,

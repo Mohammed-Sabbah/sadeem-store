@@ -179,8 +179,28 @@ const calculateTotalOrdersAmount = (storeOrders, deliveryFee) => {
 
     return {
         subtotal,
-        totalAmount: subtotal + deliveryFee
+        totalAmount: subtotal ? subtotal + deliveryFee : subtotal
     };
+}
+
+const calculateOrderSubtotal = (order) => order.items
+    .filter(item => item.status === STATUS.ACTIVE)
+    .reduce((sum, item) => sum + item.subtotal, 0)
+
+const cancelItem = (order, variantId) => {
+    const orderItem = order.items.find(
+        item => item.variantId.toString() === variantId &&
+            item.status === STATUS.ACTIVE
+    );
+    if (!orderItem)
+        throw error("Order Item Not Found")
+
+    order.items = order.items.map(item =>
+        item.variantId.toString() === variantId
+            ? { ...item.toObject(), status: STATUS.IN_ACTIVE }
+            : item
+    );
+    return orderItem
 }
 
 const decreaseVariantsStock = async (items, session) => {
@@ -244,21 +264,21 @@ const payWithJawwalPay = () => {
 
 }
 
-const payWithWallet = async (order, session) => {
+const payWithWallet = async (orderGroup, session) => {
     await payForOrder({
-        orderId: order._id,
-        userId: order.userId,
-        amount: order.totalAmount
+        orderGroupId: orderGroup._id,
+        userId: orderGroup.userId,
+        amount: orderGroup.totalAmount
     }, session)
 }
 
-const proccessPayment = async (order, session) => {
-    if (!PAYMENT_METHODS_VALUES.includes(order.paymentMethod))
+const proccessPayment = async (orderGroup, session) => {
+    if (!PAYMENT_METHODS_VALUES.includes(orderGroup.paymentMethod))
         throw error("Invalid Payment Method")
 
-    switch (order.paymentMethod) {
+    switch (orderGroup.paymentMethod) {
         case PAYMENT_METHODS.WALLET:
-            await payWithWallet(order, session)
+            await payWithWallet(orderGroup, session)
             break;
         case PAYMENT_METHODS.JAWWALPAY:
             throw error("JawwalPay is not implemented yet", 501)
@@ -460,45 +480,6 @@ const listOrder = async ({ orderId, actor, storeId }) => {
     return order;
 };
 
-// const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
-//     const session = await mongoose.startSession()
-//     try {
-//         let createdOrder;
-//         await session.withTransaction(async () => {
-//             // validate order items
-//             const { orderItems, storeId } = await validateOrderItems(items, session)
-
-//             //  calculate Total Amount 
-//             const totalAmount = calculateOrderTotalAmount(orderItems)
-
-//             // create Order
-//             const [order] = await Order.create(
-//                 [{
-//                     userId,
-//                     storeId,
-//                     items: orderItems,
-//                     subtotal: totalAmount,
-//                     deliveryAddress,
-//                     deliveryPhone,
-//                     paymentMethod,
-//                     totalAmount,
-//                 }],
-//                 { session }
-//             );
-
-//             // complete Payment
-//             await proccessPayment(order, session)
-
-//             // decrease item stock
-//             await decreaseVariantsStock(orderItems, session)
-//             createdOrder = order
-//         })
-//         return createdOrder
-//     } finally {
-//         await session.endSession()
-//     }
-// }
-
 const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
     const session = await mongoose.startSession()
     try {
@@ -558,7 +539,7 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
         })
         return { createdOrderGroup, createdOrders }
     } finally {
-        session.endSession()
+        await session.endSession()
     }
 }
 
@@ -576,19 +557,8 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
                 }).session(session)
             if (!order) throw error("Order Not Found")
 
-            // Find Order Item
-            const orderItem = order.items.find(
-                item => item.variantId.toString() === variantId
-            );
-            if (!orderItem)
-                throw error("Order Item Not Found")
-
-            // update the status of the item
-            order.items = order.items.map(item =>
-                item.variantId.toString() === variantId
-                    ? { ...item.toObject(), status: STATUS.IN_ACTIVE }
-                    : item
-            );
+            // cancel item
+            const orderItem = cancelItem(order, variantId)
 
             // update the item stock
             await increaseVariantsStock([orderItem], session)
@@ -598,13 +568,11 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             if (allItemsCancelled) {
                 order.status = ORDER_STATUS.CANCELLED
                 order.cancelledBy = storeId
-                order.cancelledAT = new Date()
+                order.cancelledAt = new Date()
             }
 
             // calculate the new subtotal and amount and refund the user
-            const newSubtotal = order.items
-                .filter(item => item.status === STATUS.ACTIVE)
-                .reduce((sum, item) => sum + item.subtotal, 0);
+            const newSubtotal = calculateOrderSubtotal(order)
             order.subtotal = newSubtotal;
 
             // save the order
@@ -624,6 +592,15 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
 
             // find subOrders of the order group
             const subOrders = await Order.find({ orderGroupId: orderGroup._id }).session(session)
+
+            // check all orders cancelled 
+            const allOrdersCancelled = subOrders.every(
+                subOrder => subOrder.status === ORDER_STATUS.CANCELLED
+            );
+
+            if (allOrdersCancelled) {
+                orderGroup.status = ORDER_STATUS.CANCELLED;
+            }
 
             // calculate the new deliveryfee
             const deliveryFee = 10
@@ -663,15 +640,8 @@ const cancelOrder = async ({ user, orderGroupId, store = null }) => {
             const userRole = user?.role
 
             let userId;
-            let storeId;
             switch (userRole) {
                 case ROLE.ADMIN:
-                    break;
-                case ROLE.SELLER:
-                    if (!store) {
-                        throw error("Store not found", 404);
-                    }
-                    storeId = store
                     break;
                 case ROLE.USER:
                     userId = user._id
@@ -684,7 +654,6 @@ const cancelOrder = async ({ user, orderGroupId, store = null }) => {
             const orderFilters = {
                 _id: orderGroupId,
                 status: ORDER_STATUS.PENDING,
-                ...(storeId ? { storeId } : {}),
                 ...(userId ? { userId } : {}),
             }
             const orderGroup = await OrderGroup.findOneAndUpdate(
@@ -697,10 +666,16 @@ const cancelOrder = async ({ user, orderGroupId, store = null }) => {
                 throw error("Order Not Found")
 
             // refund order
-            await refundOrder({ orderId: orderGroup._id, userId: orderGroup.userId }, session)
+            await refundOrder({ orderGroupId: orderGroup._id, userId: orderGroup.userId }, session)
 
             // update variants stock
-            await increaseVariantsStock(orderGroup.items, session)
+            const subOrders = await Order.find({ orderGroupId: orderGroup._id }).session(session)
+            const allItems = subOrders.flatMap(order => order.items).filter(item => item.status === STATUS.ACTIVE)
+            await increaseVariantsStock(allItems, session)
+
+            // cancel orders 
+            subOrders.map(order => order.status = ORDER_STATUS.CANCELLED)
+            await Promise.all(subOrders.map(order => order.save({ session })))
 
             cancelledOrder = orderGroup
         })

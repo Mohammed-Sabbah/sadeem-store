@@ -37,7 +37,7 @@ router.post("/", authorize(ROLE.USER), validateCreateOrder, placeOrder)
 
 // Cancel Order
 router.patch("/:id/cancel",
-    authorize(...allowAll),
+    authorize(ROLE.ADMIN, ROLE.USER),
     validateOrderId,
     cancelOrder
 )

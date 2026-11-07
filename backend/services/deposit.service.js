@@ -41,7 +41,6 @@ const approveDeposit = async ({ transactionId, amount, verifiedBy }) => {
             const depositAmount = amount ?? deposit.amount
             await increaseWalletBalance({
                 userId: deposit.userId,
-                walletId: deposit.walletId,
                 withdrawableBalance: depositAmount
             }, session)
 

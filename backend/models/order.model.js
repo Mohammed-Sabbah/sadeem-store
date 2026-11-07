@@ -1,11 +1,13 @@
 const mongoose = require("mongoose")
 const {
+    STATUS,
+    STATUS_VALUES,
     ORDER_STATUS,
     ORDER_STATUS_VALUES,
     PAYMENT_STATUS_VALUES,
     PAYMENT_STATUS
 } = require("../constants/enums")
-const { addressSchema } = require("./address")
+// const { addressSchema } = require("./address")
 
 const orderItemSchema = new mongoose.Schema(
     {
@@ -51,6 +53,18 @@ const orderItemSchema = new mongoose.Schema(
             required: true,
             min: 0,
         },
+        status: {
+            type: String,
+            enum: STATUS_VALUES,
+            default: STATUS.ACTIVE
+        },
+
+        cancellationReason: String,
+        cancelledAt: Date,
+        cancelledBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User"
+        }
     },
     { _id: false }
 )

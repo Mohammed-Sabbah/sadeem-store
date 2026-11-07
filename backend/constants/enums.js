@@ -47,7 +47,8 @@ const TRANSACTION_STATUS = {
     APPROVED: "approved",
     REJECTED: "rejected",
     CANCELLED: "cancelled",
-    REFUNDED: "refunded"
+    REFUNDED: "refunded",
+    PARTIALLY_REFUND: "partially_refund"
 };
 
 const WALLET_STATUS = {

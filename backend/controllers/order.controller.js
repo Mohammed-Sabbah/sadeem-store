@@ -21,7 +21,12 @@ const getOrderById = async (req, res, next) => {
 
 const getStoreOrders = async (req, res, next) => {
     try {
-        const orders = await orderService.listOrders({ ...req.query, storeId: req.store._id, actor: req.user })
+        const orders = await orderService.listOrders(
+            {
+                ...req.query,
+                storeId: req.store._id,
+                actor: req.user
+            })
         return success(res, 200, { orders })
     } catch (err) {
         next(err)
@@ -56,10 +61,24 @@ const cancelOrder = async (req, res, next) => {
     }
 }
 
+const cancelOrderItem = async (req, res, next) => {
+    try {
+        const order = await orderService.cancelOrderItem({
+            orderId: req.params.orderId,
+            storeId: req.store._id,
+            variantId: req.params.itemId,
+        })
+        success(res, 200, order)
+    } catch (err) {
+        next(err)
+    }
+}
+
 module.exports = {
     getOrders,
     getOrderById,
     getStoreOrders,
     placeOrder,
-    cancelOrder
+    cancelOrder,
+    cancelOrderItem
 }

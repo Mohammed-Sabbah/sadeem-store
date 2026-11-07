@@ -160,8 +160,27 @@ const validateListOrders = [
     validateRequest,
 ];
 
+// Validate Update Order Item Status
+const validateCancelOrderItemStatus = [
+    param("orderId")
+        .exists()
+        .withMessage("Order ID is required")
+        .bail()
+        .isMongoId()
+        .withMessage("Invalid Order ID"),
+
+    param("itemId")
+        .exists()
+        .withMessage("Variant ID is required")
+        .bail()
+        .isMongoId()
+        .withMessage("Invalid Variant ID"),
+];
+
+
 module.exports = {
     validateOrderId,
     validateCreateOrder,
     validateListOrders,
+    validateCancelOrderItemStatus
 };

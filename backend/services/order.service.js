@@ -16,7 +16,7 @@ const {
 } = require("../constants/enums")
 const { ROLE } = require("../constants/enums")
 const { escapeRegex } = require("../utils")
-const { payForOrder, refundOrder } = require("../services/walletService");
+const { payForOrder, refundOrder, refundOrderItemsCancellation } = require("../services/walletService");
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
 
 // Helpers
@@ -294,18 +294,18 @@ const listOrders = async ({
             break;
 
         case ROLE.SELLER:
-            if (!actor.storeId) {
+            if (!storeId) {
                 throw error("Store not found", 404);
             }
 
-            query.storeId = actor.storeId;
+            query.storeId = storeId;
             break;
 
         case ROLE.ADMIN:
             // Admin can list orders across the marketplace.
             if (userId) {
                 if (!mongoose.isValidObjectId(userId)) {
-                    throw error("Invalid buyer ID", 400);
+                    throw error("Invalid user ID", 400);
                 }
 
                 query.userId = userId;
@@ -435,7 +435,6 @@ const listOrders = async ({
 
 const listOrder = async ({ orderId, actor, storeId }) => {
     const filter = { _id: orderId };
-
     switch (actor.role) {
         case ROLE.USER:
             filter.userId = actor._id;
@@ -514,8 +513,7 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
 
             // divide store orders by region
             const regionOrders = divideByRegion(storeOrders)
-            console.log("regionOrders", regionOrders)
-            
+
             // calculate delivery fees - based on the regions and stores of every region
             const deliveryFee = 10
 
@@ -564,7 +562,100 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
     }
 }
 
-const cancelOrder = async ({ user, orderId, store = null }) => {
+const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
+    const session = await mongoose.startSession()
+    try {
+        let updatedOrder;
+        await session.withTransaction(async () => {
+            // Find Order
+            const order = await Order.findOne(
+                {
+                    _id: orderId,
+                    storeId,
+                    status: ORDER_STATUS.PENDING
+                }).session(session)
+            if (!order) throw error("Order Not Found")
+
+            // Find Order Item
+            const orderItem = order.items.find(
+                item => item.variantId.toString() === variantId
+            );
+            if (!orderItem)
+                throw error("Order Item Not Found")
+
+            // update the status of the item
+            order.items = order.items.map(item =>
+                item.variantId.toString() === variantId
+                    ? { ...item.toObject(), status: STATUS.IN_ACTIVE }
+                    : item
+            );
+
+            // update the item stock
+            await increaseVariantsStock([orderItem], session)
+
+            // check if all items are cancelled, then cancel the order
+            const allItemsCancelled = order.items.every(item => item.status === STATUS.IN_ACTIVE);
+            if (allItemsCancelled) {
+                order.status = ORDER_STATUS.CANCELLED
+                order.cancelledBy = storeId
+                order.cancelledAT = new Date()
+            }
+
+            // calculate the new subtotal and amount and refund the user
+            const newSubtotal = order.items
+                .filter(item => item.status === STATUS.ACTIVE)
+                .reduce((sum, item) => sum + item.subtotal, 0);
+            order.subtotal = newSubtotal;
+
+            // save the order
+            await order.save({ session })
+
+            // find order group
+            const orderGroup = await OrderGroup.findOne({
+                _id: order.orderGroupId,
+                status: ORDER_STATUS.PENDING
+            }).session(session)
+
+            if (!orderGroup)
+                throw error("Order Group not found")
+
+            // get the old total amount
+            const oldTotalAmount = orderGroup.totalAmount
+
+            // find subOrders of the order group
+            const subOrders = await Order.find({ orderGroupId: orderGroup._id }).session(session)
+
+            // calculate the new deliveryfee
+            const deliveryFee = 10
+
+            // calculate the new subtotal and amount of the order group
+            const { subtotal, totalAmount } = calculateTotalOrdersAmount(subOrders, deliveryFee)
+
+            // update the order group
+            orderGroup.subtotal = subtotal
+            orderGroup.totalAmount = totalAmount
+            orderGroup.deliveryFee = deliveryFee
+            await orderGroup.save({ session })
+
+            // refund the user 
+            const refundAmount = oldTotalAmount - totalAmount
+            if (refundAmount > 0) {
+                await refundOrderItemsCancellation({
+                    orderGroupId: orderGroup._id,
+                    userId: orderGroup.userId,
+                    amount: refundAmount,
+                    paymentMethod: orderGroup.paymentMethod
+                }, session);
+            }
+            updatedOrder = orderGroup
+        })
+        return updatedOrder
+    } finally {
+        await session.endSession()
+    }
+}
+
+const cancelOrder = async ({ user, orderGroupId, store = null }) => {
     const session = await mongoose.startSession()
     try {
         let cancelledOrder;
@@ -591,27 +682,27 @@ const cancelOrder = async ({ user, orderId, store = null }) => {
 
             // Update Order
             const orderFilters = {
-                _id: orderId,
+                _id: orderGroupId,
                 status: ORDER_STATUS.PENDING,
                 ...(storeId ? { storeId } : {}),
                 ...(userId ? { userId } : {}),
             }
-            const order = await Order.findOneAndUpdate(
+            const orderGroup = await OrderGroup.findOneAndUpdate(
                 orderFilters,
                 { status: ORDER_STATUS.CANCELLED, paymentStatus: PAYMENT_STATUS.REFUNDED },
                 { session, new: true }
             )
 
-            if (!order)
+            if (!orderGroup)
                 throw error("Order Not Found")
 
             // refund order
-            await refundOrder({ orderId, userId: order.userId }, session)
+            await refundOrder({ orderId: orderGroup._id, userId: orderGroup.userId }, session)
 
             // update variants stock
-            await increaseVariantsStock(order.items, session)
+            await increaseVariantsStock(orderGroup.items, session)
 
-            cancelledOrder = order
+            cancelledOrder = orderGroup
         })
         return cancelledOrder;
     } finally {
@@ -623,5 +714,6 @@ module.exports = {
     listOrders,
     listOrder,
     createOrder,
-    cancelOrder
+    cancelOrder,
+    cancelOrderItem
 }

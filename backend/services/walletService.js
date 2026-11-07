@@ -73,6 +73,31 @@ const calculateWalletBalanceDeduction = (wallet, amount) => {
         withdrawableDeduction
     };
 }
+
+const calculateRefundAllocations = (amount, allocations) => {
+    const withdrawableRefund = Math.min(
+        amount,
+        allocations.withdrawableBalance
+    );
+
+    const storeCreditRefund = amount - withdrawableRefund;
+
+    if (storeCreditRefund > allocations.storeCreditBalance) {
+        throw error("Refund amount exceeds remaining allocations");
+    }
+
+    return {
+        refundAllocations: {
+            storeCredit: storeCreditRefund,
+            withdrawable: withdrawableRefund
+        },
+        remainingAllocations: {
+            storeCredit: allocations.storeCreditBalance - storeCreditRefund,
+            withdrawable: allocations.withdrawableBalance - withdrawableRefund
+        }
+    };
+};
+
 // List Transactions
 async function getWalletByUserId(userId) {
     if (!userId || !mongoose.Types.ObjectId.isValid(String(userId))) {
@@ -233,12 +258,12 @@ const payForOrder = async ({ amount, userId, orderId }, session) => {
     };
 }
 
-const refundOrder = async ({ orderId, userId }, session) => {
+const refundOrder = async ({ orderGroupId, userId }, session) => {
     if (!session)
         throw error("A session is required for wallet payment");
 
     const transaction = await WalletTransaction.findOne({
-        referenceId: orderId,
+        referenceId: orderGroupId,
         userId,
         status: TRANSACTION_STATUS.APPROVED,
         type: WALLET_TRANSACTION_TYPE.PURCHASE
@@ -280,7 +305,60 @@ const refundOrder = async ({ orderId, userId }, session) => {
         type: WALLET_TRANSACTION_TYPE.REFUND,
         allocations,
         amount: transaction.amount,
-        referenceId: orderId
+        referenceId: orderGroupId
+    }, session)
+}
+
+const refundOrderItemsCancellation = async ({ orderGroupId, userId, amount }, session) => {
+    if (!session)
+        throw error("A session is required for wallet payment");
+
+    const wallet = await Wallet.findOne({ userId, isFrozen: false }).session(session)
+    if (!wallet) throw error("Wallet not found")
+
+    const transaction = await WalletTransaction.findOne({
+        referenceId: orderGroupId,
+        userId,
+        status: TRANSACTION_STATUS.APPROVED,
+        type: WALLET_TRANSACTION_TYPE.PURCHASE
+    }).session(session)
+
+    const allocations = transaction.allocations
+    const { refundAllocations, remainingAllocations } = calculateRefundAllocations(amount, allocations)
+
+    // increase wallet
+    await increaseWalletBalance({
+        userId,
+        walletId: wallet._id,
+        withdrawableBalance: refundAllocations.withdrawable,
+        storeCreditBalance: refundAllocations.storeCredit
+    }, session)
+
+    // update original transaction
+    const query = {
+        status: TRANSACTION_STATUS.APPROVED,
+        type: WALLET_TRANSACTION_TYPE.PURCHASE,
+        userId
+    }
+    const updates = {
+        allocations: remainingAllocations,
+        status: TRANSACTION_STATUS.PARTIALLY_REFUND
+    }
+    await updateTransaction({
+        transactionId: transaction._id,
+        query,
+        updates
+    }, session)
+
+    // create Transaction
+    await createTransaction({
+        userId,
+        walletId: wallet._id,
+        status: TRANSACTION_STATUS.APPROVED,
+        type: WALLET_TRANSACTION_TYPE.REFUND,
+        allocations: refundAllocations,
+        amount: amount,
+        referenceId: orderGroupId
     }, session)
 }
 
@@ -292,5 +370,6 @@ module.exports = {
     increaseWalletBalance,
     decreaseWalletBalance,
     payForOrder,
-    refundOrder
+    refundOrder,
+    refundOrderItemsCancellation
 };

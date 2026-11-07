@@ -9,7 +9,8 @@ const {
     getOrderById,
     getStoreOrders,
     placeOrder,
-    cancelOrder
+    cancelOrder,
+    cancelOrderItem
 } = require("../controllers/order.controller")
 
 // Middlewares
@@ -17,7 +18,7 @@ const { authenticate, authorize } = require("../middleware/auth")
 router.use(authenticate)
 
 // Schema
-const { validateOrderId, validateListOrders, validateCreateOrder } = require("../schemas/orderSchema")
+const { validateOrderId, validateListOrders, validateCreateOrder, validateCancelOrderItemStatus } = require("../schemas/orderSchema")
 
 // Get User Orders
 router.get("/", authorize(ROLE.USER), validateListOrders, getOrders)
@@ -39,6 +40,13 @@ router.patch("/:id/cancel",
     authorize(...allowAll),
     validateOrderId,
     cancelOrder
+)
+
+// cancel order item
+router.patch("/:orderId/items/:itemId/cancel",
+    authorize(ROLE.SELLER),
+    validateCancelOrderItemStatus,
+    cancelOrderItem
 )
 
 module.exports = router

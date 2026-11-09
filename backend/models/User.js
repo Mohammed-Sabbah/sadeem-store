@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 const { ROLE, STATUS, ROLE_VALUES, STATUS_VALUES } = require('../constants/enums');
-const { createAddressSchema } = require('./address');
+const { addressSchema } = require('./address');
 
 const userSchema = new mongoose.Schema(
     {
@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema(
             select: false,
         },
         addresses: {
-            type: [createAddressSchema()],
+            type: [addressSchema],
             default: [],
         },
         role: {

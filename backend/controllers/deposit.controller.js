@@ -6,6 +6,7 @@ async function createDepositRequest(req, res, next) {
         const deposit = await createDeposit({
             userId: req.user._id,
             amount: req.body.amount,
+            transferProvider: req.body.transferProvider,
             proofImage: req.body.proofImage,
         })
         return success(res, 201, {

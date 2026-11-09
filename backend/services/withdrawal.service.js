@@ -23,7 +23,6 @@ const createWithdrawal = async ({ userId, amount, payoutDetails }) => {
             // decrese the wallet 
             await decreaseWalletBalance({
                 userId,
-                walletId: wallet._id,
                 withdrawableBalance: pureAmount,
             }, session)
 
@@ -79,7 +78,6 @@ const rejectWithdrawal = async ({ transactionId, adminId, rejectReason }) => {
             // refund the wallet balance
             await increaseWalletBalance({
                 userId: transaction.userId,
-                walletId: transaction.walletId,
                 withdrawableBalance: transaction.amount
             }, session)
 

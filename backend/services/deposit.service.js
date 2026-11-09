@@ -7,7 +7,7 @@ const mongoose = require("mongoose")
 const { createTransaction, updateTransaction } = require("./transaction.service")
 const { increaseWalletBalance } = require("../services/walletService")
 
-const createDeposit = async ({ userId, amount, proofImage }) => {
+const createDeposit = async ({ userId, amount, transferProvider, proofImage }) => {
     const wallet = await Wallet.findOne({ userId, isFrozen: false })
     if (!wallet) throw error("Wallet Not Found", 404)
 
@@ -19,6 +19,7 @@ const createDeposit = async ({ userId, amount, proofImage }) => {
         type: WALLET_TRANSACTION_TYPE.DEPOSIT,
         status: TRANSACTION_STATUS.PENDING,
         balanceType: BALANCE_TYPE.WITHDRAWABLE,
+        transferProvider,
         proofImage,
         createdBy: userId
     })
@@ -40,7 +41,6 @@ const approveDeposit = async ({ transactionId, amount, verifiedBy }) => {
             const depositAmount = amount ?? deposit.amount
             await increaseWalletBalance({
                 userId: deposit.userId,
-                walletId: deposit.walletId,
                 withdrawableBalance: depositAmount
             }, session)
 
@@ -50,6 +50,7 @@ const approveDeposit = async ({ transactionId, amount, verifiedBy }) => {
             }
             const updates = {
                 status: TRANSACTION_STATUS.APPROVED,
+                amount: depositAmount,
                 verifiedBy
             }
             const updatedDeposit = await updateTransaction({

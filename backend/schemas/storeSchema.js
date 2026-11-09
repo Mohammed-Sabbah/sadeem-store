@@ -10,7 +10,7 @@ async function getDynamicHubGovernorates() {
         if (hubs && hubs.length > 0) {
             return hubs.map((h) => h.code);
         }
-    } catch {}
+    } catch { }
     return Object.values(GAZA_REGIONS)
         .filter((region) => region.status === 'hub')
         .map((region) => region.id);
@@ -54,7 +54,11 @@ const validateSellerStore = [
         .trim()
         .matches(/^\+?[0-9\s()-]{8,20}$/)
         .withMessage('Store phone number is invalid'),
-
+    body('store.regionId')
+        .notEmpty()
+        .trim()
+        .isMongoId()
+        .withMessage("not valid region id"),
     body('store.address')
         .isObject()
         .withMessage('Store address must be an object'),
@@ -74,7 +78,7 @@ const validateSellerStore = [
             let region = null;
             try {
                 region = await Region.findOne({ code: governorateCode }).lean();
-            } catch {}
+            } catch { }
             if (!region) region = GAZA_REGIONS[governorateCode];
             const isValidCity = Boolean(region && region.cities.some((regionCity) => regionCity.id === city));
             if (!isValidCity) {

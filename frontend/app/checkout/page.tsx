@@ -7,6 +7,8 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { HybridAddressPicker, type AddressFormData } from '@/features/checkout/components/HybridAddressPicker';
+import { orderService } from '@/features/orders/services/order.service';
+import { walletService } from '@/features/wallet/services/wallet.service';
 import { getGoogleMapsUrl, calculateHaversineDistance, GAZA_REGIONS_CLIENT } from '@/shared/lib/geolocation';
 
 interface Governorate {
@@ -75,34 +77,7 @@ interface SavedAddress {
   isDefault?: boolean;
 }
 
-const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [
-  {
-    id: 'addr-home',
-    tag: 'المنزل',
-    recipientName: 'أحمد سلامة',
-    phone: '0599123456',
-    governorateId: 'central',
-    governorateName: 'المحافظة الوسطى',
-    city: 'دير البلح',
-    details: 'شارع النخيل، بجوار مسجد الفرقان (منزل عائلة سلامة)',
-    coordinates: { lat: 31.418, lng: 34.351 },
-    isGpsVerified: true,
-    isDefault: true,
-  },
-  {
-    id: 'addr-work',
-    tag: 'العمل / المحل',
-    recipientName: 'أحمد سلامة',
-    phone: '0599123456',
-    governorateId: 'central',
-    governorateName: 'المحافظة الوسطى',
-    city: 'مخيم النصيرات',
-    details: 'شارع صلاح الدين، بالقرب من المدخل الرئيسي والمخبز الآلي',
-    coordinates: { lat: 31.448, lng: 34.391 },
-    isGpsVerified: true,
-    isDefault: false,
-  },
-];
+const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [];
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -118,7 +93,7 @@ export default function CheckoutPage() {
 
   // Saved Addresses State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(INITIAL_SAVED_ADDRESSES);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>('addr-home');
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
 
   // Adaptive Address Drawer / Modal State
   const [addressDrawerOpen, setAddressDrawerOpen] = useState<boolean>(false);
@@ -135,10 +110,21 @@ export default function CheckoutPage() {
   const [pickerData, setPickerData] = useState<AddressFormData | null>(null);
 
   // Payment & Bill States - PREPAID ONLY (No COD)
-  const [paymentMethod, setPaymentMethod] = useState<'jawwal' | 'wallet'>('jawwal');
+  const [paymentMethod, setPaymentMethod] = useState<'jawwal' | 'wallet'>('wallet');
+  const [orderError, setOrderError] = useState<string | null>(null);
   const [billSheetOpen, setBillSheetOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState(user?.walletBalance ?? 0);
   const [jawwalPhone, setJawwalPhone] = useState(user?.phone || '0599123456');
+
+  // Fetch live wallet balance on mount
+  useEffect(() => {
+    walletService.getWallet().then((res) => {
+      if (res.success && res.data) {
+        const spendable = (res.data.withdrawableBalance || 0) + (res.data.storeCreditBalance || 0) || res.data.balance || 0;
+        setWalletBalance(spendable);
+      }
+    }).catch(() => {});
+  }, []);
 
   // Sync authenticated user data
   useEffect(() => {
@@ -164,6 +150,23 @@ export default function CheckoutPage() {
         const def = mapped.find((m) => m.isDefault);
         if (def) setSelectedAddressId(def.id);
         else setSelectedAddressId(mapped[0].id);
+      } else if (user.address) {
+        const userAddr: SavedAddress = {
+          id: 'user-addr-profile',
+          tag: 'عنوان الملف الشخصي',
+          recipientName: user.name,
+          phone: user.phone || '',
+          governorateId: 'central',
+          governorateName: 'المحافظة الوسطى',
+          city: user.city || 'دير البلح',
+          details: user.address,
+          isDefault: true,
+        };
+        setSavedAddresses([userAddr]);
+        setSelectedAddressId(userAddr.id);
+      } else {
+        setSavedAddresses([]);
+        setSelectedAddressId('');
       }
     }
   }, [user]);
@@ -187,7 +190,7 @@ export default function CheckoutPage() {
   );
 
   // Dynamic fee: 2 ₪ per km, min 7 ₪, max 80 ₪ (matches delivery.config.js)
-  const dynamicDeliveryFee = items.length > 0 ? Math.max(7, Math.min(80, Math.round(distanceKm * 2))) : 0;
+  const dynamicDeliveryFee = items.length > 0 ? 8 : 0;
 
   const baseTotal = subtotal + dynamicDeliveryFee;
   const gatewayFee = paymentMethod === 'jawwal' ? Math.round(baseTotal * 0.03) : 0;
@@ -227,35 +230,96 @@ export default function CheckoutPage() {
     setDrawerMode('list');
   };
 
+  const executeOrderPlacement = async () => {
+    setOrderError(null);
+
+    // 1. Validate delivery address
+    const addressParts = [
+      activeSelectedAddress.governorateName,
+      activeSelectedAddress.city,
+      activeSelectedAddress.details,
+    ].filter(Boolean);
+    let fullAddress = addressParts.join(' - ');
+    if (fullAddress.trim().length < 5) {
+      fullAddress = `${fullAddress} - المحافظة الوسطى، قطاع غزة`;
+    }
+
+    // 2. Validate phone
+    const phone = (activeSelectedAddress.phone || user?.phone || '').trim();
+    if (!/^\+?[0-9\s()-]{8,20}$/.test(phone)) {
+      setOrderError('يرجى التأكد من كتابة رقم هاتف صحيح للتوصيل (8 أرقام على الأقل)');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 3. Validate and sanitize items (Ticket 06)
+    if (!items || items.length === 0) {
+      setOrderError('سلة الشراء فارغة. يرجى إضافة منتجات للمتابعة.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const aggregated = new Map<string, number>();
+    for (const it of items) {
+      const vId = it.selectedVariantId || it.product.variantId;
+      if (!vId) {
+        setOrderError(`الصنف "${it.product.title}" يفتقر لتحديد المتغير (المقاس/اللون). يرجى حذفه وإعادة اختياره من المتجر.`);
+        setIsSubmitting(false);
+        return;
+      }
+      if (!/^[0-9a-fA-F]{24}$/.test(vId)) {
+        setOrderError(`الصنف "${it.product.title}" يحتوي على معرف غير صالح. يرجى حذفه وإعادة اختياره.`);
+        setIsSubmitting(false);
+        return;
+      }
+      aggregated.set(vId, (aggregated.get(vId) || 0) + it.quantity);
+    }
+
+    const payloadItems = Array.from(aggregated.entries()).map(([variantId, quantity]) => ({
+      variantId,
+      quantity,
+    }));
+
+    // 4. Send real API call to backend
+    const res = await orderService.placeOrder({
+      items: payloadItems,
+      deliveryAddress: fullAddress,
+      deliveryPhone: phone,
+      paymentMethod: 'wallet',
+    });
+
+    if (!res.success || !res.data) {
+      setOrderError(res.message || 'تعذر تأكيد الطلب، يرجى التحقق من الرصيد أو المحاولة مجدداً');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 5. Extract real order IDs from response
+    const createdGroup = res.data.order.createdOrderGroup;
+    const createdOrders = res.data.order.createdOrders;
+    const realOrderId = createdGroup?._id || createdOrders?.[0]?.orderGroupId || createdOrders?.[0]?._id;
+
+    // 6. Refresh live wallet balance
+    try {
+      const wRes = await walletService.getWallet();
+      if (wRes.success && wRes.data) {
+        const spendable = (wRes.data.withdrawableBalance || 0) + (wRes.data.storeCreditBalance || 0) || wRes.data.balance || 0;
+        setWalletBalance(spendable);
+        if (user) {
+          updateUser({ walletBalance: spendable });
+        }
+      }
+    } catch {}
+
+    // 7. Clear cart and route to order success
+    clearCart();
+    router.push(`/order-success?orderId=${realOrderId}`);
+  };
+
   const handleStartOrder = () => {
-    const orderId = `SD-${Math.floor(100000 + Math.random() * 900000)}`;
+    setOrderError(null);
     setIsSubmitting(true);
     setCountdown(3);
-
-    const chosenAddress = {
-      fullName: activeSelectedAddress.recipientName,
-      phone: activeSelectedAddress.phone,
-      governorate: activeSelectedAddress.governorateName,
-      town: activeSelectedAddress.city,
-      detailedAddress: activeSelectedAddress.details,
-      coordinates: activeSelectedAddress.coordinates,
-    };
-
-    const orderData = {
-      orderId,
-      createdAt: new Date().toISOString(),
-      customer: chosenAddress,
-      paymentMethod,
-      items,
-      subtotal,
-      deliveryFee: dynamicDeliveryFee,
-      gatewayFee,
-      grandTotal,
-    };
-
-    try {
-      localStorage.setItem('sadeem_last_order', JSON.stringify(orderData));
-    } catch {}
 
     let remaining = 3;
     const interval = setInterval(() => {
@@ -263,14 +327,8 @@ export default function CheckoutPage() {
       setCountdown(remaining);
       if (remaining <= 0) {
         clearInterval(interval);
-        if (paymentMethod === 'wallet' && user) {
-          updateUser({
-            walletBalance: Math.max(0, (user.walletBalance || walletBalance) - grandTotal),
-            ordersCount: (user.ordersCount || 0) + 1,
-          });
-        }
-        clearCart();
-        router.push(`/order-success?orderId=${orderId}`);
+        setTimerId(null);
+        executeOrderPlacement();
       }
     }, 1000);
 
@@ -284,16 +342,6 @@ export default function CheckoutPage() {
     }
     setIsSubmitting(false);
     setCountdown(3);
-  };
-
-  const handleTopup = (amt: number) => {
-    setWalletBalance((prev) => {
-      const next = prev + amt;
-      if (user) {
-        updateUser({ walletBalance: next });
-      }
-      return next;
-    });
   };
 
   if (isLoading || !isAuthenticated) {
@@ -461,7 +509,7 @@ export default function CheckoutPage() {
                     ? 'bg-brand-primary-soft/40 border-brand-primary shadow-xs'
                     : 'bg-white border-brand-border hover:border-brand-primary/30'
                 }`}
-                onClick={() => setPaymentMethod('jawwal')}
+                /* Jawwal Pay disabled pending backend implementation */
               >
                 <div className={`w-4 h-4 rounded-full border flex items-center justify-center mt-0.5 flex-shrink-0 ${
                   paymentMethod === 'jawwal' ? 'border-brand-primary bg-brand-primary' : 'border-brand-border bg-white'
@@ -471,7 +519,7 @@ export default function CheckoutPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs sm:text-sm font-extrabold text-brand-dark">جوال باي (Jawwal Pay)</span>
-                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-surface text-brand-dark border border-brand-border">محفظة إلكترونية</span>
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">قريباً · قيد الربط الفني</span>
                   </div>
                   <div className="text-[11px] text-brand-muted mt-0.5 leading-relaxed">
                     سداد مسبق فوري وآمن عبر تطبيق جوال باي بهاتفك (+3% رسوم بوابة)
@@ -529,17 +577,11 @@ export default function CheckoutPage() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 pt-2 border-t border-brand-border-subtle flex-wrap">
-                  <span className="text-[11px] text-brand-subtle font-bold">شحن سريع:</span>
-                  <button type="button" className="px-2.5 py-1 rounded-md bg-white border border-brand-border text-xs font-bold hover:border-brand-primary transition-colors cursor-pointer" onClick={() => handleTopup(50)}>
-                    +50 ₪
-                  </button>
-                  <button type="button" className="px-2.5 py-1 rounded-md bg-white border border-brand-border text-xs font-bold hover:border-brand-primary transition-colors cursor-pointer" onClick={() => handleTopup(100)}>
-                    +100 ₪
-                  </button>
-                  <button type="button" className="px-2.5 py-1 rounded-md bg-white border border-brand-border text-xs font-bold hover:border-brand-primary transition-colors cursor-pointer" onClick={() => handleTopup(200)}>
-                    +200 ₪
-                  </button>
+                <div className="flex items-center justify-between pt-2 border-t border-brand-border-subtle flex-wrap gap-2">
+                  <span className="text-[11px] text-brand-subtle">لإيداع رصيد فعلي في محفظتك:</span>
+                  <Link href="/account" className="text-xs font-bold text-brand-primary hover:underline">
+                    شحن الرصيد عبر لوحة الحساب ←
+                  </Link>
                 </div>
               </div>
             )}
@@ -638,6 +680,12 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {orderError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold flex items-center justify-between">
+                <span>⚠️ {orderError}</span>
+                <button type="button" onClick={() => setOrderError(null)} className="text-red-500 hover:text-red-800 text-sm">✕</button>
+              </div>
+            )}
             {/* Desktop Action Button */}
             <div className="hidden lg:block pt-1">
               <button
@@ -674,16 +722,28 @@ export default function CheckoutPage() {
       {isSubmitting && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-brand-dark text-white px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-3 duration-200">
           <div>
-            <div className="font-extrabold">جاري تثبيت وحجز طلبك... ({countdown})</div>
-            <div className="text-[11px] text-brand-bg opacity-85">لديك 3 ثوانٍ للتراجع إن ضغطت بالخطأ</div>
+            <div className="font-extrabold">
+              {countdown > 0
+                ? `جاري تثبيت وحجز طلبك... (${countdown})`
+                : 'جاري سداد الفاتورة واعتماد الشحنة بالسيرفر...'}
+            </div>
+            <div className="text-[11px] text-brand-bg opacity-85">
+              {countdown > 0
+                ? 'لديك 3 ثوانٍ للتراجع إن ضغطت بالخطأ'
+                : 'يرجى الانتظار لحظات لتأكيد العملية بنجاح'}
+            </div>
           </div>
-          <button
-            type="button"
-            className="px-3 py-1 rounded-full bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover transition-colors cursor-pointer border-0"
-            onClick={handleCancelUndo}
-          >
-            تراجع ✕
-          </button>
+          {countdown > 0 ? (
+            <button
+              type="button"
+              className="px-3 py-1 rounded-full bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover transition-colors cursor-pointer border-0"
+              onClick={handleCancelUndo}
+            >
+              تراجع ✕
+            </button>
+          ) : (
+            <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin shrink-0" />
+          )}
         </div>
       )}
 

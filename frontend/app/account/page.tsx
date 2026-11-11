@@ -6,6 +6,9 @@ import { useAuth } from '@/context/AuthContext';
 import { authService } from '@/features/auth/services/auth.service';
 import { useCart } from '@/context/CartContext';
 import { useUserWalletQuery } from '@/features/wallet/hooks/useUserWallet';
+import { orderService } from '@/features/orders/services/order.service';
+import type { BackendOrder } from '@/features/orders/types/order.types';
+import { useEffect, useMemo } from 'react';
 
 interface AddressItem {
   id: string;
@@ -51,33 +54,31 @@ export default function AccountPage() {
   const [isAddAddressOpen, setIsAddAddressOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
-  // Address state (Operational Gaza Middle Governorate Pattern)
-  const [addresses, setAddresses] = useState<AddressItem[]>([
-    {
-      id: 'addr-1',
-      label: 'المنزل',
-      recipientName: user?.name || 'محمد صباح',
-      phone: user?.phone || '0592236240',
-      city: 'دير البلح',
-      area: 'البلد - شارع السلام',
-      detailedAddress: 'منطقة النخيل، بجوار صيدلية القدس',
-      landmark: 'بالقرب من ملعب الدرة ومسجد النور',
-      notes: 'الطابق الثاني - الاتصال قبل الوصول بـ 15 دقيقة',
-      isDefault: true,
-    },
-    {
-      id: 'addr-2',
-      label: 'العمل',
-      recipientName: user?.name || 'محمد صباح',
-      phone: user?.phone || '0592236240',
-      city: 'مخيم النصيرات',
-      area: 'السوق المركزي',
-      detailedAddress: 'مجمع الأندلس التجاري، الطابق الأرضي',
-      landmark: 'مقابل مكتب البريد',
-      notes: 'التسليم من 9 صباحاً حتى 3 عصراً',
-      isDefault: false,
-    },
-  ]);
+  // Address state initialized from authenticated user
+  const [addresses, setAddresses] = useState<AddressItem[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      if (user.addresses && user.addresses.length > 0) {
+        setAddresses(
+          user.addresses.map((a, idx) => ({
+            id: a._id || `addr-${idx}`,
+            label: a.label || 'المنزل',
+            recipientName: user.name,
+            phone: a.phone || user.phone || '',
+            city: a.city || 'دير البلح',
+            area: a.governorate || 'المحافظة الوسطى',
+            detailedAddress: a.detailedAddress,
+            landmark: a.landmark || 'وسط المدينة',
+            notes: a.notes,
+            isDefault: a.isDefault ?? idx === 0,
+          }))
+        );
+      } else {
+        setAddresses([]);
+      }
+    }
+  }, [user]);
 
   // Add Address Form State
   const [newAddressLabel, setNewAddressLabel] = useState('المنزل');
@@ -88,16 +89,67 @@ export default function AccountPage() {
   const [newAddressNotes, setNewAddressNotes] = useState('');
   const [newAddressIsDefault, setNewAddressIsDefault] = useState(false);
 
-  // Active Shipment Mock (Gaza Middle Governorate)
-  const activeOrder = {
-    id: '25431',
-    status: 'out_for_delivery',
-    statusText: 'المندوب استلم الطرد الموحد وباتجاه عنوانك',
-    itemsCount: 3,
-    vendorNames: ['زاد الزيتون (دير البلح)', 'عطور يافا (النصيرات)'],
-    total: 218,
-    courierName: 'أبو أحمد النجار',
-  };
+  // Real Customer Orders Integration
+  const [userOrders, setUserOrders] = useState<BackendOrder[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      setIsLoadingOrders(true);
+      orderService
+        .getCustomerOrders({ limit: 50 })
+        .then((res) => {
+          if (res.success && res.data && Array.isArray(res.data.orders)) {
+            setUserOrders(res.data.orders);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          setIsLoadingOrders(false);
+        });
+    }
+  }, [isAuthenticated]);
+
+  // Group sub-orders by orderGroupId
+  const groupedOrders = useMemo(() => {
+    const map = new Map<string, BackendOrder[]>();
+    for (const o of userOrders) {
+      const gid = o.orderGroupId || o._id;
+      if (!map.has(gid)) map.set(gid, []);
+      map.get(gid)!.push(o);
+    }
+    return Array.from(map.entries()).map(([groupId, ords]) => {
+      const totalItems = ords.reduce(
+        (sum, ord) => sum + ord.items.reduce((s, it) => s + it.quantity, 0),
+        0
+      );
+      const subtotal = ords.reduce((sum, ord) => sum + ord.subtotal, 0);
+      const stores = Array.from(
+        new Set(
+          ords.map((ord) =>
+            typeof ord.storeId === 'object' ? ord.storeId.name : 'متجر معتمد'
+          )
+        )
+      );
+      const allCancelled = ords.every((ord) => ord.status === 'cancelled');
+      const allDelivered = ords.every((ord) => ord.status === 'delivered');
+      const status = allCancelled ? 'cancelled' : allDelivered ? 'delivered' : 'pending';
+      return {
+        groupId,
+        orders: ords,
+        totalItems,
+        subtotal,
+        total: subtotal + 10,
+        stores,
+        status,
+        createdAt: ords[0]?.createdAt,
+      };
+    });
+  }, [userOrders]);
+
+  const totalOrdersCount = groupedOrders.length;
+  const activeOrders = groupedOrders.filter((g) => g.status === 'pending');
+  const latestActiveOrder = activeOrders[0] || null;
 
   // Balance computation
   const withdrawableBalance = walletData?.withdrawableBalance ?? user?.walletBalance ?? 0;
@@ -105,18 +157,30 @@ export default function AccountPage() {
   const currentBalance = walletData?.balance ?? withdrawableBalance + storeCreditBalance;
 
   // Handlers
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editName.trim()) {
       showToast('الاسم الكامل مطلوب');
       return;
     }
-    updateUser({
-      name: editName.trim(),
-      phone: editPhone.trim(),
-    });
-    setIsEditProfileOpen(false);
-    showToast('تم حفظ البيانات الشخصية بنجاح');
+    try {
+      const res = await authService.updateProfile({
+        name: editName.trim(),
+        phoneNumber: editPhone.trim(),
+      });
+      if (res.success && res.data?.user) {
+        updateUser({
+          name: editName.trim(),
+          phone: editPhone.trim(),
+        });
+        setIsEditProfileOpen(false);
+        showToast('تم حفظ البيانات الشخصية في قاعدة البيانات بنجاح');
+      } else {
+        showToast(res.message || 'تعذر تحديث البيانات');
+      }
+    } catch {
+      showToast('تعذر الاتصال بالخادم لحفظ التعديلات');
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -183,8 +247,8 @@ export default function AccountPage() {
     const newAddr: AddressItem = {
       id: newId,
       label: newAddressLabel,
-      recipientName: user?.name || 'محمد صباح',
-      phone: user?.phone || '0592236240',
+      recipientName: user?.name || 'الزبون',
+      phone: user?.phone || '',
       city: newAddressCity,
       area: newAddressArea.trim() || 'المنطقة العامة',
       detailedAddress: newAddressDetails.trim(),
@@ -193,6 +257,14 @@ export default function AccountPage() {
       isDefault: newAddressIsDefault || addresses.length === 0,
     };
 
+    const updatedAddresses = [...addresses, newAddr];
+    authService.updateProfile({
+      addresses: updatedAddresses.map(a => ({
+        city: a.city,
+        detailedAddress: a.detailedAddress,
+        isDefault: a.isDefault,
+      }))
+    }).catch(() => {});
     setAddresses((prev) => {
       if (newAddr.isDefault) {
         return [...prev.map((a) => ({ ...a, isDefault: false })), newAddr];
@@ -352,7 +424,7 @@ export default function AccountPage() {
                     </svg>
                   </span>
                   <div className="text-sm sm:text-lg font-black text-brand-dark font-mono leading-tight">
-                    1
+                    {isLoadingOrders ? '...' : totalOrdersCount}
                   </div>
                   <span className="text-[10px] sm:text-xs text-brand-muted font-bold block mt-0.5">
                     إجمالي الطلبات
@@ -398,7 +470,7 @@ export default function AccountPage() {
             {/* -------------------------------------------------------------
                 ACTIVE SHIPMENT BANNER (FULL WIDTH IF ACTIVE)
                 ------------------------------------------------------------- */}
-            {activeOrder && (
+            {latestActiveOrder && (
               <div className="p-4 sm:p-5 rounded-[16px] bg-white border border-brand-primary/30 shadow-xs space-y-3 relative overflow-hidden ring-1 ring-brand-primary/20">
                 <div className="flex items-center justify-between pb-2.5 border-b border-brand-border/70 flex-wrap gap-2">
                   <div className="flex items-center gap-2">
@@ -407,29 +479,29 @@ export default function AccountPage() {
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-trust" />
                     </span>
                     <h2 className="text-xs sm:text-sm font-black text-brand-dark m-0">
-                      طردك الموحد قيد التوصيل الميداني
+                      طردك الموحد قيد التجهيز والتوصيل الميداني
                     </h2>
                   </div>
                   <span className="text-[11px] font-black text-brand-primary bg-[var(--brand-primary-soft)] border border-[var(--brand-primary-border)] px-2.5 py-0.5 rounded-full font-mono">
-                    طلب #{activeOrder.id}
+                    طلب #{latestActiveOrder.groupId.slice(-8).toUpperCase()}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between gap-3 flex-wrap text-xs">
                   <div className="space-y-0.5">
                     <span className="font-bold text-brand-dark block">
-                      {activeOrder.itemsCount} منتجات • {activeOrder.vendorNames.join('، ')}
+                      {latestActiveOrder.totalItems} منتجات • {latestActiveOrder.stores.join('، ')}
                     </span>
                     <span className="text-brand-trust font-medium block">
-                      كابتن التوصيل: {activeOrder.courierName} ({activeOrder.statusText})
+                      قيد الفحص والتغليف بمستودع سَدِيم الموحد تمهيداً للتسليم
                     </span>
                   </div>
                   <div className="text-right sm:text-left shrink-0">
                     <span className="text-base font-black text-brand-primary font-mono block">
-                      {activeOrder.total} ₪
+                      {latestActiveOrder.total} ₪
                     </span>
                     <span className="text-[10px] text-brand-muted block">
-                      شامل توصيل 8 ₪ ثابت
+                      شامل توصيل 10 ₪ موحد
                     </span>
                   </div>
                 </div>
@@ -439,13 +511,13 @@ export default function AccountPage() {
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12" />
                     </svg>
-                    <span>حق الفحص والمعاينة عند الباب قبل الدفع</span>
+                    <span>حق الفحص والمعاينة عند الباب قبل الاستلام</span>
                   </span>
                   <Link
-                    href={`/tracking?orderId=${activeOrder.id}`}
+                    href={`/tracking?orderId=${latestActiveOrder.groupId}`}
                     className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-[8px] bg-brand-primary hover:brightness-105 text-white text-xs font-black no-underline shadow-2xs transition-all active:scale-95"
                   >
-                    <span>تتبع المندوب خطوة بخطوة</span>
+                    <span>تتبع الشحنة الموحدة</span>
                     <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="15 18 9 12 15 6" />
                     </svg>
@@ -662,7 +734,7 @@ export default function AccountPage() {
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="text-[10px] font-bold text-brand-trust bg-[var(--brand-trust-soft)] px-2 py-0.5 rounded-full border border-[var(--brand-trust-border)]">
-                          1 نشط
+                          {activeOrders.length > 0 ? `${activeOrders.length} قيد التجهيز` : `${totalOrdersCount} طلب`}
                         </span>
                         <svg className="w-3.5 h-3.5 text-brand-subtle group-hover:text-brand-primary group-hover:-translate-x-0.5 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="15 18 9 12 15 6" />
@@ -789,7 +861,7 @@ export default function AccountPage() {
                   </div>
 
                   <a
-                    href={`https://wa.me/970590000000?text=${encodeURIComponent(
+                    href={`https://wa.me/970599123456?text=${encodeURIComponent(
                       'مرحباً منسق سَدِيم، استفسار بخصوص حسابي وعناوين التوصيل في المحافظة الوسطى'
                     )}`}
                     target="_blank"

@@ -496,7 +496,7 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
             const regionOrders = divideByRegion(storeOrders)
 
             // calculate delivery fees - based on the regions and stores of every region
-            const deliveryFee = 8
+            const deliveryFee = 10
 
             // calculate total amount for each region order
             const { totalAmount, subtotal } = calculateTotalOrdersAmount(storeOrders, deliveryFee)
@@ -603,7 +603,7 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             }
 
             // calculate the new deliveryfee
-            const deliveryFee = 8
+            const deliveryFee = 10
 
             // calculate the new subtotal and amount of the order group
             const { subtotal, totalAmount } = calculateTotalOrdersAmount(subOrders, deliveryFee)

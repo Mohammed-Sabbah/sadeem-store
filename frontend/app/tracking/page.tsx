@@ -92,7 +92,7 @@ function TrackingContent() {
               paymentMethod: 'wallet',
               items: groupItems,
               subtotal,
-              deliveryFee: 8,
+              deliveryFee: 10,
               total: subtotal + 10,
             });
           } else {

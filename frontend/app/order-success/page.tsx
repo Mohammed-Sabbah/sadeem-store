@@ -27,7 +27,7 @@ function OrderSuccessContent() {
   const [phone, setPhone] = useState<string>(user?.phone || '');
   const [paymentMethod, setPaymentMethod] = useState<string>('wallet');
   const [total, setTotal] = useState<number>(0);
-  const [deliveryFee, setDeliveryFee] = useState<number>(8);
+  const [deliveryFee, setDeliveryFee] = useState<number>(10);
   const [items, setItems] = useState<OrderItemDisplay[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -58,7 +58,7 @@ function OrderSuccessContent() {
             setPaymentMethod('wallet');
 
             const orderSubtotal = groupOrders.reduce((sum, o) => sum + o.subtotal, 0);
-            setDeliveryFee(8);
+            setDeliveryFee(10);
             setTotal(orderSubtotal + 10);
 
             const fetchedItems: OrderItemDisplay[] = [];

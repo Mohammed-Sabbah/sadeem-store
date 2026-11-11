@@ -148,7 +148,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   // Fixed delivery fee in Gaza Central Governorate: 8 NIS for the unified package
-  const deliveryFee = items.length > 0 ? 8 : 0;
+  const deliveryFee = items.length > 0 ? 10 : 0;
   const grandTotal = subtotal + deliveryFee;
 
   return (

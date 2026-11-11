@@ -1,50 +1,38 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { authService } from '@/features/auth/services/auth.service';
+
+export type UserRole = 'customer' | 'merchant' | 'seller' | 'courier' | 'admin';
+
+export interface UserAddress {
+  _id?: string;
+  label?: string;
+  governorate?: string;
+  city?: string;
+  detailedAddress: string;
+  phone?: string;
+  landmark?: string;
+  notes?: string;
+  isDefault?: boolean;
+}
 
 export interface UserProfile {
   id: string;
   name: string;
   phone: string;
-  backupPhone?: string;
   email?: string;
   city?: string;
   address?: string;
-  addresses?: Array<{
-    _id?: string;
-    label?: string;
-    governorate?: string;
-    city?: string;
-    detailedAddress: string;
-    phone?: string;
-    isDefault?: boolean;
-    landmark?: string;
-    notes?: string;
-  }>;
-  jawwalPayNumber?: string;
-  notificationChannel?: 'whatsapp' | 'sms';
-  role: 'customer' | 'merchant' | 'seller' | 'courier' | 'admin';
+  addresses?: UserAddress[];
+  role: UserRole;
   status: 'active' | 'pending_approval' | 'suspended';
   walletBalance: number;
-  ordersCount?: number;
+  ordersCount: number;
   merchantId?: string | null;
 }
 
-/**
- * دالة موحدة لمواءمة وتوحيد مسميات الأدوار بين الباك إند (user, seller) والفرونت إند (customer, merchant)
- */
-export function normalizeRole(role?: string): 'customer' | 'merchant' | 'courier' | 'admin' {
-  if (!role) return 'customer';
-  const r = role.toLowerCase().trim();
-  if (r === 'seller' || r === 'merchant') return 'merchant';
-  if (r === 'user' || r === 'customer') return 'customer';
-  if (r === 'admin') return 'admin';
-  if (r === 'courier') return 'courier';
-  return 'customer';
-}
-
-interface AuthContextType {
+export interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -52,6 +40,13 @@ interface AuthContextType {
   logout: () => Promise<void>;
   updateUser: (fields: Partial<UserProfile>) => void;
   checkSession: () => Promise<void>;
+}
+
+function normalizeRole(role?: string): UserRole {
+  if (role === 'admin') return 'admin';
+  if (role === 'merchant' || role === 'seller') return 'merchant';
+  if (role === 'courier') return 'courier';
+  return 'customer';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -83,62 +78,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           merchantId: u.merchantId,
         };
 
-        // إذا كان الحساب موقوفاً أو معلقاً في قاعدة البيانات، يجب تنظيف الكاش فوراً
-        if (profile.status !== 'active') {
-          setUser(null);
-          try {
-            localStorage.removeItem(AUTH_STORAGE_KEY);
-          } catch {}
-        } else {
+        if (profile.status === 'active') {
           setUser(profile);
-          try {
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
-          } catch {}
+        } else {
+          setUser(null);
         }
       } else {
-        // إذا رجع السيرفر خطأ صريح 401 أو 403 (انتهت الجلسة أو الحساب معطل)، نمسح الجلسة المخزنة
-        if (res.statusCode === 401 || res.statusCode === 403) {
-          setUser(null);
-          try {
-            localStorage.removeItem(AUTH_STORAGE_KEY);
-          } catch {}
-        } else {
-          // استرجاع الكاش فقط في حالات انقطاع الشبكة الفعلي (PWA Offline Resilience)
-          try {
-            const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-            if (stored) {
-              const parsed = JSON.parse(stored);
-              if (parsed && parsed.status === 'active') {
-                setUser(parsed);
-              } else {
-                setUser(null);
-                localStorage.removeItem(AUTH_STORAGE_KEY);
-              }
-            } else {
-              setUser(null);
-            }
-          } catch {
-            setUser(null);
-          }
-        }
-      }
-    } catch {
-      try {
-        const stored = localStorage.getItem(AUTH_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (parsed && parsed.status === 'active') {
-            setUser(parsed);
-          } else {
-            setUser(null);
-            localStorage.removeItem(AUTH_STORAGE_KEY);
-          }
-        } else {
-          setUser(null);
-        }
-      } catch {
         setUser(null);
       }
+    } catch {
+      setUser(null);
     } finally {
       setIsLoading(false);
     }
@@ -179,19 +128,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       merchantId: (rawUser.merchantId as string | undefined) || null,
     };
 
-    if (profile.status !== 'active') {
+    if (profile.status === 'active') {
+      setUser(profile);
+    } else {
       setUser(null);
-      try {
-        localStorage.removeItem(AUTH_STORAGE_KEY);
-      } catch {}
-      return;
-    }
-
-    setUser(profile);
-    try {
-      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(profile));
-    } catch (e) {
-      console.error(e);
     }
   }, []);
 
@@ -204,6 +144,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('sadeem_cart');
+        localStorage.removeItem('sadeem_last_order');
       } catch (e) {
         console.error(e);
       }
@@ -213,13 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const updateUser = useCallback((fields: Partial<UserProfile>) => {
     setUser((prev) => {
       if (!prev) return null;
-      const updated = { ...prev, ...fields };
-      try {
-        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
-      } catch (e) {
-        console.error(e);
-      }
-      return updated;
+      return { ...prev, ...fields };
     });
   }, []);
 
@@ -245,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

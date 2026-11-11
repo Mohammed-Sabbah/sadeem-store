@@ -48,6 +48,10 @@ export function useRegister() {
     }
 
     if (res.data?.user) {
+      try {
+        localStorage.removeItem('sadeem_last_order');
+        localStorage.removeItem('sadeem_cart');
+      } catch {}
       setSessionUser(res.data.user);
       router.push(redirectUrl);
     }

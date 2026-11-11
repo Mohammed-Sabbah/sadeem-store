@@ -30,3 +30,25 @@ exports.getMe = async (req, res, next) => {
         return next(err);
     }
 }
+
+const User = require("../models/User");
+
+exports.updateProfile = async (req, res, next) => {
+    try {
+        const { name, phoneNumber, addresses } = req.body;
+        const updates = {};
+        if (typeof name === 'string' && name.trim()) updates.name = name.trim();
+        if (typeof phoneNumber === 'string' && phoneNumber.trim()) updates.phoneNumber = phoneNumber.trim();
+        if (Array.isArray(addresses)) updates.addresses = addresses;
+
+        const updatedUser = await User.findByIdAndUpdate(
+            req.user._id,
+            { $set: updates },
+            { new: true, runValidators: true }
+        );
+
+        return success(res, 200, { user: sanitizeUser(updatedUser) });
+    } catch (err) {
+        return next(err);
+    }
+};

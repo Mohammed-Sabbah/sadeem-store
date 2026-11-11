@@ -124,7 +124,25 @@ async function rejectStore(req, res, next) {
     }
 }
 
+
+async function getPublicStores(req, res, next) {
+    try {
+        const stores = await Store.find({
+            status: STATUS.ACTIVE,
+            approveStatus: APPROVE_STATUS.APPROVED,
+            isDeleted: false,
+        })
+            .select('name logo description address status approveStatus')
+            .lean();
+
+        return success(res, 200, { stores });
+    } catch (err) {
+        return next(err);
+    }
+}
+
 module.exports = {
+    getPublicStores,
     getPublicStore,
     approveStore,
     getMyStore,

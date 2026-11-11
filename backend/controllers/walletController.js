@@ -19,6 +19,7 @@ async function getWallet(req, res, next) {
         if (wallet.isFrozen)
             return error(res, 400, "Your wallet is not active")
 
+        wallet.balance = (wallet.withdrawableBalance || 0) + (wallet.storeCreditBalance || 0);
         return success(res, 200, { wallet });
     } catch (err) {
         return next(err);

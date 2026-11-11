@@ -496,7 +496,7 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
             const regionOrders = divideByRegion(storeOrders)
 
             // calculate delivery fees - based on the regions and stores of every region
-            const deliveryFee = 10
+            const deliveryFee = 8
 
             // calculate total amount for each region order
             const { totalAmount, subtotal } = calculateTotalOrdersAmount(storeOrders, deliveryFee)
@@ -603,7 +603,7 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             }
 
             // calculate the new deliveryfee
-            const deliveryFee = 10
+            const deliveryFee = 8
 
             // calculate the new subtotal and amount of the order group
             const { subtotal, totalAmount } = calculateTotalOrdersAmount(subOrders, deliveryFee)
@@ -632,7 +632,8 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
     }
 }
 
-const cancelOrder = async ({ user, orderGroupId, store = null }) => {
+const cancelOrder = async ({ user, orderGroupId, orderId, store = null }) => {
+    const targetGroupId = orderGroupId || orderId;
     const session = await mongoose.startSession()
     try {
         let cancelledOrder;
@@ -652,7 +653,7 @@ const cancelOrder = async ({ user, orderGroupId, store = null }) => {
 
             // Update Order
             const orderFilters = {
-                _id: orderGroupId,
+                _id: targetGroupId,
                 status: ORDER_STATUS.PENDING,
                 ...(userId ? { userId } : {}),
             }

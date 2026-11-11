@@ -4,15 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { Product } from '@/types';
-import { products } from '@/data/products';
 import { ProductCard } from '@/components/ui/ProductCard';
 
-const INITIAL_WISHLIST: Product[] = [
-  products.find((p) => p.id === 'canaan-wool-hoodie') || products[4],
-  products.find((p) => p.id === 'power-station-1200w') || products[2],
-  products.find((p) => p.id === 'olive-oil-amphora') || products[1],
-  products.find((p) => p.id === 'router-4g-cat6') || products[0],
-];
+const INITIAL_WISHLIST: Product[] = [];
 
 export default function WishlistPage() {
   const { addToCart } = useCart();

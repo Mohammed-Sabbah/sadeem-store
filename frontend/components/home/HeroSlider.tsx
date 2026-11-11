@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
-import { products } from '@/data/products';
 
 export function HeroSlider() {
   const [activeSlide, setActiveSlide] = useState(0);
@@ -42,9 +41,7 @@ export function HeroSlider() {
     touchStartX.current = null;
   };
 
-  const powerStationProduct = products.find((p) => p.id === 'power-station-1200w') || products[2];
-  const oliveOilProduct = products.find((p) => p.id === 'olive-oil-amphora') || products[1];
-
+    
   return (
     <section className="max-w-[1240px] mx-auto px-4 pt-3 md:pt-4 w-full" aria-label="أبرز العروض والمنتجات">
       <div
@@ -97,7 +94,7 @@ export function HeroSlider() {
                   </div>
 
                   <Link
-                    href={`/product/${powerStationProduct.id}`}
+                    href="/explore"
                     className="h-7 sm:h-9 md:h-11 px-3 sm:px-5 rounded-full md:rounded-lg bg-brand-primary text-white hover:brightness-110 text-[11px] sm:text-xs md:text-sm font-extrabold flex items-center gap-1.5 shadow-xs transition-all shrink-0"
                   >
                     <span className="hidden md:inline">احجز مع المعاينة</span>
@@ -112,7 +109,7 @@ export function HeroSlider() {
 
               {/* Image Column */}
               <Link
-                href={`/product/${powerStationProduct.id}`}
+                href="/explore"
                 className="w-full h-full flex items-center justify-center relative cursor-pointer"
               >
                 <img
@@ -168,7 +165,7 @@ export function HeroSlider() {
                   <button
                     type="button"
                     className="h-7 sm:h-9 md:h-11 px-3 sm:px-5 rounded-full md:rounded-lg bg-brand-primary text-white hover:brightness-110 text-[11px] sm:text-xs md:text-sm font-extrabold flex items-center gap-1.5 shadow-xs transition-all shrink-0 cursor-pointer"
-                    onClick={() => addToCart(oliveOilProduct, 1)}
+                    /* Add to cart from explore */
                   >
                     <span className="hidden md:inline">اقتنِ الخابية</span>
                     <span className="md:inline">اقتنِ الآن</span>
@@ -182,7 +179,7 @@ export function HeroSlider() {
 
               {/* Image Column */}
               <Link
-                href={`/product/${oliveOilProduct.id}`}
+                href="/explore"
                 className="w-full h-full flex items-center justify-center relative cursor-pointer"
               >
                 <img

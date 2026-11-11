@@ -36,7 +36,6 @@ export default function MerchantSidebar({
     {
       title: 'الطلبيات والطرود',
       href: '/merchant/orders',
-      badge: 'قريباً',
       isActive: pathname === '/merchant/orders',
       icon: (
         <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

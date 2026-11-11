@@ -878,7 +878,7 @@ export default function ProductDetailPage() {
               <div className="p-4 bg-brand-surface border border-brand-border rounded-xl shadow-xs">
                 <div className="flex items-center justify-between mb-1.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-brand-dark">أحمد سلامة</span>
+                    <span className="text-xs font-bold text-brand-dark">متسوق موثق</span>
                     <span className="text-[11px] text-brand-muted">· دير البلح</span>
                   </div>
                   <span className="text-[11px] text-brand-muted">منذ 3 أيام</span>

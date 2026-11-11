@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { catalogService, type CatalogStore, type CatalogProduct } from '@/features/catalog/catalog.service';
 import Link from 'next/link';
-import { stores } from '@/data/stores';
-import { products } from '@/data/products';
 import { ProductCard } from '@/components/ui/ProductCard';
 
 const CATEGORIES: Array<{
@@ -112,6 +111,26 @@ export default function ExplorePage() {
   const [selectedCity, setSelectedCity] = useState<string>('الكل');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+
+  const [stores, setStores] = useState<CatalogStore[]>([]);
+  const [products, setProducts] = useState<CatalogProduct[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      catalogService.getStores().catch(() => []),
+      catalogService.getProducts().catch(() => []),
+    ]).then(([liveStores, liveProducts]) => {
+      if (!active) return;
+      setStores(liveStores);
+      setProducts(liveProducts);
+      setIsLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Filter stores by city & search
   const filteredStores = stores.filter((store) => {

@@ -1,6 +1,6 @@
 export type WalletTransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'refund';
 
-export type WalletTransactionStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type WalletTransactionStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded' | 'partially_refund';
 
 export type BalanceType = 'withdrawable' | 'storeCredit';
 

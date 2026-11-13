@@ -17,6 +17,9 @@ export function useUserWalletQuery(options?: {
     queryKey: USER_WALLET_KEYS.wallet,
     queryFn: async () => {
       const res = await walletService.getWallet();
+      if (!res.success || !res.data) {
+        throw new Error(res.message || 'تعذر استرجاع المحفظة');
+      }
       return res.data;
     },
     enabled: options?.enabled ?? true,

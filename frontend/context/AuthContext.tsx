@@ -144,7 +144,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY);
-        localStorage.removeItem('sadeem_cart');
         localStorage.removeItem('sadeem_last_order');
       } catch (e) {
         console.error(e);

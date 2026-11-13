@@ -6,6 +6,9 @@ import type {
 } from '../types/order.types';
 
 export interface CreateOrderPayload {
+  ownerId: string;
+  cartRevision: number;
+  expectedSubtotal: number;
   items: Array<{
     variantId: string;
     quantity: number;

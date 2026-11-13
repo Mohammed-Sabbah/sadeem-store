@@ -373,7 +373,7 @@ export default function ProductDetailPage() {
     });
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product) return;
     if (isOutOfStock) {
       showToast('عذراً، هذا الخيار غير متوفر حالياً بالمخزون');
@@ -384,7 +384,7 @@ export default function ProductDetailPage() {
     const sizeVal = Object.entries(selectedAttributes).find(([k]) => k.includes('مقاس') || k === 'المقاس')?.[1];
     const activeImage = selectedVariant?.image || (selectedVariant?.images && selectedVariant.images[0]) || selectedImage || product.image;
 
-    addToCart(
+    const result = await addToCart(
       {
         ...product,
         image: activeImage,
@@ -398,6 +398,7 @@ export default function ProductDetailPage() {
       sizeVal,
       selectedVariant?._id
     );
+    if (!result.success) { showToast(result.message || 'تعذر حفظ السلة'); return; }
     showToast(`✓ تمت إضافة (${quantity}) من "${product.title.substring(0, 22)}..." إلى السلة`);
   };
 
@@ -522,14 +523,14 @@ export default function ProductDetailPage() {
               <div className="flex items-center justify-between pb-3 border-b border-brand-border/60">
                 <div className="flex items-center gap-2 text-xs font-bold text-brand-dark">
                   <span className="w-2 h-2 rounded-full bg-brand-trust" title="متجر معتمد" />
-                  <Link href={`/store/${product.vendor.id}`} className="hover:text-brand-primary transition-colors">
-                    {product.vendor.name}
+                  <Link href={`/store/${product.vendor?.id || ''}`} className="hover:text-brand-primary transition-colors">
+                    {product.vendor?.name || 'متجر معتمد'}
                   </Link>
-                  <span className="text-brand-muted font-normal text-[11px]">({product.vendor.city} · موثق)</span>
+                  <span className="text-brand-muted font-normal text-[11px]">({product.vendor?.city || 'المحافظة الوسطى'} · موثق)</span>
                 </div>
 
                 <Link
-                  href={`/store/${product.vendor.id}`}
+                  href={`/store/${product.vendor?.id || ''}`}
                   className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-primary bg-[var(--brand-primary-soft)] px-2.5 py-1 rounded-full border border-[var(--brand-primary-border)] hover:bg-brand-primary hover:text-white transition-all"
                 >
                   <span>زيارة المتجر</span>
@@ -1100,7 +1101,7 @@ export default function ProductDetailPage() {
           <div className="flex justify-between items-center p-2.5 bg-brand-card rounded-lg text-xs">
             <span className="text-brand-muted">المتجر والمنشأ:</span>
             <strong className="text-brand-dark">
-              {isAnonymousVendor ? 'توريد مباشر وموثق عبر سَدِيم' : `${product.vendor.name} · ${product.vendor.city}`}
+              {isAnonymousVendor ? 'توريد مباشر وموثق عبر سَدِيم' : `${product.vendor?.name || 'متجر معتمد'} · ${product.vendor?.city || 'المحافظة الوسطى'}`}
             </strong>
           </div>
           <div className="flex justify-between items-center p-2.5 bg-brand-card rounded-lg text-xs">

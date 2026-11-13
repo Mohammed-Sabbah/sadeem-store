@@ -81,7 +81,7 @@ const INITIAL_SAVED_ADDRESSES: SavedAddress[] = [];
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, deliveryFee, clearCart } = useCart();
+  const { items, subtotal, deliveryFee, revision, canCheckout, error: cartError, refreshCart } = useCart();
   const { user, isAuthenticated, isLoading, updateUser } = useAuth();
 
   // Route guard: Must be authenticated to checkout
@@ -190,7 +190,7 @@ export default function CheckoutPage() {
   );
 
   // Dynamic fee: 2 ₪ per km, min 7 ₪, max 80 ₪ (matches delivery.config.js)
-  const dynamicDeliveryFee = items.length > 0 ? 8 : 0;
+  const dynamicDeliveryFee = deliveryFee;
 
   const baseTotal = subtotal + dynamicDeliveryFee;
   const gatewayFee = paymentMethod === 'jawwal' ? Math.round(baseTotal * 0.03) : 0;
@@ -232,6 +232,11 @@ export default function CheckoutPage() {
 
   const executeOrderPlacement = async () => {
     setOrderError(null);
+    if (!canCheckout || revision === null || !user || !activeSelectedAddress) {
+      setOrderError('راجع السلة والعنوان قبل تأكيد الطلب');
+      setIsSubmitting(false);
+      return;
+    }
 
     // 1. Validate delivery address
     const addressParts = [
@@ -282,6 +287,9 @@ export default function CheckoutPage() {
 
     // 4. Send real API call to backend
     const res = await orderService.placeOrder({
+      ownerId: user.id,
+      cartRevision: revision,
+      expectedSubtotal: subtotal,
       items: payloadItems,
       deliveryAddress: fullAddress,
       deliveryPhone: phone,
@@ -291,6 +299,7 @@ export default function CheckoutPage() {
     if (!res.success || !res.data) {
       setOrderError(res.message || 'تعذر تأكيد الطلب، يرجى التحقق من الرصيد أو المحاولة مجدداً');
       setIsSubmitting(false);
+      await refreshCart();
       return;
     }
 
@@ -312,12 +321,13 @@ export default function CheckoutPage() {
     } catch {}
 
     // 7. Clear cart and route to order success
-    clearCart();
+    await refreshCart();
     router.push(`/order-success?orderId=${realOrderId}`);
   };
 
   const handleStartOrder = () => {
     setOrderError(null);
+    if (!canCheckout) { setOrderError('راجع السلة قبل تأكيد الطلب'); return; }
     setIsSubmitting(true);
     setCountdown(3);
 
@@ -359,7 +369,7 @@ export default function CheckoutPage() {
       <div className="flex items-center justify-between pb-3 mb-3 border-b border-brand-border">
         <div>
           <h1 className="text-lg sm:text-xl font-extrabold text-brand-dark m-0">تأكيد الطلب والسداد</h1>
-          <p className="text-xs text-brand-muted m-0 mt-0.5">طرد سَدِيم الموحد للمحافظة الوسطى · توصيل 8 ₪ فقط</p>
+          <p className="text-xs text-brand-muted m-0 mt-0.5">طرد سَدِيم الموحد للمحافظة الوسطى · توصيل 10 ₪ فقط</p>
         </div>
 
         <Link
@@ -405,7 +415,7 @@ export default function CheckoutPage() {
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
           </svg>
-          <span>طرد موحد 8 ₪</span>
+          <span>طرد موحد 10 ₪</span>
         </span>
         <span className="text-xs text-brand-muted font-medium leading-relaxed">
           تُجمع طلبياتك من كافة متاجر الوسطى في شحنة واحدة مع حق المعاينة عند الباب قبل الدفع.
@@ -692,7 +702,7 @@ export default function CheckoutPage() {
                 type="button"
                 className="w-full py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-sm sm:text-base font-extrabold shadow-md hover:shadow-lg transition-all active:scale-98 flex items-center justify-between cursor-pointer border-0 disabled:opacity-50"
                 onClick={handleStartOrder}
-                disabled={isSubmitting || (paymentMethod === 'wallet' && !isWalletSufficient)}
+                disabled={!canCheckout || isSubmitting || (paymentMethod === 'wallet' && !isWalletSufficient)}
               >
                 <span>تأكيد وحجز الطلب الآن</span>
                 <span>←</span>
@@ -711,13 +721,14 @@ export default function CheckoutPage() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-brand-trust">
                   <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
-                <span>طرد موحد لكافة المتاجر بمندوب واحد (8 ₪)</span>
+                <span>طرد موحد لكافة المتاجر بمندوب واحد (10 ₪)</span>
               </div>
             </div>
           </div>
         </aside>
       </div>
 
+      {cartError && <p role="alert" className="text-center text-red-600">{cartError}</p>}
       {/* 3-SECOND UNDO COUNTDOWN TOAST */}
       {isSubmitting && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-brand-dark text-white px-5 py-3 rounded-full text-xs sm:text-sm font-bold shadow-2xl flex items-center gap-4 animate-in fade-in slide-in-from-bottom-3 duration-200">
@@ -761,7 +772,7 @@ export default function CheckoutPage() {
           type="button"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs sm:text-sm font-bold shadow-sm transition-all active:scale-95 border-0 cursor-pointer disabled:opacity-50"
           onClick={handleStartOrder}
-          disabled={isSubmitting || (paymentMethod === 'wallet' && !isWalletSufficient)}
+          disabled={!canCheckout || isSubmitting || (paymentMethod === 'wallet' && !isWalletSufficient)}
         >
           <span>تأكيد وحجز الطلب</span>
           <span>←</span>
@@ -905,7 +916,7 @@ export default function CheckoutPage() {
               setBillSheetOpen(false);
               handleStartOrder();
             }}
-            disabled={isSubmitting || (paymentMethod === 'wallet' && !isWalletSufficient)}
+            disabled={!canCheckout || isSubmitting || (paymentMethod === 'wallet' && !isWalletSufficient)}
             className="w-full py-3 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-xs sm:text-sm font-extrabold transition-all active:scale-98 flex items-center justify-center gap-2 mt-2 cursor-pointer border-0 disabled:opacity-50 shadow-sm"
           >
             <span>تأكيد وحجز الطلب الآن</span>

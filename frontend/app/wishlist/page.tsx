@@ -26,11 +26,14 @@ export default function WishlistPage() {
     showToast(`تمت إزالة "${item ? item.title.substring(0, 22) : ''}..." من المفضلة`);
   };
 
-  const handleAddAllToCart = () => {
+  const handleAddAllToCart = async () => {
     if (items.length === 0) return;
-    items.forEach((item) => {
-      addToCart(item, 1);
-    });
+    let added = 0;
+    for (const item of items) {
+      const result = await addToCart(item, 1);
+      if (!result.success) { showToast(`تمت إضافة ${added} من ${items.length}. ${result.message || 'تعذر حفظ الصنف التالي'}`); return; }
+      added += 1;
+    }
     showToast(`تم نقل جميع المنتجات (${items.length}) إلى سلتك الموحدة بنجاح`);
   };
 

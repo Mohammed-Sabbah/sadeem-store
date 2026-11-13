@@ -39,6 +39,8 @@ export interface Store {
 }
 
 export interface CartItem {
+  unavailableReason?: string;
+  priceChanged?: boolean;
   product: Product;
   quantity: number;
   selectedColor?: string;

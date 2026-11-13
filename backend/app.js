@@ -42,6 +42,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/withdrawals', withDrawalRoutes);
 app.use('/api/deposits', depositRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/cart', require('./routes/cart.route'));
 
 app.use(notFound);
 app.use(errorHandler);

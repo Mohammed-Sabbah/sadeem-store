@@ -22,7 +22,10 @@ const validateCreateOrder = [
             "items",
             "deliveryAddress",
             "deliveryPhone",
-            "paymentMethod"
+            "paymentMethod",
+            "ownerId",
+            "cartRevision",
+            "expectedSubtotal"
         ];
 
         if (Object.keys(value).some((field) => !allowedFields.includes(field))) {
@@ -31,6 +34,12 @@ const validateCreateOrder = [
 
         return true;
     }),
+
+    body("ownerId").isMongoId().withMessage("Cart owner is required"),
+    body("cartRevision").isInt({ min: 0 }).custom(value => typeof value === "number")
+        .withMessage("Cart revision is required"),
+    body("expectedSubtotal").custom(value => typeof value === "number" && Number.isFinite(value) && value >= 0)
+        .withMessage("Confirmed subtotal is required"),
 
     body("items")
         .isArray({ min: 1, max: 50 })
@@ -53,6 +62,7 @@ const validateCreateOrder = [
 
     body("items.*.variantId")
         .isMongoId()
+        .customSanitizer(value => typeof value === "string" ? value.toLowerCase() : value)
         .withMessage("Variant ID must be a valid Mongo ID"),
 
     body("items.*.quantity")

@@ -40,7 +40,10 @@ const placeOrder = async (req, res, next) => {
             items: req.body.items,
             deliveryAddress: req.body.deliveryAddress,
             deliveryPhone: req.body.deliveryPhone,
-            paymentMethod: req.body.paymentMethod
+            paymentMethod: req.body.paymentMethod,
+            ownerId: req.body.ownerId,
+            cartRevision: req.body.cartRevision,
+            expectedSubtotal: req.body.expectedSubtotal
         })
         return success(res, 201, { order })
     } catch (err) {

@@ -18,6 +18,7 @@ const { ROLE } = require("../constants/enums")
 const { escapeRegex } = require("../utils")
 const { payForOrder, refundOrder, refundOrderItemsCancellation } = require("../services/walletService");
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
+const { consumeCart, assertOwner } = require('./cart.service');
 
 // Helpers
 const validateOrderItems = async (items, session) => {
@@ -104,6 +105,8 @@ const divideByStore = async (items, session) => {
     const stores = await Store.find({
         _id: { $in: storeIds },
         status: STATUS.ACTIVE,
+        isDeleted: false,
+        approveStatus: APPROVE_STATUS.APPROVED,
     })
         .select("_id regionId")
         .session(session)
@@ -480,14 +483,20 @@ const listOrder = async ({ orderId, actor, storeId }) => {
     return order;
 };
 
-const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
+const createOrder = async ({ userId, ownerId, cartRevision, expectedSubtotal, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
+    assertOwner(userId, ownerId);
     const session = await mongoose.startSession()
     try {
         let createdOrderGroup;
         let createdOrders;
         await session.withTransaction(async () => {
+            await consumeCart(userId, items, cartRevision, session);
             // validate order items - return validated order items 
             const { orderItems } = await validateOrderItems(items, session)
+            const currentSubtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
+            if (!Number.isFinite(expectedSubtotal) || Math.round(currentSubtotal * 100) !== Math.round(expectedSubtotal * 100)) {
+                throw error('Prices changed. Refresh your cart and confirm the new total.', 409);
+            }
 
             // divide order items by store
             const storeOrders = await divideByStore(orderItems, session)

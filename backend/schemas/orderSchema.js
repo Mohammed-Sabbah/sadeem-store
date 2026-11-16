@@ -1,6 +1,7 @@
 const { body, param, query } = require("express-validator");
 const validateRequest = require("./validateRequest");
 const { ORDER_STATUS_VALUES, PAYMENT_METHODS_VALUES } = require("../constants/enums")
+const { GAZA_REGIONS } = require("../constants/gaza-regions");
 
 // Validate order ID
 const validateOrderId = [
@@ -35,11 +36,16 @@ const validateCreateOrder = [
         return true;
     }),
 
-    body("ownerId").isMongoId().withMessage("Cart owner is required"),
-    body("cartRevision").isInt({ min: 0 }).custom(value => typeof value === "number")
-        .withMessage("Cart revision is required"),
-    body("expectedSubtotal").custom(value => typeof value === "number" && Number.isFinite(value) && value >= 0)
-        .withMessage("Confirmed subtotal is required"),
+    // body("ownerId")
+    //     .isMongoId()
+    //     .withMessage("Cart owner is required"),
+    // body("cartRevision")
+    //     .isInt({ min: 0 })
+    //     .custom(value => typeof value === "number")
+    //     .withMessage("Cart revision is required"),
+    // body("expectedSubtotal")
+    //     .custom(value => typeof value === "number" && Number.isFinite(value) && value >= 0)
+    //     .withMessage("Confirmed subtotal is required"),
 
     body("items")
         .isArray({ min: 1, max: 50 })
@@ -87,15 +93,65 @@ const validateCreateOrder = [
     }),
 
     body("deliveryAddress")
+        .isObject({ strict: true })
+        .withMessage("Delivery address must be an address object")
+        .bail()
+        .custom((address) => {
+            const allowedFields = [
+                "governorate",
+                "city",
+                "detailedAddress",
+                "coordinates",
+                "isDefault"
+            ];
+            if (Object.keys(address).some(field => !allowedFields.includes(field))) {
+                throw new Error("Delivery address contains unsupported fields");
+            }
+            if (address.coordinates && Object.keys(address.coordinates).some(
+                field => !["lat", "lng"].includes(field)
+            )) {
+                throw new Error("Delivery coordinates contain unsupported fields");
+            }
+            return true;
+        }),
+    body("deliveryAddress.governorate")
+        .optional()
+        .isIn(GAZA_REGIONS.map(region => region.id))
+        .withMessage("Delivery address governorate is invalid"),
+    body("deliveryAddress.city")
+        .optional()
+        .custom((city, { req }) => {
+            const governorate = req.body.deliveryAddress.governorate || "central";
+            const region = GAZA_REGIONS.find(item => item.id === governorate);
+            return Boolean(region && region.cities.some(item => item.id === city));
+        })
+        .withMessage("Delivery address city must belong to its governorate"),
+    body("deliveryAddress.detailedAddress")
         .isString()
-        .withMessage("Delivery address must be a string")
+        .withMessage("Detailed delivery address must be a string")
         .bail()
         .trim()
         .notEmpty()
-        .withMessage("Delivery address is required")
+        .withMessage("Detailed delivery address is required")
         .bail()
         .isLength({ min: 5, max: 500 })
-        .withMessage("Delivery address must be between 5 and 500 characters"),
+        .withMessage("Detailed delivery address must be between 5 and 500 characters"),
+    body("deliveryAddress.coordinates")
+        .isObject({ strict: true })
+        .withMessage("Delivery address coordinates are required"),
+    body("deliveryAddress.coordinates.lat")
+        .isFloat({ min: -90, max: 90 })
+        .withMessage("Delivery address latitude must be valid")
+        .toFloat(),
+    body("deliveryAddress.coordinates.lng")
+        .isFloat({ min: -180, max: 180 })
+        .withMessage("Delivery address longitude must be valid")
+        .toFloat(),
+    body("deliveryAddress.isDefault")
+        .optional()
+        .isBoolean()
+        .withMessage("Delivery address isDefault must be a boolean")
+        .toBoolean(),
 
     body("deliveryPhone")
         .trim()

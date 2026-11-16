@@ -19,6 +19,7 @@ const { escapeRegex } = require("../utils")
 const { payForOrder, refundOrder, refundOrderItemsCancellation } = require("../services/walletService");
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
 const { consumeCart, assertOwner } = require('./cart.service');
+const { calculateDeliveryFee } = require("./delivery.service");
 
 // Helpers
 const validateOrderItems = async (items, session) => {
@@ -108,7 +109,7 @@ const divideByStore = async (items, session) => {
         isDeleted: false,
         approveStatus: APPROVE_STATUS.APPROVED,
     })
-        .select("_id regionId")
+        .select("_id regionId address.coordinates")
         .session(session)
         .lean();
 
@@ -120,13 +121,16 @@ const divideByStore = async (items, session) => {
     const storeRegionMap = new Map(
         stores.map(store => [
             store._id.toString(),
-            store.regionId
+            {
+                regionId: store.regionId,
+                storePoint: store.address.coordinates
+            }
         ])
     );
 
     return Array.from(storeMap.values()).map(storeOrder => ({
         ...storeOrder,
-        regionId: storeRegionMap.get(storeOrder.storeId.toString())
+        ...storeRegionMap.get(storeOrder.storeId.toString())
     }));
 };
 
@@ -484,28 +488,25 @@ const listOrder = async ({ orderId, actor, storeId }) => {
 };
 
 const createOrder = async ({ userId, ownerId, cartRevision, expectedSubtotal, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
-    assertOwner(userId, ownerId);
+    // assertOwner(userId, ownerId);
     const session = await mongoose.startSession()
     try {
         let createdOrderGroup;
         let createdOrders;
         await session.withTransaction(async () => {
-            await consumeCart(userId, items, cartRevision, session);
+            // await consumeCart(userId, items, cartRevision, session);
+
             // validate order items - return validated order items 
             const { orderItems } = await validateOrderItems(items, session)
-            const currentSubtotal = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
-            if (!Number.isFinite(expectedSubtotal) || Math.round(currentSubtotal * 100) !== Math.round(expectedSubtotal * 100)) {
-                throw error('Prices changed. Refresh your cart and confirm the new total.', 409);
-            }
 
             // divide order items by store
             const storeOrders = await divideByStore(orderItems, session)
 
             // divide store orders by region
-            const regionOrders = divideByRegion(storeOrders)
+            const regionsOrders = divideByRegion(storeOrders)
 
             // calculate delivery fees - based on the regions and stores of every region
-            const deliveryFee = 10
+            const { totalFee: deliveryFee } = calculateDeliveryFee(regionsOrders, deliveryAddress)
 
             // calculate total amount for each region order
             const { totalAmount, subtotal } = calculateTotalOrdersAmount(storeOrders, deliveryFee)

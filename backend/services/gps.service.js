@@ -85,7 +85,21 @@ const getFarthestPoint = (addressPoint, points) => {
     }, null);
 };
 
+const normalizePoint = (point, label) => {
+    const lat = Number(point?.lat);
+    const lng = Number(point?.lng);
+
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90 ||
+        !Number.isFinite(lng) || lng < -180 || lng > 180) {
+        throw new TypeError(`${label} must contain valid latitude and longitude`);
+    }
+
+    return { lat, lng };
+};
+
 module.exports = {
+    calculateDistance,
     getFarthestPoint,
-    getFullAddress
+    getFullAddress,
+    normalizePoint,
 }

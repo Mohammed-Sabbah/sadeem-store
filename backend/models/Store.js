@@ -2,7 +2,6 @@ const mongoose = require('mongoose');
 const { STATUS, STATUS_VALUES, APPROVE_STATUS_VALUES, APPROVE_STATUS } = require('../constants/enums');
 const { addressSchema } = require('./address');
 
-
 const storeSchema = new mongoose.Schema(
     {
         ownerId: {
@@ -28,12 +27,6 @@ const storeSchema = new mongoose.Schema(
         address: {
             type: addressSchema,
             required: true,
-        },
-        regionId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Region',
-            required: true,
-            index: true
         },
         balance: {
             type: Number,

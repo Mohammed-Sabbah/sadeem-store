@@ -1,35 +1,6 @@
 const { body, param } = require('express-validator');
 const validateRequest = require('./validateRequest');
-const Region = require('../models/Region');
-const { GAZA_REGIONS } = require('../constants/gaza-regions');
-const { calculateHaversineDistance } = require('../utils/deliveryCalculator');
-
-async function getDynamicHubGovernorates() {
-    try {
-        const hubs = await Region.find({ status: 'hub' }).select('code').lean();
-        if (hubs && hubs.length > 0) {
-            return hubs.map((h) => h.code);
-        }
-    } catch { }
-    return Object.values(GAZA_REGIONS)
-        .filter((region) => region.status === 'hub')
-        .map((region) => region.id);
-}
-
-function matchNearestGovernorate(lat, lng) {
-    let minDistance = Infinity;
-    let matchedGov = null;
-    Object.values(GAZA_REGIONS).forEach((gov) => {
-        gov.cities.forEach((city) => {
-            const d = calculateHaversineDistance(lat, lng, city.center.lat, city.center.lng);
-            if (d < minDistance) {
-                minDistance = d;
-                matchedGov = gov.id;
-            }
-        });
-    });
-    return matchedGov;
-}
+const { createAddressesValidator } = require('./addressValidator');
 
 const validateSellerStore = [
     body('store.name')
@@ -54,81 +25,7 @@ const validateSellerStore = [
         .trim()
         .matches(/^\+?[0-9\s()-]{8,20}$/)
         .withMessage('Store phone number is invalid'),
-    body('store.regionId')
-        .notEmpty()
-        .trim()
-        .isMongoId()
-        .withMessage("not valid region id"),
-    body('store.address')
-        .isObject()
-        .withMessage('Store address must be an object'),
-    body('store.address.governorate')
-        .trim()
-        .custom(async (gov) => {
-            const allowedHubs = await getDynamicHubGovernorates();
-            if (!allowedHubs.includes(gov)) {
-                throw new Error('تسجيل المتاجر متاح حالياً للمحافظات ذات المركز المعتمد فقط');
-            }
-            return true;
-        }),
-    body('store.address.city')
-        .trim()
-        .custom(async (city, { req }) => {
-            const governorateCode = req.body.store?.address?.governorate;
-            let region = null;
-            try {
-                region = await Region.findOne({ code: governorateCode }).lean();
-            } catch { }
-            if (!region) region = GAZA_REGIONS[governorateCode];
-            const isValidCity = Boolean(region && region.cities.some((regionCity) => regionCity.id === city));
-            if (!isValidCity) {
-                throw new Error('المدينة أو المخيم المحدد لا يتبع للمحافظة المختارة');
-            }
-            return true;
-        }),
-    body('store.address.detailedAddress')
-        .trim()
-        .notEmpty()
-        .withMessage('Detailed store address is required')
-        .isLength({ min: 5 })
-        .withMessage('Detailed store address must be at least 5 characters'),
-
-    // Mandatory GPS Coordinates within Gaza Bounds and within Active Hub
-    body('store.address.coordinates')
-        .notEmpty()
-        .withMessage('Store GPS coordinates are mandatory')
-        .isObject()
-        .withMessage('Store coordinates must be an object')
-        .custom(async (coords) => {
-            const lat = Number(coords.lat);
-            const lng = Number(coords.lng);
-            if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
-                throw new Error('إحداثيات الـ GPS غير مكتملة');
-            }
-            if (lat < 31.18 || lat > 31.62 || lng < 34.15 || lng > 34.60) {
-                throw new Error('إحداثيات المتجر تقع خارج نطاق قطاع غزة');
-            }
-            const nearestGov = matchNearestGovernorate(lat, lng);
-            const allowedHubs = await getDynamicHubGovernorates();
-            if (!allowedHubs.includes(nearestGov)) {
-                throw new Error('موقع المتجر الجغرافي يقع خارج نطاق المحافظات ذات المركز المعتمد حالياً');
-            }
-            return true;
-        }),
-    body('store.address.coordinates.lat')
-        .notEmpty()
-        .withMessage('Store GPS latitude is mandatory')
-        .toFloat(),
-    body('store.address.coordinates.lng')
-        .notEmpty()
-        .withMessage('Store GPS longitude is mandatory')
-        .toFloat(),
-    body('store.address.isDefault')
-        .optional()
-        .isBoolean()
-        .withMessage('Address isDefault must be a boolean')
-        .toBoolean(),
-
+    ...createAddressesValidator("store.address", "object"),
     body('store').customSanitizer((store, { req }) => {
         const storeInput = store || {};
         const storeFields = { ...storeInput };
@@ -148,6 +45,7 @@ const validateSellerStore = [
             phoneNumber: storeInput.phoneNumber || userInput.phoneNumber,
         };
     }),
+    validateRequest,
 ];
 
 const validateStoreId = [
@@ -156,8 +54,6 @@ const validateStoreId = [
         .withMessage('Invalid store ID'),
     validateRequest,
 ];
-
-validateSellerStore.push(validateRequest);
 
 module.exports = {
     validateSellerStore,

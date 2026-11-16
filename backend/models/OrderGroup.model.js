@@ -23,7 +23,7 @@ const orderGroupSchema = new mongoose.Schema(
             }
         ],
         deliveryAddress: {
-            type: String,
+            type: addressSchema,
             required: true
         },
         deliveryPhone: {

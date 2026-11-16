@@ -14,7 +14,7 @@ const citySchema = new mongoose.Schema(
 
 const regionSchema = new mongoose.Schema(
     {
-        code: {
+        id: {
             type: String,
             unique: true,
             index: true,

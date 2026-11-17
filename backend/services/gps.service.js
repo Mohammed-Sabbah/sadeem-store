@@ -17,62 +17,6 @@ const calculateDistance = (point1, point2) => {
     return R * c;
 };
 
-const getAddress = () => {
-    return new Promise((resolve, reject) => {
-        if (!navigator.geolocation) {
-            return reject(new Error("Geolocation is not supported"));
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                resolve({
-                    lat: latitude,
-                    lng: longitude
-                });
-            },
-            (error) => {
-                reject(error);
-            },
-            {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 0
-            }
-        );
-    });
-}
-
-const getRegionAndCity = (userPoint, regions) => {
-    let nearestCity = null;
-
-    for (const region of regions) {
-        for (const city of region.cities) {
-            const distance = calculateDistance(
-                userPoint,
-                city.center
-            );
-
-            if (!nearestCity || distance < nearestCity.distance) {
-                nearestCity = {
-                    region,
-                    city,
-                    distance
-                };
-            }
-        }
-    }
-
-    return nearestCity;
-};
-
-const getFullAddress = async () => {
-    const userPoint = await getAddress();
-    const regions = []
-    const userAddress = getRegionAndCity(userPoint, regions);
-    return userAddress;
-};
-
 const getFarthestPoint = (addressPoint, points) => {
     return points.reduce((farthest, point) => {
         const distance = calculateDistance(addressPoint, point);
@@ -100,6 +44,5 @@ const normalizePoint = (point, label) => {
 module.exports = {
     calculateDistance,
     getFarthestPoint,
-    getFullAddress,
     normalizePoint,
 }

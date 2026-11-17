@@ -98,7 +98,7 @@ const validateCreateOrder = [
         .bail()
         .custom((address) => {
             const allowedFields = [
-                "governorate",
+                "region",
                 "city",
                 "detailedAddress",
                 "coordinates",
@@ -114,18 +114,17 @@ const validateCreateOrder = [
             }
             return true;
         }),
-    body("deliveryAddress.governorate")
-        .optional()
+    body("deliveryAddress.region")
+        .notEmpty()
         .isIn(GAZA_REGIONS.map(region => region.id))
-        .withMessage("Delivery address governorate is invalid"),
+        .withMessage("Delivery address region is invalid"),
     body("deliveryAddress.city")
-        .optional()
+        .notEmpty()
         .custom((city, { req }) => {
-            const governorate = req.body.deliveryAddress.governorate || "central";
-            const region = GAZA_REGIONS.find(item => item.id === governorate);
+            const region = GAZA_REGIONS.find(item => item.id === req.body.deliveryAddress.region);
             return Boolean(region && region.cities.some(item => item.id === city));
         })
-        .withMessage("Delivery address city must belong to its governorate"),
+        .withMessage("Delivery address city must belong to its region"),
     body("deliveryAddress.detailedAddress")
         .isString()
         .withMessage("Detailed delivery address must be a string")
@@ -137,13 +136,16 @@ const validateCreateOrder = [
         .isLength({ min: 5, max: 500 })
         .withMessage("Detailed delivery address must be between 5 and 500 characters"),
     body("deliveryAddress.coordinates")
+        .optional()
         .isObject({ strict: true })
-        .withMessage("Delivery address coordinates are required"),
+        .withMessage("Delivery address coordinates must be an object"),
     body("deliveryAddress.coordinates.lat")
+        .optional()
         .isFloat({ min: -90, max: 90 })
         .withMessage("Delivery address latitude must be valid")
         .toFloat(),
     body("deliveryAddress.coordinates.lng")
+        .optional()
         .isFloat({ min: -180, max: 180 })
         .withMessage("Delivery address longitude must be valid")
         .toFloat(),

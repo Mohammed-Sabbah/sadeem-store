@@ -107,12 +107,6 @@ const orderSchema = new mongoose.Schema({
         default: null,
         index: true,
     },
-    regionId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Region",
-        required: true,
-        index: true,
-    },
     subtotal: {
         type: Number,
         required: true,

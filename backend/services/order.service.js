@@ -109,7 +109,7 @@ const divideByStore = async (items, session) => {
         isDeleted: false,
         approveStatus: APPROVE_STATUS.APPROVED,
     })
-        .select("_id regionId address.coordinates")
+        .select("_id address.region address.coordinates")
         .session(session)
         .lean();
 
@@ -122,7 +122,7 @@ const divideByStore = async (items, session) => {
         stores.map(store => [
             store._id.toString(),
             {
-                regionId: store.regionId,
+                region: store.address.region,
                 storePoint: store.address.coordinates
             }
         ])
@@ -138,20 +138,20 @@ const divideByRegion = (storeOrders) => {
     const regionMap = new Map();
 
     for (const order of storeOrders) {
-        const regionId = order.regionId.toString();
+        const region = order.region.toString();
 
-        if (!regionMap.has(regionId)) {
-            regionMap.set(regionId, {
-                regionId: order.regionId,
+        if (!regionMap.has(region)) {
+            regionMap.set(region, {
+                region: order.region,
                 orders: [],
                 subtotal: 0
             });
         }
 
-        const region = regionMap.get(regionId);
+        const storeRegion = regionMap.get(region);
 
-        region.orders.push(order);
-        region.subtotal += order.subtotal;
+        storeRegion.orders.push(order);
+        storeRegion.subtotal += order.subtotal;
     }
 
     return Array.from(regionMap.values());
@@ -169,7 +169,6 @@ const createStoresOrders = async ({ orders, userId, orderGroupId, deliveryPhone,
             subtotal: order.subtotal,
             deliveryPhone,
             deliveryAddress,
-            regionId: order.regionId
         }], { session });
 
         createdOrders.push(createdOrder);
@@ -506,7 +505,7 @@ const createOrder = async ({ userId, ownerId, cartRevision, expectedSubtotal, it
             const regionsOrders = divideByRegion(storeOrders)
 
             // calculate delivery fees - based on the regions and stores of every region
-            const { totalFee: deliveryFee } = calculateDeliveryFee(regionsOrders, deliveryAddress)
+            const { totalFee: deliveryFee } = await calculateDeliveryFee(regionsOrders, deliveryAddress)
 
             // calculate total amount for each region order
             const { totalAmount, subtotal } = calculateTotalOrdersAmount(storeOrders, deliveryFee)

@@ -20,6 +20,7 @@ const { payForOrder, refundOrder, refundOrderItemsCancellation } = require("../s
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
 const { consumeCart, assertOwner } = require('./cart.service');
 const { calculateDeliveryFee } = require("./delivery.service");
+const { roundMoney } = require("../utils/wallet");
 
 // Helpers
 const validateOrderItems = async (items, session) => {
@@ -134,29 +135,6 @@ const divideByStore = async (items, session) => {
     }));
 };
 
-const divideByRegion = (storeOrders) => {
-    const regionMap = new Map();
-
-    for (const order of storeOrders) {
-        const region = order.region.toString();
-
-        if (!regionMap.has(region)) {
-            regionMap.set(region, {
-                region: order.region,
-                orders: [],
-                subtotal: 0
-            });
-        }
-
-        const storeRegion = regionMap.get(region);
-
-        storeRegion.orders.push(order);
-        storeRegion.subtotal += order.subtotal;
-    }
-
-    return Array.from(regionMap.values());
-};
-
 const createStoresOrders = async ({ orders, userId, orderGroupId, deliveryPhone, deliveryAddress }, session) => {
     const createdOrders = [];
 
@@ -178,14 +156,14 @@ const createStoresOrders = async ({ orders, userId, orderGroupId, deliveryPhone,
 }
 
 const calculateTotalOrdersAmount = (storeOrders, deliveryFee) => {
-    const subtotal = storeOrders.reduce(
+    const subtotal = roundMoney(storeOrders.reduce(
         (total, order) => total + order.subtotal,
         0
-    );
+    ));
 
     return {
         subtotal,
-        totalAmount: subtotal ? subtotal + deliveryFee : subtotal
+        totalAmount: subtotal ? roundMoney(subtotal + deliveryFee) : subtotal
     };
 }
 
@@ -501,11 +479,8 @@ const createOrder = async ({ userId, ownerId, cartRevision, expectedSubtotal, it
             // divide order items by store
             const storeOrders = await divideByStore(orderItems, session)
 
-            // divide store orders by region
-            const regionsOrders = divideByRegion(storeOrders)
-
             // calculate delivery fees - based on the regions and stores of every region
-            const { totalFee: deliveryFee } = await calculateDeliveryFee(regionsOrders, deliveryAddress)
+            const deliveryFee = await calculateDeliveryFee(storeOrders, deliveryAddress)
 
             // calculate total amount for each region order
             const { totalAmount, subtotal } = calculateTotalOrdersAmount(storeOrders, deliveryFee)
@@ -600,7 +575,7 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             const oldTotalAmount = orderGroup.totalAmount
 
             // find subOrders of the order group
-            const subOrders = await Order.find({ orderGroupId: orderGroup._id }).session(session)
+            const subOrders = await Order.find({ orderGroupId: orderGroup._id }).populate("storeId").session(session)
 
             // check all orders cancelled 
             const allOrdersCancelled = subOrders.every(
@@ -612,7 +587,15 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             }
 
             // calculate the new deliveryfee
-            const deliveryFee = 10
+            const remainingStoreOrders = subOrders.filter(
+                subOrder =>
+                    subOrder.status !== ORDER_STATUS.CANCELLED &&
+                    calculateOrderSubtotal(subOrder) > 0
+            )
+            const deliveryFee = await calculateDeliveryFee(
+                remainingStoreOrders,
+                orderGroup.deliveryAddress
+            )
 
             // calculate the new subtotal and amount of the order group
             const { subtotal, totalAmount } = calculateTotalOrdersAmount(subOrders, deliveryFee)
@@ -624,8 +607,9 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             await orderGroup.save({ session })
 
             // refund the user 
-            const refundAmount = oldTotalAmount - totalAmount
+            const refundAmount = roundMoney(oldTotalAmount - totalAmount)
             if (refundAmount > 0) {
+                console.log(`Refunding ${refundAmount} to user ${orderGroup.userId} for order group ${orderGroup._id}`)
                 await refundOrderItemsCancellation({
                     orderGroupId: orderGroup._id,
                     userId: orderGroup.userId,

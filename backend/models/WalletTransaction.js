@@ -6,6 +6,7 @@ const {
     TRANSACTION_STATUS,
     TRANSACTION_STATUS_VALUES,
 } = require('../constants/enums');
+const { isMoneyAmount } = require('../utils/wallet');
 
 const payoutDetailsSchema = new mongoose.Schema(
     {
@@ -55,7 +56,7 @@ const walletTransactionSchema = new mongoose.Schema(
             required: true,
             min: 0.01,
             validate: {
-                validator: (value) => Number.isFinite(value) && Math.round(value * 100) === value * 100,
+                validator: isMoneyAmount,
                 message: 'Amount must have at most two decimal places',
             },
         },

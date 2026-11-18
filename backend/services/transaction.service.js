@@ -1,10 +1,31 @@
 const { TRANSACTION_STATUS } = require("../constants/enums")
 const walletTransaction = require("../models/WalletTransaction")
 const error = require("../utils/error")
+const { roundMoney } = require("../utils/wallet")
+
+const normalizeMoneyFields = (values) => {
+    const normalized = { ...values };
+
+    if (normalized.amount !== undefined && normalized.amount !== null) {
+        normalized.amount = roundMoney(normalized.amount);
+    }
+
+    if (normalized.allocations) {
+        normalized.allocations = { ...normalized.allocations };
+        for (const field of ["storeCreditBalance", "withdrawableBalance"]) {
+            const amount = normalized.allocations[field];
+            if (amount !== undefined && amount !== null) {
+                normalized.allocations[field] = roundMoney(amount);
+            }
+        }
+    }
+
+    return normalized;
+};
 
 const createTransaction = async (transactionData, session = null) => {
     const [transaction] = await walletTransaction.create(
-        [transactionData],
+        [normalizeMoneyFields(transactionData)],
         session ? { session } : {}
     );
 
@@ -17,7 +38,7 @@ const updateTransaction = async ({ transactionId, updates, query = {} }, session
             _id: transactionId,
             ...query
         },
-        updates,
+        normalizeMoneyFields(updates),
         { session, new: true })
 
     if (!updatedTransaction)

@@ -1,4 +1,5 @@
 const { RATE_PER_KM, STORE_FEE } = require("../constants/delivery");
+const { roundMoney } = require("../utils/wallet");
 const Region = require("../models/Region");
 const error = require("../utils/error");
 const { getFarthestPoint, normalizePoint } = require("./gps.service");
@@ -38,13 +39,43 @@ const resolveUserPoint = async (address) => {
     return normalizePoint(cityRecord.center, "User city center");
 };
 
-const calculateDeliveryFee = async (regionsOrders, address) => {
-    if (!Array.isArray(regionsOrders)) {
-        throw new TypeError("Region orders must be an array");
+const divideByRegion = (storeOrders) => {
+    const regionMap = new Map();
+
+    for (const order of storeOrders) {
+        const region = order.region || order?.storeId?.address?.region;
+        if (!region) {
+            throw new TypeError("Store order must include a region");
+        }
+        const regionId = region.toString();
+
+        if (!regionMap.has(regionId)) {
+            regionMap.set(regionId, {
+                region,
+                orders: [],
+                subtotal: 0
+            });
+        }
+
+        const storeRegion = regionMap.get(regionId);
+
+        storeRegion.orders.push(order);
+        storeRegion.subtotal += order.subtotal;
     }
 
+    return Array.from(regionMap.values());
+};
+
+const calculateDeliveryFee = async (storesOrders, address) => {
+    if (!Array.isArray(storesOrders)) {
+        throw new TypeError("stores orders must be an array");
+    }
+
+    // divide store orders by region
+    const regionsOrders = divideByRegion(storesOrders)
+
     if (regionsOrders.length === 0) {
-        return { regions: [], totalFee: 0 };
+        return 0;
     }
 
     const addressPoint = await resolveUserPoint(address);
@@ -63,28 +94,28 @@ const calculateDeliveryFee = async (regionsOrders, address) => {
         }
 
         const storePoints = regionOrder.orders.map(order => ({
-            ...normalizePoint(order.storePoint, "Store address"),
+            ...normalizePoint(order?.storePoint || order?.storeId?.address?.coordinates, "Store address"),
             storeId: order.storeId
         }));
         const farthestStore = getFarthestPoint(addressPoint, storePoints);
         const distanceFee = farthestStore.distance * RATE_PER_KM;
         const additionalStoresCount = Math.max(0, regionOrder.orders.length - 1);
         const storesFee = additionalStoresCount * STORE_FEE;
-        const deliveryFee = Number((distanceFee + storesFee).toFixed(2));
+        const deliveryFee = roundMoney(distanceFee + storesFee);
 
         return {
             region: regionOrder.region,
             storeCount: regionOrder.orders.length,
-            farthestDistanceKm: Number(farthestStore.distance.toFixed(2)),
+            farthestDistanceKm: roundMoney(farthestStore.distance),
             deliveryFee
         };
     });
 
-    const totalFee = Number(
-        regions.reduce((total, region) => total + region.deliveryFee, 0).toFixed(2)
+    const totalFee = roundMoney(
+        regions.reduce((total, region) => total + region.deliveryFee, 0)
     );
 
-    return { regions, totalFee };
+    return totalFee;
 };
 
 module.exports = {

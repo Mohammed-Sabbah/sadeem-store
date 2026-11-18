@@ -4,6 +4,7 @@ const WalletTransaction = require('../models/WalletTransaction');
 const { updateTransaction, createTransaction } = require("./transaction.service")
 const {
     parsePositiveMoney,
+    roundMoney,
 } = require("../utils/wallet")
 const error = require("../utils/error")
 const {
@@ -75,12 +76,12 @@ const calculateWalletBalanceDeduction = (wallet, amount) => {
 }
 
 const calculateRefundAllocations = (amount, allocations) => {
-    const withdrawableRefund = Math.min(
+    const withdrawableRefund = roundMoney(Math.min(
         amount,
         allocations.withdrawableBalance
-    );
+    ));
 
-    const storeCreditRefund = amount - withdrawableRefund;
+    const storeCreditRefund = roundMoney(amount - withdrawableRefund);
 
     if (storeCreditRefund > allocations.storeCreditBalance) {
         throw error("Refund amount exceeds remaining allocations");
@@ -92,8 +93,8 @@ const calculateRefundAllocations = (amount, allocations) => {
             withdrawableBalance: withdrawableRefund
         },
         remainingAllocations: {
-            storeCreditBalance: allocations.storeCreditBalance - storeCreditRefund,
-            withdrawableBalance: allocations.withdrawableBalance - withdrawableRefund
+            storeCreditBalance: roundMoney(allocations.storeCreditBalance - storeCreditRefund),
+            withdrawableBalance: roundMoney(allocations.withdrawableBalance - withdrawableRefund)
         }
     };
 };
@@ -311,6 +312,7 @@ const refundOrderItemsCancellation = async ({ orderGroupId, userId, amount }, se
     if (!session)
         throw error("A session is required for wallet payment");
 
+    const refundAmount = parsePositiveMoney(amount, "Refund amount");
     const wallet = await Wallet.findOne({ userId, isFrozen: false }).session(session)
     if (!wallet) throw error("Wallet not found")
 
@@ -327,7 +329,7 @@ const refundOrderItemsCancellation = async ({ orderGroupId, userId, amount }, se
         throw error("Transaction not found")
 
     const allocations = transaction.allocations
-    const { refundAllocations, remainingAllocations } = calculateRefundAllocations(amount, allocations)
+    const { refundAllocations, remainingAllocations } = calculateRefundAllocations(refundAmount, allocations)
 
     // increase wallet
     await increaseWalletBalance({
@@ -337,7 +339,7 @@ const refundOrderItemsCancellation = async ({ orderGroupId, userId, amount }, se
     }, session)
 
     // update original transaction
-    const remainingAmount = transaction.amount - amount;
+    const remainingAmount = roundMoney(transaction.amount - refundAmount);
 
     const newStatus = remainingAmount === 0
         ? TRANSACTION_STATUS.REFUNDED
@@ -366,7 +368,7 @@ const refundOrderItemsCancellation = async ({ orderGroupId, userId, amount }, se
         status: TRANSACTION_STATUS.APPROVED,
         type: WALLET_TRANSACTION_TYPE.REFUND,
         allocations: refundAllocations,
-        amount: amount,
+        amount: refundAmount,
         referenceId: orderGroupId
     }, session)
 }

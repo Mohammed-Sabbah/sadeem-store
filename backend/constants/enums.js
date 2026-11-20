@@ -2,7 +2,7 @@ const ROLE = {
     ADMIN: 'admin',
     USER: 'user',
     SELLER: 'seller',
-    COURIER: 'courier',
+    DRIVER: 'driver',
 };
 
 const STATUS = {
@@ -59,8 +59,9 @@ const WALLET_STATUS = {
 // Order 
 const ORDER_STATUS = {
     PENDING: "pending",
+    IN_DELIVERY: "in_delivery",
     DELIVERED: "delivered",
-    CANCELLED: "cancelled",
+    CANCELLED: "cancelled"
 }
 
 const PAYMENT_METHODS = {
@@ -71,6 +72,17 @@ const PAYMENT_METHODS = {
 const PAYMENT_STATUS = {
     PAID: "paid",
     REFUNDED: "refunded"
+}
+
+// Delivery
+const DELIVERY_STATUS = {
+    DELIVERED: "deliverd",
+    INPROGRESS: "inprogress"
+}
+
+const DELIVERY_TYPE = {
+    COLLECTION: "collection",
+    FINAL: "final"
 }
 
 // General Enums
@@ -91,6 +103,10 @@ const ORDER_STATUS_VALUES = Object.values(ORDER_STATUS)
 const PAYMENT_METHODS_VALUES = Object.values(PAYMENT_METHODS)
 const PAYMENT_STATUS_VALUES = Object.values(PAYMENT_STATUS)
 
+// Delivery
+const DELIVERY_STATUS_VALUES = Object.values(DELIVERY_STATUS)
+const DELIVERY_TYPE_VALUES = Object.values(DELIVERY_TYPE)
+
 module.exports = {
     ROLE,
     STATUS,
@@ -104,6 +120,8 @@ module.exports = {
     ORDER_STATUS,
     PAYMENT_METHODS,
     PAYMENT_STATUS,
+    DELIVERY_STATUS,
+    DELIVERY_TYPE,
     ROLE_VALUES,
     STATUS_VALUES,
     APPROVE_STATUS_VALUES,
@@ -115,5 +133,7 @@ module.exports = {
     TRANSACTION_STATUS_VALUES,
     ORDER_STATUS_VALUES,
     PAYMENT_METHODS_VALUES,
-    PAYMENT_STATUS_VALUES
+    PAYMENT_STATUS_VALUES,
+    DELIVERY_STATUS_VALUES,
+    DELIVERY_TYPE_VALUES
 };

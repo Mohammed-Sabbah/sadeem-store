@@ -1,8 +1,14 @@
+const mongoose = require("mongoose");
+const Order = require("../models/order.model");
+const Region = require("../models/Region");
+const Delivery = require("../models/delivery.model");
+const Store = require("../models/Store");
 const { RATE_PER_KM, STORE_FEE } = require("../constants/delivery");
 const { roundMoney } = require("../utils/wallet");
-const Region = require("../models/Region");
-const error = require("../utils/error");
 const { getFarthestPoint, normalizePoint } = require("./gps.service");
+const { divideByRegion } = require("./order.service");
+const { ORDER_STATUS, ROLE, STATUS, DELIVERY_STATUS, APPROVE_STATUS, DELIVERY_TYPE } = require("../constants/enums");
+const error = require("../utils/error")
 
 const resolveUserPoint = async (address) => {
     const coordinates = address?.coordinates;
@@ -37,33 +43,6 @@ const resolveUserPoint = async (address) => {
     }
 
     return normalizePoint(cityRecord.center, "User city center");
-};
-
-const divideByRegion = (storeOrders) => {
-    const regionMap = new Map();
-
-    for (const order of storeOrders) {
-        const region = order.region || order?.storeId?.address?.region;
-        if (!region) {
-            throw new TypeError("Store order must include a region");
-        }
-        const regionId = region.toString();
-
-        if (!regionMap.has(regionId)) {
-            regionMap.set(regionId, {
-                region,
-                orders: [],
-                subtotal: 0
-            });
-        }
-
-        const storeRegion = regionMap.get(regionId);
-
-        storeRegion.orders.push(order);
-        storeRegion.subtotal += order.subtotal;
-    }
-
-    return Array.from(regionMap.values());
 };
 
 const calculateDeliveryFee = async (storesOrders, address) => {
@@ -117,6 +96,174 @@ const calculateDeliveryFee = async (storesOrders, address) => {
 
     return totalFee;
 };
+
+const validateOrdersAvalilability = async (ids, session) => {
+    const uniqueIds = [...new Set(ids.map(id => id.toString()))]
+
+    if (uniqueIds.length !== ids.length) {
+        throw error("Duplicate order IDs", 400)
+    }
+
+    const orders = await Order.find({
+        _id: { $in: ids },
+        status: ORDER_STATUS.PENDING
+    })
+        .populate("storeId", "address")
+        .session(session)
+
+    if (orders.length !== ids.length) {
+        throw error("Some orders are unavailable or already assigned", 409)
+    }
+
+    const orderGroupIds = new Set(
+        orders.map(order => order.orderGroupId.toString())
+    )
+
+    if (orderGroupIds.size !== 1) {
+        throw error("All orders must belong to the same order group", 400)
+    }
+
+    const orderGroupId = orders[0].orderGroupId
+    const pickupLocations = getDeliveryPickupLocations(orders)
+    return { orderGroupId, pickupLocations }
+}
+
+const getDeliveryPickupLocations = (orders) => {
+    const pickupMap = new Map()
+
+    for (const order of orders) {
+        const store = order.storeId
+
+        if (!store?.address?.coordinates) {
+            throw error("Store address not found", 400)
+        }
+
+        const storeId = store._id.toString()
+
+        if (!pickupMap.has(storeId)) {
+            pickupMap.set(storeId, {
+                storeId: store._id,
+                location: store.address.coordinates,
+                orderIds: []
+            })
+        }
+
+        pickupMap.get(storeId).orderIds.push(order._id)
+    }
+
+    return [...pickupMap.values()]
+}
+
+// delivery Operations
+const createDeliveryTask = async ({
+    orderGroupId,
+    orderIds,
+    driverId,
+    driverPayment,
+    pickupLocation,
+    deliveryLocation,
+    type,
+    createdBy
+}, session) => {
+    const [deliveryTask] = await Delivery.create(
+        [{
+            orderGroupId,
+            orderIds,
+            driverId,
+            driverPayment,
+            pickupLocation,
+            deliveryLocation,
+            type,
+            createdBy
+        }], { session })
+    return deliveryTask
+}
+
+const updateDeliveryTask = async ({ deliveryTaskId, updates }, session) => {
+    const updatedTask = await Delivery.findOneAndUpdate(
+        {
+            _id: deliveryTaskId,
+            status: DELIVERY_STATUS.INPROGRESS
+        },
+        updates,
+        session ? { session } : {}
+    )
+    if (!updatedTask) throw error("Delivery Task not found")
+    return updatedTask
+}
+
+const createCollectingDelivery = async ({ orderIds, driverId, amount, deliveryLocation, adminId }) => {
+    const session = await mongoose.startSession()
+    try {
+        let createdDelivery;
+        await session.withTransaction(async () => {
+            const { orderGroupId, pickupLocations } = await validateOrdersAvalilability(orderIds, session)
+
+            const driver = await User.findOne({ _id: driverId, role: ROLE.DRIVER, status: STATUS.ACTIVE })
+                .session(session)
+            if (!driver) throw error("driver not found", 404)
+
+            const driverPayment = { amount }
+
+            const deliveryTask = await createDeliveryTask({
+                orderGroupId,
+                orderIds,
+                driverId,
+                deliveryLocation,
+                pickupLocations,
+                driverPayment,
+                type: DELIVERY_TYPE.COLLECTION,
+                createdBy: adminId
+            }, session)
+
+            const updatedOrders = await Order.updateMany(
+                {
+                    _id: { $in: orderIds },
+                    status: ORDER_STATUS.PENDING
+                },
+                {
+                    $set: {
+                        status: ORDER_STATUS.IN_DELIVERY
+                    }
+                },
+                {
+                    session
+                }
+            )
+
+            if (updatedOrders.matchedCount !== orderIds.length) {
+                throw error("Some orders are already assigned", 409)
+            }
+
+            createdDelivery = deliveryTask
+        })
+        return createdDelivery
+    } finally {
+        await session.endSession()
+    }
+}
+
+const createFinalDelivery = async ({ orderGroupId, driverId, amount }) => {
+
+}
+
+const assignDriverToTask = async ({ driverId, deliveryTaskId }) => {
+    const session = await mongoose.session()
+    try {
+        await session.withTransaction(async () => {
+            const driver = await User.findOne({ _id: driverId, role: ROLE.DRIVER, status: STATUS.ACTIVE }).session()
+            if (!driver) throw error("Driver not found")
+
+            const updates = {
+                driverId,
+                assignedAt: new Date()
+            }
+            await updateDeliveryTask({ deliveryTaskId, updates }, session)
+        })
+    } finally {
+        await session.endSession()
+    }
+}
 
 module.exports = {
     calculateDeliveryFee,

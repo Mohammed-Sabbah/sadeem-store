@@ -1,5 +1,12 @@
-const { body } = require('express-validator');
+const { body, param } = require('express-validator');
 const validateRequest = require('./validateRequest');
+
+const validateDeliveryTaskId = [
+    param("id")
+        .isMongoId()
+        .withMessage("Delivery task ID must be a valid Mongo ID"),
+    validateRequest,
+];
 
 const validateDeliveryCalculation = [
     body('stores')
@@ -11,5 +18,6 @@ const validateDeliveryCalculation = [
 ];
 
 module.exports = {
+    validateDeliveryTaskId,
     validateDeliveryCalculation,
 };

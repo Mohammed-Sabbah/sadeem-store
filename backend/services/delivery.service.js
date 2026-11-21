@@ -207,6 +207,131 @@ const updateDeliveryTask = async ({ query, updates }, session) => {
     return updatedTask
 }
 
+const getDeliveryTasks = async (actor) => {
+    if (!actor?._id || !actor?.role) {
+        throw error("Authentication required", 401);
+    }
+
+    const query = {};
+    if (actor.role === ROLE.DRIVER) {
+        query.driverId = actor._id;
+    } else if (actor.role !== ROLE.ADMIN) {
+        throw error("Forbidden", 403);
+    }
+
+    return Delivery.find(query)
+        .sort({ createdAt: -1, _id: -1 })
+        .populate("orderGroupId")
+        .populate({
+            path: "orderIds",
+            populate: { path: "storeId", select: "name" }
+        })
+        .populate("driverId", "name phoneNumber")
+        .populate("createdBy", "name")
+        .lean();
+};
+
+const getDeliveryTask = async ({ deliveryTaskId, actor }) => {
+    if (!actor?._id || !actor?.role) {
+        throw error("Authentication required", 401);
+    }
+
+    const query = { _id: deliveryTaskId };
+    if (actor.role === ROLE.DRIVER) {
+        query.driverId = actor._id;
+    } else if (actor.role !== ROLE.ADMIN) {
+        throw error("Forbidden", 403);
+    }
+
+    const deliveryTask = await Delivery.findOne(query)
+        .populate("orderGroupId")
+        .populate({
+            path: "orderIds",
+            populate: { path: "storeId", select: "name" }
+        })
+        .populate("driverId", "name phoneNumber")
+        .populate("createdBy", "name")
+        .lean();
+
+    if (!deliveryTask) {
+        throw error("Delivery Task not found", 404);
+    }
+
+    return deliveryTask;
+};
+
+const cancelDeliveryTask = async (deliveryTaskId) => {
+    const session = await mongoose.startSession();
+    try {
+        let cancelledTask;
+        await session.withTransaction(async () => {
+            const deliveryTask = await Delivery.findOne({
+                _id: deliveryTaskId,
+                status: DELIVERY_STATUS.INPROGRESS
+            }).session(session);
+
+            if (!deliveryTask) {
+                throw error("Delivery Task not found or is no longer active", 404);
+            }
+
+            if (deliveryTask.type === DELIVERY_TYPE.COLLECTION) {
+                if (!deliveryTask.orderIds?.length) {
+                    throw error("Delivery task has no orders");
+                }
+
+                const updatedOrders = await Order.updateMany(
+                    {
+                        _id: { $in: deliveryTask.orderIds },
+                        status: ORDER_STATUS.COLLECTING
+                    },
+                    { $set: { status: ORDER_STATUS.PENDING } },
+                    { session }
+                );
+
+                if (updatedOrders.matchedCount !== deliveryTask.orderIds.length) {
+                    throw error("Some orders could not be returned to pending", 409);
+                }
+            } else if (deliveryTask.type === DELIVERY_TYPE.FINAL) {
+                const updatedOrderGroup = await OrderGroup.findOneAndUpdate(
+                    {
+                        _id: deliveryTask.orderGroupId,
+                        status: ORDER_STATUS.IN_DELIVERY
+                    },
+                    { $set: { status: ORDER_STATUS.PENDING } },
+                    { session, new: true }
+                );
+
+                if (!updatedOrderGroup) {
+                    throw error("Order group could not be returned to pending", 409);
+                }
+            } else {
+                throw error("Unsupported delivery task type", 400);
+            }
+
+            cancelledTask = await Delivery.findOneAndUpdate(
+                {
+                    _id: deliveryTaskId,
+                    status: DELIVERY_STATUS.INPROGRESS
+                },
+                {
+                    $set: {
+                        status: DELIVERY_STATUS.CANCELLED,
+                        cancelledAt: new Date()
+                    }
+                },
+                { session, new: true }
+            );
+
+            if (!cancelledTask) {
+                throw error("Delivery Task is no longer active", 409);
+            }
+        });
+        return cancelledTask;
+    } finally {
+        await session.endSession();
+    }
+};
+
 const createCollectingDelivery = async ({ orderIds, driverId, amount, deliveryLocation, adminId }) => {
     const session = await mongoose.startSession()
     try {
@@ -438,5 +563,8 @@ module.exports = {
     assignDriverToTask,
     createFinalDelivery,
     completeCollectingDelivery,
-    completeFinalDelivery
+    completeFinalDelivery,
+    getDeliveryTasks,
+    getDeliveryTask,
+    cancelDeliveryTask
 }

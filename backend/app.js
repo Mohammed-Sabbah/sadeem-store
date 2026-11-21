@@ -28,6 +28,7 @@ const walletRoutes = require('./routes/walletRoutes');
 const withDrawalRoutes = require('./routes/withdrawal.route');
 const depositRoutes = require('./routes/deposit.route');
 const orderRoutes = require("./routes/order.route")
+const deliveryRoutes = require("./routes/delivery.route")
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -40,6 +41,7 @@ app.use('/api/wallet', walletRoutes);
 app.use('/api/withdrawals', withDrawalRoutes);
 app.use('/api/deposits', depositRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/delivery', deliveryRoutes);
 app.use('/api/cart', require('./routes/cart.route'));
 
 app.use(notFound);

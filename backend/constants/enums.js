@@ -59,6 +59,8 @@ const WALLET_STATUS = {
 // Order 
 const ORDER_STATUS = {
     PENDING: "pending",
+    COLLECTING: "collecting",
+    COLLECTED: "collected",
     IN_DELIVERY: "in_delivery",
     DELIVERED: "delivered",
     CANCELLED: "cancelled"
@@ -76,8 +78,9 @@ const PAYMENT_STATUS = {
 
 // Delivery
 const DELIVERY_STATUS = {
-    DELIVERED: "deliverd",
-    INPROGRESS: "inprogress"
+    COMPLETED: "completed",
+    INPROGRESS: "inprogress",
+    CANCELLED: "cancelled"
 }
 
 const DELIVERY_TYPE = {

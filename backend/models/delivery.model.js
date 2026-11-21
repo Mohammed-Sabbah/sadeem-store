@@ -28,7 +28,7 @@ const deliverySchema = new mongoose.Schema({
         ref: "OrderGroup",
         required: true
     },
-    ordersIds: {
+    orderIds: {
         type: [{
             type: mongoose.Schema.Types.ObjectId,
             ref: "Order",
@@ -85,5 +85,5 @@ const deliverySchema = new mongoose.Schema({
     }
 }, { timestamps: true })
 
-const Delivery = new mongoose.model("Delivery", deliverySchema)
+const Delivery = new mongoose.model("DeliveryTask", deliverySchema)
 module.exports = Delivery

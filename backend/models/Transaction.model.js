@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const {
-    WALLET_TRANSACTION_TYPE_VALUES,
-    WALLET_TRANSFER_PROVIDER_VALUES,
+    TRANSACTION_TYPE_VALUES,
+    TRANSFER_PROVIDER_VALUES,
     BALANCE_TYPE_VALUES,
     TRANSACTION_STATUS,
     TRANSACTION_STATUS_VALUES,
@@ -13,7 +13,7 @@ const payoutDetailsSchema = new mongoose.Schema(
         transferProvider: {
             type: String,
             required: true,
-            enum: WALLET_TRANSFER_PROVIDER_VALUES,
+            enum: TRANSFER_PROVIDER_VALUES,
             trim: true,
         },
         accountNumber: {
@@ -32,12 +32,11 @@ const payoutDetailsSchema = new mongoose.Schema(
     { _id: false }
 );
 
-const walletTransactionSchema = new mongoose.Schema(
+const transactionSchema = new mongoose.Schema(
     {
         walletId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Wallet',
-            required: true,
             index: true,
         },
         userId: {
@@ -48,7 +47,7 @@ const walletTransactionSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            enum: WALLET_TRANSACTION_TYPE_VALUES,
+            enum: TRANSACTION_TYPE_VALUES,
             required: true,
         },
         amount: {
@@ -105,7 +104,7 @@ const walletTransactionSchema = new mongoose.Schema(
         },
         transferProvider: {
             type: String,
-            enum: WALLET_TRANSFER_PROVIDER_VALUES,
+            enum: TRANSFER_PROVIDER_VALUES,
             required: function () {
                 return this.type === 'deposit';
             },
@@ -139,8 +138,8 @@ const walletTransactionSchema = new mongoose.Schema(
     }
 );
 
-walletTransactionSchema.index({ walletId: 1, createdAt: -1 });
-walletTransactionSchema.index({ status: 1, type: 1 });
-walletTransactionSchema.index({ userId: 1, idempotencyKey: 1, type: 1 });
+transactionSchema.index({ walletId: 1, createdAt: -1 });
+transactionSchema.index({ status: 1, type: 1 });
+transactionSchema.index({ userId: 1, idempotencyKey: 1, type: 1 });
 
-module.exports = mongoose.model('WalletTransaction', walletTransactionSchema);
+module.exports = mongoose.model('Transaction', transactionSchema);

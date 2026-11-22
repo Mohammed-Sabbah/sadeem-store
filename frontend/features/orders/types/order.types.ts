@@ -36,7 +36,7 @@ export interface BackendOrder {
   deliveryPhone: string;
   subtotal: number;
   paymentStatus: 'paid' | 'refunded';
-  status: 'pending' | 'delivered' | 'cancelled';
+  status: 'pending' | 'collecting' | 'collected' | 'in_delivery' | 'delivered' | 'cancelled';
   regionId?: string;
   cancelledBy?: string | null;
   cancellationReason?: string | null;
@@ -57,7 +57,7 @@ export interface BackendOrderGroup {
   totalAmount: number;
   paymentMethod: 'wallet' | 'jawwalpay';
   paymentStatus: 'paid' | 'refunded';
-  status: 'pending' | 'delivered' | 'cancelled';
+  status: 'pending' | 'collecting' | 'collected' | 'in_delivery' | 'delivered' | 'cancelled';
   cancelledAt?: string | null;
   cancellationReason?: string | null;
   createdAt: string;
@@ -114,7 +114,7 @@ export interface OrderDetail {
   id: string;
   orderGroupId?: string;
   date: string;
-  status: 'pending' | 'delivered' | 'cancelled';
+  status: 'pending' | 'collecting' | 'collected' | 'in_delivery' | 'delivered' | 'cancelled';
   statusText: string;
   itemsCount: number;
   vendorNames: string[];

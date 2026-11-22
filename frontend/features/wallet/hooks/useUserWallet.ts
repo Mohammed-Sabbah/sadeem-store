@@ -82,7 +82,11 @@ export function useUserWalletOperations() {
   const withdrawalMutation = useMutation({
     mutationFn: (data: {
       amount: number;
-      payoutDetails: { bankName: string; accountNumber: string; accountName: string; notes?: string };
+      payoutDetails: {
+        transferProvider: 'palestine' | 'jawwalpay' | 'palpay';
+        accountNumber: string;
+        accountName: string;
+      };
     }) => walletService.submitWithdrawal(data),
     onSuccess: (res) => {
       if (res.success) {

@@ -1,8 +1,8 @@
-const { WALLET_TRANSACTION_TYPE, TRANSACTION_STATUS, BALANCE_TYPE } = require("../constants/enums")
+const { TRANSACTION_TYPE, TRANSACTION_STATUS, BALANCE_TYPE } = require("../constants/enums")
 const Wallet = require("../models/Wallet")
 const { parsePositiveMoney } = require("../utils/wallet")
 const error = require("../utils/error")
-const WalletTransaction = require("../models/WalletTransaction")
+const WalletTransaction = require("../models/Transaction.model")
 const mongoose = require("mongoose")
 const { createTransaction, updateTransaction } = require("./transaction.service")
 const { increaseWalletBalance } = require("../services/walletService")
@@ -16,7 +16,7 @@ const createDeposit = async ({ userId, amount, transferProvider, proofImage }) =
         userId: wallet.userId,
         walletId: wallet._id,
         amount: pureAmount,
-        type: WALLET_TRANSACTION_TYPE.DEPOSIT,
+        type: TRANSACTION_TYPE.DEPOSIT,
         status: TRANSACTION_STATUS.PENDING,
         balanceType: BALANCE_TYPE.WITHDRAWABLE,
         transferProvider,

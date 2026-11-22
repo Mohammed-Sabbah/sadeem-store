@@ -8,7 +8,16 @@ const { RATE_PER_KM, STORE_FEE } = require("../constants/delivery");
 const { roundMoney } = require("../utils/wallet");
 const { divideByRegion } = require("../utils/order");
 const { getFarthestPoint, normalizePoint } = require("./gps.service");
-const { ORDER_STATUS, ROLE, STATUS, DELIVERY_STATUS, DELIVERY_TYPE } = require("../constants/enums");
+const { createTransaction } = require("./transaction.service");
+const {
+    ORDER_STATUS,
+    ROLE,
+    STATUS,
+    DELIVERY_STATUS,
+    DELIVERY_TYPE,
+    TRANSACTION_TYPE,
+    TRANSACTION_STATUS
+} = require("../constants/enums");
 const error = require("../utils/error");
 
 const resolveUserPoint = async (address) => {
@@ -453,19 +462,53 @@ const assignDriverToTask = async ({ driverId, deliveryTaskId }) => {
     }
 }
 
+const completeDeliveryTask = async ({ deliveryTaskId, driverId, type }, session) => {
+    const deliveryTask = await Delivery.findOne(
+        {
+            _id: deliveryTaskId,
+            status: DELIVERY_STATUS.INPROGRESS,
+            type,
+            driverId
+        }).session(session)
+
+    if (!deliveryTask)
+        throw error("delivery task not found", 404)
+
+    // update delivery task
+    const query = {
+        _id: deliveryTaskId,
+        status: DELIVERY_STATUS.INPROGRESS,
+        type,
+        driverId
+    }
+    const updates = {
+        status: DELIVERY_STATUS.COMPLETED,
+        completedAt: new Date()
+    }
+    const completedTask = await updateDeliveryTask({ query, updates }, session)
+
+    // create earning transaction record
+    await createTransaction({
+        userId: driverId,
+        amount: deliveryTask.driverPayment.amount,
+        referenceId: deliveryTaskId,
+        type: TRANSACTION_TYPE.DRIVER_EARNING,
+        status: TRANSACTION_STATUS.APPROVED
+    }, session)
+
+    return { completedTask, deliveryTask }
+}
+
 const completeCollectingDelivery = async ({ deliveryTaskId, driverId }) => {
     const session = await mongoose.startSession()
     try {
-        let completedTask;
+        let task;
         await session.withTransaction(async () => {
-            const deliveryTask = await Delivery.findOne(
-                {
-                    _id: deliveryTaskId,
-                    status: DELIVERY_STATUS.INPROGRESS,
-                    type: DELIVERY_TYPE.COLLECTION,
-                    driverId
-                }).session(session)
-            if (!deliveryTask) throw error("delivery task not found", 404)
+            const { deliveryTask, completedTask } = await completeDeliveryTask({
+                deliveryTaskId,
+                driverId,
+                type: DELIVERY_TYPE.COLLECTION
+            }, session)
 
             const orderIds = deliveryTask.orderIds
             if (!orderIds?.length)
@@ -486,21 +529,9 @@ const completeCollectingDelivery = async ({ deliveryTaskId, driverId }) => {
             )
             if (updatedOrders.matchedCount !== orderIds.length)
                 throw error("cant update some orders.")
-
-            const query = {
-                _id: deliveryTaskId,
-                status: DELIVERY_STATUS.INPROGRESS,
-                type: DELIVERY_TYPE.COLLECTION,
-                driverId
-            }
-            const updates = {
-                status: DELIVERY_STATUS.COMPLETED,
-                completedAt: new Date()
-            }
-            const updatedTask = await updateDeliveryTask({ query, updates }, session)
-            completedTask = updatedTask
+            task = completedTask
         })
-        return completedTask
+        return task
     } finally {
         await session.endSession()
     }
@@ -509,17 +540,13 @@ const completeCollectingDelivery = async ({ deliveryTaskId, driverId }) => {
 const completeFinalDelivery = async ({ deliveryTaskId, driverId }) => {
     const session = await mongoose.startSession()
     try {
-        let completedTask;
+        let task;
         await session.withTransaction(async () => {
-            const deliveryTask = await Delivery.findOne(
-                {
-                    _id: deliveryTaskId,
-                    status: DELIVERY_STATUS.INPROGRESS,
-                    type: DELIVERY_TYPE.FINAL,
-                    driverId
-                }).session(session)
-            if (!deliveryTask)
-                throw error("delivery task not found", 404)
+            const { deliveryTask, completedTask } = await completeDeliveryTask({
+                deliveryTaskId,
+                driverId,
+                type: DELIVERY_TYPE.FINAL
+            }, session)
 
             // update order group 
             const updatedOrderGroup = await OrderGroup.findOneAndUpdate(
@@ -537,20 +564,9 @@ const completeFinalDelivery = async ({ deliveryTaskId, driverId }) => {
             if (!updatedOrderGroup)
                 throw error("cant update this order group.")
 
-            const query = {
-                _id: deliveryTaskId,
-                type: DELIVERY_TYPE.FINAL,
-                status: DELIVERY_STATUS.INPROGRESS,
-                driverId
-            }
-            const updates = {
-                status: DELIVERY_STATUS.COMPLETED,
-                completedAt: new Date()
-            }
-            const updatedTask = await updateDeliveryTask({ query, updates }, session)
-            completedTask = updatedTask
+            task = completedTask
         })
-        return completedTask
+        return task
     } finally {
         await session.endSession()
     }

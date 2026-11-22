@@ -76,8 +76,8 @@ export interface AdminWalletTransactionItem {
     phoneNumber?: string;
     email?: string;
   };
-  type: 'deposit' | 'withdrawal' | 'purchase' | 'refund';
-  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  type: 'deposit' | 'withdrawal' | 'purchase' | 'refund' | 'driver_earning' | 'driver_payout';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded' | 'partially_refund';
   amount: number;
   requestedAmount?: number;
   balanceType: 'withdrawable' | 'storeCredit';
@@ -86,7 +86,7 @@ export interface AdminWalletTransactionItem {
   rejectReason?: string;
   referenceId?: string;
   payoutDetails?: {
-    method?: string;
+    transferProvider?: 'palestine' | 'jawwalpay' | 'palpay';
     accountNumber?: string;
     accountName?: string;
     notes?: string;

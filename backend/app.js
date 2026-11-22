@@ -25,6 +25,7 @@ const variantRoutes = require('./routes/variantRoutes');
 const storeRoutes = require('./routes/storeRoutes');
 const regionRoutes = require('./routes/regionRoutes');
 const walletRoutes = require('./routes/walletRoutes');
+const transactionRoutes = require('./routes/transactions.route');
 const withDrawalRoutes = require('./routes/withdrawal.route');
 const depositRoutes = require('./routes/deposit.route');
 const orderRoutes = require("./routes/order.route")
@@ -38,6 +39,7 @@ app.use('/api/products/:id/variants', variantRoutes);
 app.use('/api/stores', storeRoutes);
 app.use('/api/regions', regionRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/transactions', transactionRoutes);
 app.use('/api/withdrawals', withDrawalRoutes);
 app.use('/api/deposits', depositRoutes);
 app.use('/api/orders', orderRoutes);

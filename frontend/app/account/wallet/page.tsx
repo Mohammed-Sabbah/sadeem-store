@@ -182,17 +182,18 @@ export default function CustomerWalletPage() {
     if (isNaN(amt) || amt <= 0 || amt > withdrawableBalance) return;
     if (!withdrawFields.accountNumber.trim() || !withdrawFields.accountName.trim()) return;
 
-    const railConfig = PAYMENT_RAILS[withdrawRail];
+    const transferProvider = withdrawRail === 'JAWWAL_PAY'
+      ? 'jawwalpay'
+      : withdrawRail === 'PAL_PAY'
+        ? 'palpay'
+        : 'palestine';
     submitWithdrawal(
       {
         amount: amt,
         payoutDetails: {
-          bankName: railConfig.name,
+          transferProvider,
           accountNumber: withdrawFields.accountNumber.trim(),
           accountName: withdrawFields.accountName.trim(),
-          notes: [withdrawFields.bankBranch ? `الفرع: ${withdrawFields.bankBranch}` : '', withdrawFields.notes]
-            .filter(Boolean)
-            .join(' - '),
         },
       },
       {

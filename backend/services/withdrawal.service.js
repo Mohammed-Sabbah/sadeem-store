@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
 const Wallet = require("../models/Wallet")
-const WalletTransaction = require("../models/WalletTransaction");
+const WalletTransaction = require("../models/Transaction.model");
 const { createTransaction, updateTransaction } = require("./transaction.service");
 const { parsePositiveMoney } = require("../utils/wallet");
 const { decreaseWalletBalance, increaseWalletBalance } = require("./walletService");
-const { WALLET_TRANSACTION_TYPE, TRANSACTION_STATUS, BALANCE_TYPE } = require("../constants/enums")
+const { TRANSACTION_TYPE, TRANSACTION_STATUS, BALANCE_TYPE } = require("../constants/enums")
 const error = require("../utils/error");
 
 const createWithdrawal = async ({ userId, amount, payoutDetails }) => {
@@ -31,7 +31,7 @@ const createWithdrawal = async ({ userId, amount, payoutDetails }) => {
                 walletId: wallet._id,
                 userId,
                 amount: pureAmount,
-                type: WALLET_TRANSACTION_TYPE.WITHDRAWAL,
+                type: TRANSACTION_TYPE.WITHDRAWAL,
                 status: TRANSACTION_STATUS.PENDING,
                 balanceType: BALANCE_TYPE.WITHDRAWABLE,
                 payoutDetails,

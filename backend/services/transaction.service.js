@@ -1,6 +1,5 @@
-const { TRANSACTION_STATUS } = require("../constants/enums")
+const { TRANSACTION_STATUS, TRANSACTION_TYPE } = require("../constants/enums")
 const Transaction = require("../models/Transaction.model")
-const Wallet = require("../models/Wallet")
 const error = require("../utils/error")
 const { roundMoney } = require("../utils/wallet")
 
@@ -87,6 +86,9 @@ async function cancelTransaction({ userId, transactionId }) {
             }).session(session)
             if (!transaction) throw error("Transaction Not Found")
 
+            if (![TRANSACTION_TYPE.DEPOSIT, TRANSACTION_TYPE.WITHDRAWAL].includes(transaction.type))
+                throw error("cant cancel this transaction")
+
             if (transaction.type === TRANSACTION_TYPE.WITHDRAWAL) {
                 // increase Wallet Balance
                 await increaseWalletBalance({
@@ -96,19 +98,19 @@ async function cancelTransaction({ userId, transactionId }) {
                 }, session)
             }
 
-            // update wallet
+            // update transaction
             const query = {
                 status: TRANSACTION_STATUS.PENDING
             }
             const updates = {
                 status: TRANSACTION_STATUS.CANCELLED
             }
-            const updatedTransaction = await updateTransaction({
+            cancelledTransaction = await updateTransaction({
                 transactionId,
                 query,
                 updates
             }, session)
-            cancelledTransaction = updatedTransaction
+
         })
         return cancelledTransaction
     } finally {

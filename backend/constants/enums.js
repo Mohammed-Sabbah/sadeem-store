@@ -90,6 +90,11 @@ const DELIVERY_TYPE = {
     FINAL: "final"
 }
 
+const DRIVER_PAYOUT_STATUS = {
+    PENDING: "pending",
+    PAID: "paid"
+}
+
 // General Enums
 const ROLE_VALUES = Object.values(ROLE);
 const STATUS_VALUES = Object.values(STATUS);
@@ -111,7 +116,7 @@ const PAYMENT_STATUS_VALUES = Object.values(PAYMENT_STATUS)
 // Delivery
 const DELIVERY_STATUS_VALUES = Object.values(DELIVERY_STATUS)
 const DELIVERY_TYPE_VALUES = Object.values(DELIVERY_TYPE)
-
+const DRIVER_PAYOUT_STATUS_VALUES = Object.values(DRIVER_PAYOUT_STATUS)
 module.exports = {
     ROLE,
     STATUS,
@@ -127,6 +132,7 @@ module.exports = {
     PAYMENT_STATUS,
     DELIVERY_STATUS,
     DELIVERY_TYPE,
+    DRIVER_PAYOUT_STATUS,
     ROLE_VALUES,
     STATUS_VALUES,
     APPROVE_STATUS_VALUES,
@@ -140,5 +146,6 @@ module.exports = {
     PAYMENT_METHODS_VALUES,
     PAYMENT_STATUS_VALUES,
     DELIVERY_STATUS_VALUES,
-    DELIVERY_TYPE_VALUES
+    DELIVERY_TYPE_VALUES,
+    DRIVER_PAYOUT_STATUS_VALUES
 };

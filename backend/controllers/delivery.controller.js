@@ -87,6 +87,37 @@ const completeFinalDeliveryTask = async (req, res, next) => {
     }
 }
 
+const createDriverPayout = async (req, res, next) => {
+    try {
+        const transaction = await deliveryService.createDeliveryDriverPayout({
+            driverId: req.params.id,
+            amount: req.body.amount,
+            adminId: req.user._id
+        })
+        return success(res, 200, { transaction })
+    } catch (err) {
+        next(err)
+    }
+}
+
+const getMyBalance = async (req, res, next) => {
+    try {
+        const balance = await deliveryService.getDriverBalance(req.user._id)
+        return success(res, 200, { balance })
+    } catch (err) {
+        next(err)
+    }
+}
+
+const getDriverBalance = async (req, res, next) => {
+    try {
+        const balance = await deliveryService.getDriverBalance(req.params.id)
+        return success(res, 200, { balance })
+    } catch (err) {
+        next(err)
+    }
+}
+
 module.exports = {
     getDeliveryTasks,
     getDeliveryTask,
@@ -94,5 +125,8 @@ module.exports = {
     createCollectingDeliveryTask,
     createFinalDeliveryTask,
     completeCollectingDeliveryTask,
-    completeFinalDeliveryTask
+    completeFinalDeliveryTask,
+    createDriverPayout,
+    getMyBalance,
+    getDriverBalance
 }

@@ -1,25 +1,25 @@
 const mongoose = require("mongoose")
-const { DELIVERY_STATUS_VALUES, DELIVERY_STATUS, DELIVERY_TYPE_VALUES, DELIVERY_TYPE } = require("../constants/enums")
+const { DELIVERY_STATUS_VALUES, DELIVERY_STATUS, DELIVERY_TYPE_VALUES, DELIVERY_TYPE, DRIVER_PAYOUT_STATUS, DRIVER_PAYOUT_STATUS_VALUES } = require("../constants/enums")
 
-const driverPaymentSchema = new mongoose.Schema(
-    {
-        amount: {
-            type: Number,
-            min: 0,
-            default: null
-        },
-        status: {
-            type: String,
-            enum: ["PENDING", "PAYABLE", "PAID"],
-            default: "PENDING"
-        },
-        paidAt: {
-            type: Date,
-            default: null
-        }
-    },
-    { _id: false }
-);
+// const driverPaymentSchema = new mongoose.Schema(
+//     {
+//         amount: {
+//             type: Number,
+//             min: 0,
+//             default: null
+//         },
+//         status: {
+//             type: String,
+//             enum: DRIVER_PAYOUT_STATUS_VALUES,
+//             default: DRIVER_PAYOUT_STATUS.PENDING
+//         },
+//         paidAt: {
+//             type: Date,
+//             default: null
+//         }
+//     },
+//     { _id: false }
+// );
 
 
 const deliverySchema = new mongoose.Schema({
@@ -58,8 +58,8 @@ const deliverySchema = new mongoose.Schema({
         default: DELIVERY_TYPE.COLLECTION,
     },
     driverPayment: {
-        type: driverPaymentSchema,
-        // required: true
+        type: Number,
+        required: true
     },
     assignedAt: {
         type: Date,

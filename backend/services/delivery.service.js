@@ -4,6 +4,7 @@ const Order = require("../models/order.model");
 const Region = require("../models/Region");
 const Delivery = require("../models/delivery.model");
 const OrderGroup = require("../models/OrderGroup.model");
+const Transaction = require("../models/Transaction.model");
 const { RATE_PER_KM, STORE_FEE } = require("../constants/delivery");
 const { roundMoney } = require("../utils/wallet");
 const { divideByRegion } = require("../utils/order");
@@ -178,16 +179,99 @@ const getDeliveryPickupLocations = (orders) => {
 const validateDriver = async (driverId, session) => {
     const driver = await User.findOne({ _id: driverId, role: ROLE.DRIVER, status: STATUS.ACTIVE })
         .session(session)
-    if (!driver) throw error("driver not found", 404)
+    if (!driver)
+        throw error("driver not found", 404)
+}
+
+const checkPayoutBalance = async ({ amount, driverId }, session) => {
+    const driverBalance = await getDriverBalance(driverId, session)
+    if (amount > driverBalance.balance)
+        throw error("The payout amount is bigger than the driver balance")
 }
 
 // delivery Operations
+const getDriverBalance = async (driverId, session = null) => {
+    let query = Transaction.aggregate([
+        {
+            $match: {
+                userId: new mongoose.Types.ObjectId(driverId),
+                type: {
+                    $in: [
+                        TRANSACTION_TYPE.DRIVER_EARNING,
+                        TRANSACTION_TYPE.DRIVER_PAYOUT
+                    ]
+                },
+                status: TRANSACTION_STATUS.APPROVED
+            }
+        },
+        {
+            $group: {
+                _id: null,
+
+                totalEarnings: {
+                    $sum: {
+                        $cond: [
+                            { $eq: ["$type", TRANSACTION_TYPE.DRIVER_EARNING] },
+                            "$amount",
+                            0
+                        ]
+                    }
+                },
+
+                totalPayouts: {
+                    $sum: {
+                        $cond: [
+                            { $eq: ["$type", TRANSACTION_TYPE.DRIVER_PAYOUT] },
+                            "$amount",
+                            0
+                        ]
+                    }
+                },
+
+                earningsCount: {
+                    $sum: {
+                        $cond: [
+                            { $eq: ["$type", TRANSACTION_TYPE.DRIVER_EARNING] },
+                            1,
+                            0
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                totalEarnings: 1,
+                totalPayouts: 1,
+                unpaidBalance: {
+                    $subtract: ["$totalEarnings", "$totalPayouts"]
+                },
+                earningsCount: 1
+            }
+        }
+    ]);
+
+    if (session) {
+        query = query.session(session);
+    }
+
+    const [result] = await query;
+
+    return {
+        totalEarnings: result?.totalEarnings || 0,
+        totalPayouts: result?.totalPayouts || 0,
+        balance: result?.unpaidBalance || 0,
+        earningsCount: result?.earningsCount || 0
+    };
+};
+
 const createDeliveryTask = async ({
     orderGroupId,
     orderIds,
     driverId,
     driverPayment,
-    pickupLocation,
+    pickupLocations,
     deliveryLocation,
     type,
     createdBy
@@ -198,7 +282,7 @@ const createDeliveryTask = async ({
             orderIds,
             driverId,
             driverPayment,
-            pickupLocation,
+            pickupLocations,
             deliveryLocation,
             type,
             createdBy
@@ -444,8 +528,7 @@ const assignDriverToTask = async ({ driverId, deliveryTaskId }) => {
     const session = await mongoose.startSession()
     try {
         await session.withTransaction(async () => {
-            const driver = await User.findOne({ _id: driverId, role: ROLE.DRIVER, status: STATUS.ACTIVE }).session()
-            if (!driver) throw error("Driver not found")
+            await validateDriver(driverId, session)
 
             const query = {
                 _id: deliveryTaskId,
@@ -572,6 +655,29 @@ const completeFinalDelivery = async ({ deliveryTaskId, driverId }) => {
     }
 }
 
+const createDeliveryDriverPayout = async ({ amount, driverId, adminId }) => {
+    const session = await mongoose.startSession()
+    try {
+        let createdPayout;
+        await session.withTransaction(async () => {
+            await validateDriver(driverId, session)
+
+            await checkPayoutBalance({ driverId, amount }, session)
+
+            createdPayout = await createTransaction({
+                userId: driverId,
+                amount,
+                type: TRANSACTION_TYPE.DRIVER_PAYOUT,
+                status: TRANSACTION_STATUS.APPROVED,
+                createdBy: adminId
+            }, session)
+        })
+        return createdPayout
+    } finally {
+        await session.endSession()
+    }
+}
+
 module.exports = {
     calculateDeliveryFee,
     resolveUserPoint,
@@ -582,5 +688,7 @@ module.exports = {
     completeFinalDelivery,
     getDeliveryTasks,
     getDeliveryTask,
-    cancelDeliveryTask
+    cancelDeliveryTask,
+    createDeliveryDriverPayout,
+    getDriverBalance,
 }

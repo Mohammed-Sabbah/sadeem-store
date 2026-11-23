@@ -626,6 +626,10 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
     }
 }
 
+const completeOrder = async ({ orderGroupId }, session) => {
+
+}
+
 const cancelOrder = async ({ user, orderGroupId, orderId, store = null }) => {
     const targetGroupId = orderGroupId || orderId;
     const session = await mongoose.startSession()

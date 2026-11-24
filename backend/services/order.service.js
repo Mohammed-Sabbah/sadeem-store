@@ -279,9 +279,14 @@ const listOrders = async ({
     search,
     startDate,
     endDate,
+    createdFrom,
+    createdTo,
     userId,
+    buyerId,
+    orderNumber,
     storeId,
     page = 1,
+    offset,
     limit = 10,
     sortBy = "createdAt",
     sortOrder = "desc",
@@ -308,12 +313,13 @@ const listOrders = async ({
 
         case ROLE.ADMIN:
             // Admin can list orders across the marketplace.
-            if (userId) {
-                if (!mongoose.isValidObjectId(userId)) {
+            const buyerFilter = userId || buyerId;
+            if (buyerFilter) {
+                if (!mongoose.isValidObjectId(buyerFilter)) {
                     throw error("Invalid user ID", 400);
                 }
 
-                query.userId = userId;
+                query.userId = buyerFilter;
             }
 
             if (storeId) {
@@ -349,12 +355,21 @@ const listOrders = async ({
         ];
     }
 
+    if (orderNumber?.trim()) {
+        query.orderNumber = new RegExp(
+            `^${escapeRegex(orderNumber.trim())}$`,
+            "i"
+        );
+    }
+
     // 4. Filter by creation date.
-    if (startDate || endDate) {
+    const dateFrom = startDate || createdFrom;
+    const dateTo = endDate || createdTo;
+    if (dateFrom || dateTo) {
         const dateFilter = {};
 
-        if (startDate) {
-            const start = new Date(startDate);
+        if (dateFrom) {
+            const start = new Date(dateFrom);
 
             if (Number.isNaN(start.getTime())) {
                 throw error("Invalid start date", 400);
@@ -363,8 +378,8 @@ const listOrders = async ({
             dateFilter.$gte = start;
         }
 
-        if (endDate) {
-            const end = new Date(endDate);
+        if (dateTo) {
+            const end = new Date(dateTo);
 
             if (Number.isNaN(end.getTime())) {
                 throw error("Invalid end date", 400);
@@ -403,6 +418,13 @@ const listOrders = async ({
     }
 
     limit = Math.min(limit, 100);
+    const skip = offset === undefined
+        ? (page - 1) * limit
+        : Number(offset);
+
+    if (!Number.isInteger(skip) || skip < 0) {
+        throw error("Invalid pagination parameters", 400);
+    }
 
     // 6. Whitelist sorting fields and direction.
     if (!SORT_FIELDS.includes(sortBy)) {
@@ -410,8 +432,6 @@ const listOrders = async ({
     }
 
     const sortDirection = sortOrder === "asc" ? 1 : -1;
-
-    const skip = (page - 1) * limit;
 
     // 7. Fetch results and total count.
     const [orders, totalOrders] = await Promise.all([
@@ -428,12 +448,13 @@ const listOrders = async ({
     return {
         orders,
         pagination: {
-            page,
+            page: Math.floor(skip / limit) + 1,
+            offset: skip,
             limit,
             totalOrders,
             totalPages: Math.ceil(totalOrders / limit),
-            hasNextPage: page * limit < totalOrders,
-            hasPreviousPage: page > 1,
+            hasNextPage: skip + limit < totalOrders,
+            hasPreviousPage: skip > 0,
         },
     };
 };
@@ -624,10 +645,6 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
     } finally {
         await session.endSession()
     }
-}
-
-const completeOrder = async ({ orderGroupId }, session) => {
-
 }
 
 const cancelOrder = async ({ user, orderGroupId, orderId, store = null }) => {

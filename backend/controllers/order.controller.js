@@ -55,7 +55,7 @@ const cancelOrder = async (req, res, next) => {
     try {
         const order = await orderService.cancelOrder({
             user: req.user,
-            orderId: req.params.id,
+            orderGroupId: req.params.id,
             store: req.store?._id
         })
         return success(res, 200, { order })

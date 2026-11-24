@@ -170,6 +170,12 @@ const validateCreateOrder = [
 
 // Validate order listing filters
 const validateListOrders = [
+    query("page")
+        .optional()
+        .isInt({ min: 1, max: 1000000 })
+        .withMessage("Page must be a positive integer")
+        .toInt(),
+
     query("offset")
         .optional()
         .isInt({ min: 0, max: 1000000 })
@@ -182,6 +188,15 @@ const validateListOrders = [
         .withMessage("Limit must be between 1 and 100")
         .toInt(),
 
+    query("search")
+        .optional()
+        .isString()
+        .withMessage("Search must be a string")
+        .bail()
+        .trim()
+        .isLength({ max: 100 })
+        .withMessage("Search is too long"),
+
     query("status")
         .optional()
         .isIn(ORDER_STATUS_VALUES)
@@ -191,6 +206,11 @@ const validateListOrders = [
         .optional()
         .isMongoId()
         .withMessage("Store ID must be a valid Mongo ID"),
+
+    query("userId")
+        .optional()
+        .isMongoId()
+        .withMessage("User ID must be a valid Mongo ID"),
 
     query("buyerId")
         .optional()
@@ -209,6 +229,22 @@ const validateListOrders = [
         .isLength({ max: 100 })
         .withMessage("Order number is too long"),
 
+    query("startDate")
+        .optional()
+        .isISO8601()
+        .withMessage("Start date must be a valid date"),
+
+    query("endDate")
+        .optional()
+        .isISO8601()
+        .withMessage("End date must be a valid date")
+        .bail()
+        .custom((value, { req }) => {
+            const startDate = req.query.startDate || req.query.createdFrom;
+            return !startDate || new Date(value) >= new Date(startDate);
+        })
+        .withMessage("End date must be on or after start date"),
+
     query("createdFrom")
         .optional()
         .isISO8601()
@@ -219,11 +255,21 @@ const validateListOrders = [
         .isISO8601()
         .withMessage("Created to must be a valid date")
         .bail()
-        .custom((value, { req }) =>
-            !req.query.createdFrom ||
-            new Date(value) >= new Date(req.query.createdFrom)
-        )
+        .custom((value, { req }) => {
+            const startDate = req.query.startDate || req.query.createdFrom;
+            return !startDate || new Date(value) >= new Date(startDate);
+        })
         .withMessage("Created to must be on or after created from"),
+
+    query("sortBy")
+        .optional()
+        .isIn(["createdAt", "updatedAt", "totalAmount"])
+        .withMessage("Unsupported order sort field"),
+
+    query("sortOrder")
+        .optional()
+        .isIn(["asc", "desc"])
+        .withMessage("Sort order must be asc or desc"),
 
     validateRequest,
 ];

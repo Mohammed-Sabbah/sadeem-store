@@ -638,7 +638,34 @@ const completeFinalDelivery = async ({ deliveryTaskId, driverId }) => {
                 type: DELIVERY_TYPE.FINAL
             }, session)
 
-            // update order group 
+            const orderGroup = await OrderGroup.findOne({
+                _id: deliveryTask.orderGroupId,
+                status: ORDER_STATUS.IN_DELIVERY
+            }).session(session)
+
+            if (!orderGroup || !orderGroup.orders?.length) {
+                throw error("Order group not found or has no orders", 409)
+            }
+
+            const updatedOrders = await Order.updateMany(
+                {
+                    orderGroupId: orderGroup._id,
+                    status: ORDER_STATUS.COLLECTED
+                },
+                {
+                    $set: {
+                        status: ORDER_STATUS.DELIVERED,
+                        deliveredAt: completedTask.completedAt
+                    }
+                },
+                { session }
+            )
+
+            if (updatedOrders.matchedCount !== orderGroup.orders.length) {
+                throw error("Some orders could not be marked as delivered", 409)
+            }
+
+            // Update the order group after all its store orders are delivered.
             const updatedOrderGroup = await OrderGroup.findOneAndUpdate(
                 {
                     _id: deliveryTask.orderGroupId,

@@ -33,7 +33,7 @@ const deliverySchema = new mongoose.Schema({
             type: mongoose.Schema.Types.ObjectId,
             ref: "Order",
         }],
-        required: true
+        default: []
     },
     driverId: {
         type: mongoose.Schema.Types.ObjectId,
@@ -44,12 +44,12 @@ const deliverySchema = new mongoose.Schema({
         enum: DELIVERY_STATUS_VALUES,
         default: DELIVERY_STATUS.INPROGRESS
     },
-    pickUpLocations: {
-        type: [String],
+    pickupLocations: {
+        type: [mongoose.Schema.Types.Mixed],
         required: true
     },
     deliveryLocation: {
-        type: String,
+        type: mongoose.Schema.Types.Mixed,
         required: true
     },
     type: {

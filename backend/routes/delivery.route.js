@@ -18,7 +18,9 @@ const { authenticate, authorize } = require("../middleware/auth")
 const {
     validateDeliveryTaskId,
     validateCreateCollectingDeliveryTask,
-    validateCreateFinalDeliveryTask
+    validateCreateFinalDeliveryTask,
+    validateDriverId,
+    validateCreateDriverPayout
 } = require("../schemas/deliverySchema")
 
 router.use(authenticate)
@@ -46,7 +48,7 @@ router.use(authorize(ROLE.ADMIN))
 router.patch("/:id/cancel", validateDeliveryTaskId, cancelDeliveryTask)
 router.post("/collecting", validateCreateCollectingDeliveryTask, createCollectingDeliveryTask)
 router.post("/final", validateCreateFinalDeliveryTask, createFinalDeliveryTask)
-router.post("/driver/:id/payouts", createDriverPayout)
-router.get("/driver/:id/balance", getDriverBalance)
+router.post("/driver/:id/payouts", validateCreateDriverPayout, createDriverPayout)
+router.get("/driver/:id/balance", validateDriverId, getDriverBalance)
 
 module.exports = router

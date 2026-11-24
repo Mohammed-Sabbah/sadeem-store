@@ -13,38 +13,8 @@ const { generateOtp, sendEmail } = require('../utils/email');
 const { success, error } = require('../utils/responses');
 const { sanitizeUser } = require("../utils/user")
 const { withMongoTransaction } = require("../config/db")
+const { createUserWithWallet, checkRegistrationConflicts } = require("../services/user.service")
 
-async function checkRegistrationConflicts(email, phoneNumber) {
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
-        return 'Email already exists';
-    }
-
-    if (phoneNumber && await User.findOne({ phoneNumber })) {
-        return 'Phone number already exists';
-    }
-
-    return null;
-}
-
-async function createUserWithWallet(userData, session) {
-    const options = session ? { session } : {};
-    const [user] = await User.create([userData], options);
-
-    if (user.role === ROLE.USER) {
-        await Wallet.create([{
-            userId: user._id,
-            withdrawableBalance: 0,
-            storeCreditBalance: 0,
-            balance: 0,
-            currency: 'ILS',
-            status: STATUS.ACTIVE,
-        }], options);
-    }
-
-    return user;
-}
 
 async function register(req, res, next) {
     try {

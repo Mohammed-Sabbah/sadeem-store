@@ -177,8 +177,11 @@ const getDeliveryPickupLocations = (orders) => {
 }
 
 const validateDriver = async (driverId, session) => {
-    const driver = await User.findOne({ _id: driverId, role: ROLE.DRIVER, status: STATUS.ACTIVE })
-        .session(session)
+    const driver = await User.findOne(
+        { _id: driverId, role: ROLE.DRIVER, status: STATUS.ACTIVE },
+        null,
+        ...(session ? { session } : {})
+    )
     if (!driver)
         throw error("driver not found", 404)
 }
@@ -187,6 +190,10 @@ const checkPayoutBalance = async ({ amount, driverId }, session) => {
     const driverBalance = await getDriverBalance(driverId, session)
     if (amount > driverBalance.balance)
         throw error("The payout amount is bigger than the driver balance")
+}
+
+const hasActiveTask = async ({ driverId }) => {
+    return await Delivery.findOne({ driverId, status: DELIVERY_STATUS.INPROGRESS })
 }
 
 // delivery Operations
@@ -434,7 +441,7 @@ const createCollectingDelivery = async ({ orderIds, driverId, amount, deliveryLo
 
             await validateDriver(driverId, session)
 
-            const driverPayment = { amount }
+            const driverPayment = amount
 
             const deliveryTask = await createDeliveryTask({
                 orderGroupId,
@@ -496,12 +503,12 @@ const createFinalDelivery = async ({ orderGroupId, driverId, amount, pickupLocat
 
             await validateDriver(driverId, session)
 
-            const driverPayment = { amount }
+            const driverPayment = amount
 
             const deliveryTask = await createDeliveryTask({
                 orderGroupId,
                 driverId,
-                pickupLocation,
+                pickupLocations: [pickupLocation],
                 deliveryLocation: orderGroup.deliveryAddress,
                 driverPayment,
                 type: DELIVERY_TYPE.FINAL,
@@ -573,7 +580,7 @@ const completeDeliveryTask = async ({ deliveryTaskId, driverId, type }, session)
     // create earning transaction record
     await createTransaction({
         userId: driverId,
-        amount: deliveryTask.driverPayment.amount,
+        amount: deliveryTask.driverPayment,
         referenceId: deliveryTaskId,
         type: TRANSACTION_TYPE.DRIVER_EARNING,
         status: TRANSACTION_STATUS.APPROVED
@@ -691,4 +698,6 @@ module.exports = {
     cancelDeliveryTask,
     createDeliveryDriverPayout,
     getDriverBalance,
+    hasActiveTask,
+    validateDriver
 }

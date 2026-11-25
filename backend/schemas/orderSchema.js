@@ -168,6 +168,58 @@ const validateCreateOrder = [
     validateRequest,
 ];
 
+const validateCalculateOrderTotal = [
+    body("items")
+        .isArray({ min: 1, max: 50 })
+        .withMessage("An order must contain between 1 and 50 items"),
+    body("items.*.variantId")
+        .isMongoId()
+        .customSanitizer(value => typeof value === "string" ? value.toLowerCase() : value)
+        .withMessage("Variant ID must be a valid Mongo ID"),
+    body("items.*.quantity")
+        .isInt({ min: 1, max: 1000 })
+        .withMessage("Quantity must be a positive whole number")
+        .toInt(),
+    body("items").custom((items) => {
+        if (!Array.isArray(items)) return true;
+        const variantIds = items.map(item => item?.variantId);
+        if (variantIds.some(id => typeof id !== "string")) return true;
+        if (new Set(variantIds).size !== variantIds.length) {
+            throw new Error("Duplicate variants are not allowed in an order");
+        }
+        return true;
+    }),
+    body("deliveryAddress")
+        .isObject({ strict: true })
+        .withMessage("Delivery address must be an address object"),
+    body("deliveryAddress.region")
+        .notEmpty()
+        .isIn(GAZA_REGIONS.map(region => region.id))
+        .withMessage("Delivery address region is invalid"),
+    body("deliveryAddress.city")
+        .notEmpty()
+        .custom((city, { req }) => {
+            const region = GAZA_REGIONS.find(item => item.id === req.body.deliveryAddress.region);
+            return Boolean(region && region.cities.some(item => item.id === city));
+        })
+        .withMessage("Delivery address city must belong to its region"),
+    body("deliveryAddress.coordinates")
+        .optional()
+        .isObject({ strict: true })
+        .withMessage("Delivery address coordinates must be an object"),
+    body("deliveryAddress.coordinates.lat")
+        .optional()
+        .isFloat({ min: -90, max: 90 })
+        .withMessage("Delivery address latitude must be valid")
+        .toFloat(),
+    body("deliveryAddress.coordinates.lng")
+        .optional()
+        .isFloat({ min: -180, max: 180 })
+        .withMessage("Delivery address longitude must be valid")
+        .toFloat(),
+    validateRequest,
+];
+
 // Validate order listing filters
 const validateListOrders = [
     query("page")
@@ -295,6 +347,7 @@ const validateCancelOrderItemStatus = [
 module.exports = {
     validateOrderId,
     validateCreateOrder,
+    validateCalculateOrderTotal,
     validateListOrders,
     validateCancelOrderItemStatus
 };

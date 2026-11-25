@@ -10,6 +10,7 @@ const { roundMoney } = require("../utils/wallet");
 const { divideByRegion } = require("../utils/order");
 const { getFarthestPoint, normalizePoint } = require("./gps.service");
 const { createTransaction } = require("./transaction.service");
+const { completeStoreEarnings } = require("./storeBalance.service");
 const {
     ORDER_STATUS,
     ROLE,
@@ -665,7 +666,13 @@ const completeFinalDelivery = async ({ deliveryTaskId, driverId }) => {
                 throw error("Some orders could not be marked as delivered", 409)
             }
 
-            // Update the order group after all its store orders are delivered.
+            const deliveredOrders = await Order.find({
+                orderGroupId: orderGroup._id,
+                status: ORDER_STATUS.DELIVERED,
+            }).select("_id storeId").session(session);
+            await completeStoreEarnings({ orders: deliveredOrders, session });
+
+            // Update the order group 
             const updatedOrderGroup = await OrderGroup.findOneAndUpdate(
                 {
                     _id: deliveryTask.orderGroupId,

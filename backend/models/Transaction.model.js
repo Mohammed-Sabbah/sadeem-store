@@ -45,6 +45,11 @@ const transactionSchema = new mongoose.Schema(
             required: true,
             index: true,
         },
+        storeId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Store',
+            index: true,
+        },
         type: {
             type: String,
             enum: TRANSACTION_TYPE_VALUES,
@@ -139,6 +144,7 @@ const transactionSchema = new mongoose.Schema(
 );
 
 transactionSchema.index({ walletId: 1, createdAt: -1 });
+transactionSchema.index({ storeId: 1, createdAt: -1 });
 transactionSchema.index({ status: 1, type: 1 });
 transactionSchema.index({ userId: 1, idempotencyKey: 1, type: 1 });
 

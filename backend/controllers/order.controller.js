@@ -19,6 +19,18 @@ const getOrderById = async (req, res, next) => {
     }
 }
 
+const calculateOrderTotal = async (req, res, next) => {
+    try {
+        const totals = await orderService.calculateOrderTotal({
+            items: req.body.items,
+            deliveryAddress: req.body.deliveryAddress
+        });
+        return success(res, 200, { totals });
+    } catch (err) {
+        next(err);
+    }
+}
+
 const getStoreOrders = async (req, res, next) => {
     try {
         const orders = await orderService.listOrders(
@@ -80,6 +92,7 @@ const cancelOrderItem = async (req, res, next) => {
 module.exports = {
     getOrders,
     getOrderById,
+    calculateOrderTotal,
     getStoreOrders,
     placeOrder,
     cancelOrder,

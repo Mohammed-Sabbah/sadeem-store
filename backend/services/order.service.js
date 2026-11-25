@@ -22,6 +22,11 @@ const { consumeCart, assertOwner } = require('./cart.service');
 const { calculateDeliveryFee } = require("./delivery.service");
 const { roundMoney } = require("../utils/wallet");
 const { divideByRegion } = require("../utils/order");
+const {
+    createStoreEarning,
+    updatePendingStoreEarning,
+    cancelPendingStoreEarning,
+} = require("./storeBalance.service");
 
 // Helpers
 const validateOrderItems = async (items, session) => {
@@ -167,6 +172,24 @@ const calculateTotalOrdersAmount = (storeOrders, deliveryFee) => {
         totalAmount: subtotal ? roundMoney(subtotal + deliveryFee) : subtotal
     };
 }
+
+const calculateOrderTotals = async ({ items, deliveryAddress, session }) => {
+    const { orderItems } = await validateOrderItems(items, session);
+    const storeOrders = await divideByStore(orderItems, session);
+    const deliveryFee = await calculateDeliveryFee(storeOrders, deliveryAddress);
+    const totals = calculateTotalOrdersAmount(storeOrders, deliveryFee);
+
+    return { orderItems, storeOrders, deliveryFee, ...totals };
+};
+
+const calculateOrderTotal = async ({ items, deliveryAddress }) => {
+    const { subtotal, deliveryFee, totalAmount } = await calculateOrderTotals({
+        items,
+        deliveryAddress
+    });
+
+    return { subtotal, deliveryFee, totalAmount };
+};
 
 const calculateOrderSubtotal = (order) => order.items
     .filter(item => item.status === STATUS.ACTIVE)
@@ -494,18 +517,8 @@ const createOrder = async ({ userId, ownerId, cartRevision, expectedSubtotal, it
         let createdOrders;
         await session.withTransaction(async () => {
             // await consumeCart(userId, items, cartRevision, session);
-
-            // validate order items - return validated order items 
-            const { orderItems } = await validateOrderItems(items, session)
-
-            // divide order items by store
-            const storeOrders = await divideByStore(orderItems, session)
-
-            // calculate delivery fees - based on the regions and stores of every region
-            const deliveryFee = await calculateDeliveryFee(storeOrders, deliveryAddress)
-
-            // calculate total amount for each region order
-            const { totalAmount, subtotal } = calculateTotalOrdersAmount(storeOrders, deliveryFee)
+            const { orderItems, storeOrders, deliveryFee, totalAmount, subtotal } =
+                await calculateOrderTotals({ items, deliveryAddress, session });
 
             // create the order group
             const [orderGroup] = await OrderGroup.create(
@@ -532,6 +545,10 @@ const createOrder = async ({ userId, ownerId, cartRevision, expectedSubtotal, it
                 deliveryAddress,
                 deliveryPhone
             }, session)
+
+            for (const order of subOrders) {
+                await createStoreEarning({ order, session });
+            }
 
             const subOrdersIds = subOrders.map(subOrder => subOrder._id)
             orderGroup.orders = subOrdersIds
@@ -580,6 +597,7 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             // calculate the new subtotal and amount and refund the user
             const newSubtotal = calculateOrderSubtotal(order)
             order.subtotal = newSubtotal;
+            await updatePendingStoreEarning({ order, session });
 
             // save the order
             await order.save({ session })
@@ -691,6 +709,9 @@ const cancelOrder = async ({ user, orderGroupId, orderId, store = null }) => {
 
             // cancel orders 
             subOrders.map(order => order.status = ORDER_STATUS.CANCELLED)
+            for (const order of subOrders) {
+                await cancelPendingStoreEarning({ order, session });
+            }
             await Promise.all(subOrders.map(order => order.save({ session })))
 
             cancelledOrder = orderGroup
@@ -704,6 +725,7 @@ const cancelOrder = async ({ user, orderGroupId, orderId, store = null }) => {
 module.exports = {
     listOrders,
     listOrder,
+    calculateOrderTotal,
     createOrder,
     cancelOrder,
     cancelOrderItem,

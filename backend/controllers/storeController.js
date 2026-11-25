@@ -2,6 +2,7 @@ const Store = require('../models/Store');
 const User = require('../models/User');
 const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
+const storeBalanceService = require('../services/storeBalance.service');
 
 async function getMyStore(req, res, next) {
     try {
@@ -12,6 +13,38 @@ async function getMyStore(req, res, next) {
         next(err)
     }
 }
+
+async function getMyStoreBalance(req, res, next) {
+    try {
+        const balance = await storeBalanceService.getStoreBalance(req.store._id);
+        return success(res, 200, { balance });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function getStoreBalance(req, res, next) {
+    try {
+        const balance = await storeBalanceService.getStoreBalance(req.params.id);
+        return success(res, 200, { balance });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function createStorePayout(req, res, next) {
+    try {
+        const transaction = await storeBalanceService.createStorePayout({
+            storeId: req.params.id,
+            amount: req.body.amount,
+            adminId: req.user._id,
+        });
+        return success(res, 201, { transaction });
+    } catch (err) {
+        return next(err);
+    }
+}
+
 async function getPublicStore(req, res, next) {
     try {
         const store = await Store.findOne({
@@ -146,6 +179,9 @@ module.exports = {
     getPublicStore,
     approveStore,
     getMyStore,
+    getMyStoreBalance,
+    getStoreBalance,
+    createStorePayout,
     getAdminStores,
     toggleStoreStatus,
     rejectStore

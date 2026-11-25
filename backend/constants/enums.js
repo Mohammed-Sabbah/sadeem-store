@@ -30,7 +30,9 @@ const TRANSACTION_TYPE = {
     PURCHASE: 'purchase',
     REFUND: 'refund',
     DRIVER_EARNING: "driver_earning",
-    DRIVER_PAYOUT: "driver_payout"
+    DRIVER_PAYOUT: "driver_payout",
+    STORE_EARNING: "store_earning",
+    STORE_PAYOUT: "store_payout"
 };
 
 const TRANSFER_PROVIDER = {
@@ -47,6 +49,7 @@ const BALANCE_TYPE = {
 const TRANSACTION_STATUS = {
     PENDING: "pending",
     APPROVED: "approved",
+    COMPLETED: "completed",
     REJECTED: "rejected",
     CANCELLED: "cancelled",
     REFUNDED: "refunded",

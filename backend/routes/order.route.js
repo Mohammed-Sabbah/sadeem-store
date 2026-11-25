@@ -7,6 +7,7 @@ const allowAll = [ROLE.ADMIN, ROLE.SELLER, ROLE.USER]
 const {
     getOrders,
     getOrderById,
+    calculateOrderTotal,
     getStoreOrders,
     placeOrder,
     cancelOrder,
@@ -18,7 +19,13 @@ const { authenticate, authorize } = require("../middleware/auth")
 router.use(authenticate)
 
 // Schema
-const { validateOrderId, validateListOrders, validateCreateOrder, validateCancelOrderItemStatus } = require("../schemas/orderSchema")
+const {
+    validateOrderId,
+    validateListOrders,
+    validateCreateOrder,
+    validateCalculateOrderTotal,
+    validateCancelOrderItemStatus
+} = require("../schemas/orderSchema")
 
 // Get User Orders
 router.get("/", authorize(ROLE.USER), validateListOrders, getOrders)
@@ -28,6 +35,14 @@ router.get("/store", authorize(ROLE.SELLER), validateListOrders, getStoreOrders)
 
 // Get Admin Orders
 router.get("/admin", authorize(ROLE.ADMIN), validateListOrders, getOrders)
+
+// Calculate the amount due without creating or charging an order
+router.post(
+    "/calculate-total",
+    authorize(ROLE.USER),
+    validateCalculateOrderTotal,
+    calculateOrderTotal
+)
 
 // Get Order By Id
 router.get("/:id", authorize(...allowAll), validateOrderId, getOrderById)

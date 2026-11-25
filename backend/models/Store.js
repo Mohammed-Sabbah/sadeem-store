@@ -2,6 +2,22 @@ const mongoose = require('mongoose');
 const { STATUS, STATUS_VALUES, APPROVE_STATUS_VALUES, APPROVE_STATUS } = require('../constants/enums');
 const { addressSchema } = require('./address');
 
+const storeBalanceSchema = new mongoose.Schema(
+    {
+        pending: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+        available: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+    },
+    { _id: false }
+);
+
 const storeSchema = new mongoose.Schema(
     {
         ownerId: {
@@ -29,8 +45,8 @@ const storeSchema = new mongoose.Schema(
             required: true,
         },
         balance: {
-            type: Number,
-            default: 0,
+            type: storeBalanceSchema,
+            default: () => ({}),
         },
         status: {
             type: String,
@@ -52,5 +68,14 @@ const storeSchema = new mongoose.Schema(
         timestamps: true,
     }
 );
+
+storeSchema.pre('init', function (document) {
+    if (typeof document.balance === 'number') {
+        document.balance = {
+            pending: 0,
+            available: document.balance,
+        };
+    }
+});
 
 module.exports = mongoose.model('Store', storeSchema);

@@ -55,7 +55,35 @@ const validateStoreId = [
     validateRequest,
 ];
 
+const validateCreateStorePayout = [
+    param('id')
+        .isMongoId()
+        .withMessage('Invalid store ID'),
+    body().custom((value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            throw new Error('Payout data must be an object');
+        }
+        if (Object.keys(value).some((field) => field !== 'amount')) {
+            throw new Error('Payout contains unsupported fields');
+        }
+        return true;
+    }),
+    body('amount')
+        .exists()
+        .withMessage('Payout amount is required')
+        .bail()
+        .isFloat({ min: 0.01, max: 100000000 })
+        .withMessage('Payout amount must be a valid positive amount')
+        .bail()
+        .custom((value) => Number.isFinite(Number(value)) &&
+            Math.round(Number(value) * 100) === Number(value) * 100)
+        .withMessage('Payout amount must have at most two decimal places')
+        .toFloat(),
+    validateRequest,
+];
+
 module.exports = {
     validateSellerStore,
     validateStoreId,
+    validateCreateStorePayout,
 };

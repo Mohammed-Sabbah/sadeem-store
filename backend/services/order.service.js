@@ -20,6 +20,7 @@ const { payForOrder, refundOrder, refundOrderItemsCancellation } = require("../s
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
 const { consumeCart, assertOwner } = require('./cart.service');
 const { calculateDeliveryFee } = require("./delivery.service");
+const { assertStoresHaveActiveRegions } = require("./region.service");
 const { roundMoney } = require("../utils/wallet");
 const { divideByRegion } = require("../utils/order");
 const {
@@ -123,6 +124,8 @@ const divideByStore = async (items, session) => {
     if (stores.length !== storeIds.length) {
         throw error("One or more stores are invalid or inactive");
     }
+
+    await assertStoresHaveActiveRegions(stores, session);
 
     // 3. Attach regionId to each store order
     const storeRegionMap = new Map(

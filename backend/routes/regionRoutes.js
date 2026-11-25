@@ -1,32 +1,56 @@
 const express = require('express');
 const {
     getAllRegions,
-    getRegionByCode,
+    getAllRegionsForAdmin,
+    getRegionById,
+    getRegionByIdForAdmin,
+    createRegion,
+    addCity,
     updateRegionStatus,
+    updateRegionCenter,
+    updateCityCenter,
 } = require('../controllers/regionController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { ROLE } = require('../constants/enums');
 const {
     validateRegionScope,
-    validateRegionCode,
+    validateRegionId,
+    validateCreateRegion,
+    validateCreateCity,
     validateRegionStatus,
+    validateRegionCenter,
+    validateCityCenter,
 } = require('../schemas/regionSchema');
 
 const router = express.Router();
+const adminOnly = [authenticate, authorize(ROLE.ADMIN)];
 
-// 1. المسار الموحد العام لجلب المحافظات (مع دعم الفلترة ?scope=hub / ?scope=delivery)
+router.get('/admin/regions', ...adminOnly, getAllRegionsForAdmin);
+router.get('/admin/regions/:id', ...adminOnly, validateRegionId, getRegionByIdForAdmin);
+router.post('/', ...adminOnly, validateCreateRegion, createRegion);
+router.post('/:id/cities', ...adminOnly, validateCreateCity, addCity);
+
 router.get('/', validateRegionScope, getAllRegions);
+router.get('/:id', validateRegionId, getRegionById);
 
-// 2. جلب تفاصيل محافظة محددة بالكود
-router.get('/:code', validateRegionCode, getRegionByCode);
-
-// 3. تعديل الحالة التشغيلية للمحافظة (متاح للأدمن فقط)
 router.patch(
-    '/:code/status',
-    authenticate,
-    authorize(ROLE.ADMIN),
+    '/:id/status',
+    ...adminOnly,
+    validateRegionId,
     validateRegionStatus,
     updateRegionStatus
+);
+router.patch(
+    '/:id/center',
+    ...adminOnly,
+    validateRegionCenter,
+    updateRegionCenter
+);
+router.patch(
+    '/:id/cities/:cityId/center',
+    ...adminOnly,
+    validateCityCenter,
+    updateCityCenter
 );
 
 module.exports = router;

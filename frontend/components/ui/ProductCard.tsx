@@ -19,12 +19,14 @@ export function ProductCard({
   onRemoveFromWishlist,
 }: ProductCardProps) {
   const { addToCart } = useCart();
+  const [cartMessage, setCartMessage] = useState('');
   const [isWished, setIsWished] = useState(isWishlistPage);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1, undefined, undefined, product.variantId);
+    const result = await addToCart(product, 1, undefined, undefined, product.variantId);
+    setCartMessage(result.success ? 'تمت الإضافة للسلة' : result.message || 'تعذر حفظ السلة');
   };
 
   const handleToggleWish = (e: React.MouseEvent) => {
@@ -41,6 +43,7 @@ export function ProductCard({
 
   return (
     <article className="group relative bg-white border border-brand-border-subtle hover:border-brand-primary/40 rounded-xl overflow-hidden transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md flex flex-col text-right">
+      {cartMessage && <p role="status" className="px-3 text-xs text-brand-primary">{cartMessage}</p>}
       <Link href={`/product/${product.id}`} className="no-underline text-inherit flex flex-col flex-1">
         {/* Thumbnail Stage */}
         <div className="relative aspect-square w-full overflow-hidden bg-brand-surface flex items-center justify-center">
@@ -90,10 +93,10 @@ export function ProductCard({
               </span>
             ) : (
               <>
-                <span>{product.vendor.name}</span>
+                <span>{product.vendor?.name || 'متجر معتمد'}</span>
                 <span>•</span>
-                <span>{product.vendor.city}</span>
-                {product.vendor.verified && (
+                <span>{product.vendor?.city || 'المحافظة الوسطى'}</span>
+                {Boolean(product.vendor?.verified) && (
                   <span className="text-brand-trust inline-flex items-center" title="متجر معتمد وموثق">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                       <polyline points="20 6 9 17 4 12"></polyline>

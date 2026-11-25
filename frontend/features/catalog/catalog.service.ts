@@ -1,3 +1,4 @@
+import { formatCity, formatGovernorate } from '@/shared/lib/formatters';
 import { getRequest } from '@/shared/lib/coreApi';
 import type { Product, Store } from '@/types';
 import { getAttributeKey, getAttributeDisplayName } from '@/shared/lib/attributeUtils';
@@ -250,7 +251,7 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
     vendor: {
       id: store?._id || (typeof product.storeId === 'string' ? product.storeId : ''),
       name: product.isAnonymousVendor ? 'توريد مباشر وموثق عبر سَدِيم' : (store?.name || 'متجر معتمد في سَدِيم'),
-      city: product.isAnonymousVendor ? 'المحافظة الوسطى' : (store?.address?.city || 'المحافظة الوسطى'),
+      city: product.isAnonymousVendor ? 'المحافظة الوسطى' : formatCity(store?.address?.city),
       verified: true,
     },
     category: category?.title || '',
@@ -266,8 +267,8 @@ export function mapCatalogProduct(product: ApiProduct): CatalogProduct | null {
     colorImageMap,
     isSimple,
     isAnonymousVendor: Boolean(product.isAnonymousVendor),
-    rating: (product as any).ratingsAverage || 5.0,
-    reviewsCount: (product as any).ratingsQuantity || 142,
+    rating: (product as any).ratingsAverage || 0,
+    reviewsCount: (product as any).ratingsQuantity || 0,
     createdAt: product.createdAt,
   };
 }
@@ -276,7 +277,7 @@ function mapCatalogStore(store: ApiStore): CatalogStore {
   return {
     id: store._id,
     name: store.name,
-    city: store.address?.city || 'المحافظة الوسطى',
+    city: formatCity(store.address?.city),
     address: store.address?.detailedAddress || '',
     verified: true,
     image: (store.logo && store.logo.trim()) || DEFAULT_CATALOG_STORE_IMAGE,
@@ -316,6 +317,11 @@ export const catalogService = {
   async getStore(storeId: string) {
     const data = await requestData<{ store: ApiStore }>(`/api/stores/${storeId}`);
     return mapCatalogStore(data.store);
+  },
+
+  async getStores() {
+    const data = await requestData<{ stores: ApiStore[] }>('/api/stores');
+    return data.stores.map(mapCatalogStore);
   },
 
   async getCategories() {

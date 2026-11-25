@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const addressSchema = new mongoose.Schema({
-    governorate: {
+    region: {
         type: String,
         default: 'central',
     },

@@ -198,7 +198,7 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
                 <>
                   <div className="p-3 flex items-center justify-between">
                     <span className="text-brand-muted">الجهة المستفيدة</span>
-                    <strong className="text-brand-dark font-bold">{transaction.payoutDetails.bankName}</strong>
+                    <strong className="text-brand-dark font-bold">{transaction.payoutDetails.transferProvider}</strong>
                   </div>
                   <div className="p-3 flex items-center justify-between">
                     <span className="text-brand-muted">رقم الحساب / الهاتف</span>

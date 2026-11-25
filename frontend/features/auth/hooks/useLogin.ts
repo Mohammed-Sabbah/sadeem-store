@@ -49,6 +49,11 @@ export function useLogin() {
     }
 
     if (res.data?.user) {
+      try {
+        localStorage.removeItem('sadeem_last_order');
+        // Guest cart is automatically and safely migrated to user cart by CartProvider
+      } catch {}
+
       const loggedUser = res.data.user;
       setSessionUser(loggedUser);
 

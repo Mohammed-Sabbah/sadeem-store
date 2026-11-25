@@ -4,15 +4,9 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { Product } from '@/types';
-import { products } from '@/data/products';
 import { ProductCard } from '@/components/ui/ProductCard';
 
-const INITIAL_WISHLIST: Product[] = [
-  products.find((p) => p.id === 'canaan-wool-hoodie') || products[4],
-  products.find((p) => p.id === 'power-station-1200w') || products[2],
-  products.find((p) => p.id === 'olive-oil-amphora') || products[1],
-  products.find((p) => p.id === 'router-4g-cat6') || products[0],
-];
+const INITIAL_WISHLIST: Product[] = [];
 
 export default function WishlistPage() {
   const { addToCart } = useCart();
@@ -32,11 +26,14 @@ export default function WishlistPage() {
     showToast(`تمت إزالة "${item ? item.title.substring(0, 22) : ''}..." من المفضلة`);
   };
 
-  const handleAddAllToCart = () => {
+  const handleAddAllToCart = async () => {
     if (items.length === 0) return;
-    items.forEach((item) => {
-      addToCart(item, 1);
-    });
+    let added = 0;
+    for (const item of items) {
+      const result = await addToCart(item, 1);
+      if (!result.success) { showToast(`تمت إضافة ${added} من ${items.length}. ${result.message || 'تعذر حفظ الصنف التالي'}`); return; }
+      added += 1;
+    }
     showToast(`تم نقل جميع المنتجات (${items.length}) إلى سلتك الموحدة بنجاح`);
   };
 

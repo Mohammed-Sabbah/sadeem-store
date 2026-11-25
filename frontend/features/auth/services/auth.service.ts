@@ -1,4 +1,4 @@
-import { postRequest, getRequest } from '@/shared/lib/coreApi';
+import { postRequest, getRequest, patchRequest } from '@/shared/lib/coreApi';
 import type {
   LoginFormValues,
   RegisterFormValues,
@@ -123,4 +123,13 @@ export const authService = {
    * تسجيل الخروج وإلغاء صلاحية التوكنات
    */
   logout: () => postRequest<AuthMessageResponse>('/api/auth/logout'),
+
+  /**
+   * تحديث الملف الشخصي والعناوين في قاعدة البيانات
+   */
+  updateProfile: (data: {
+    name?: string;
+    phoneNumber?: string;
+    addresses?: Array<any>;
+  }) => patchRequest<UserResponse>('/api/users/profile', data),
 } as const;

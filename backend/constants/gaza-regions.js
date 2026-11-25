@@ -1,8 +1,7 @@
-const GAZA_REGIONS = {
-    central: {
+const GAZA_REGIONS = [
+    {
         id: 'central',
         name: 'المحافظة الوسطى',
-        status: 'hub',
         isActive: true,
         center: { lat: 31.428, lng: 34.375 },
         cities: [
@@ -13,10 +12,9 @@ const GAZA_REGIONS = {
             { id: 'maghazi', name: 'مخيم المغازي', center: { lat: 31.423, lng: 34.385 } },
         ],
     },
-    khan_younis: {
+    {
         id: 'khan_younis',
         name: 'خان يونس',
-        status: 'delivery_only',
         isActive: true,
         center: { lat: 31.346, lng: 34.306 },
         cities: [
@@ -27,23 +25,21 @@ const GAZA_REGIONS = {
             { id: 'mawasi_ky', name: 'المواصي - خان يونس', center: { lat: 31.355, lng: 34.260 } },
         ],
     },
-    gaza: {
+    {
         id: 'gaza',
         name: 'مدينة غزة',
-        status: 'closed',
         isActive: false,
         center: { lat: 31.505, lng: 34.463 },
         cities: [
-            { id: 'riman', name: 'الرمال وتل الهوا', center: { lat: 31.512, lng: 34.445 } },
+            { id: 'rimal', name: 'الرمال وتل الهوا', center: { lat: 31.512, lng: 34.445 } },
             { id: 'shujaeyya', name: 'الشجاعية والدرج والتفاح', center: { lat: 31.505, lng: 34.480 } },
             { id: 'zaytoun', name: 'الزيتون والصبرة', center: { lat: 31.495, lng: 34.460 } },
             { id: 'sheikh_radwan', name: 'الشيخ رضوان والنصر', center: { lat: 31.525, lng: 34.465 } },
         ],
     },
-    north: {
+    {
         id: 'north',
         name: 'شمال غزة',
-        status: 'closed',
         isActive: false,
         center: { lat: 31.545, lng: 34.505 },
         cities: [
@@ -52,10 +48,9 @@ const GAZA_REGIONS = {
             { id: 'beit_hanoun', name: 'بيت حانون', center: { lat: 31.542, lng: 34.536 } },
         ],
     },
-    rafah: {
+    {
         id: 'rafah',
         name: 'رفح',
-        status: 'closed',
         isActive: false,
         center: { lat: 31.282, lng: 34.250 },
         cities: [
@@ -65,7 +60,7 @@ const GAZA_REGIONS = {
             { id: 'mawasi_rafah', name: 'المواصي - رفح', center: { lat: 31.310, lng: 34.215 } },
         ],
     },
-};
+];
 
 module.exports = {
     GAZA_REGIONS,

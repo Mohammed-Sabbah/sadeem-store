@@ -3,11 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
+import { cartOptions } from '@/features/cart/cart.types';
 import { useAuth } from '@/context/AuthContext';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
 export default function CartPage() {
-  const { items, updateQuantity, removeFromCart, totalItems, subtotal, deliveryFee, grandTotal } = useCart();
+  const { items, updateQuantity, removeFromCart, totalItems, subtotal, deliveryFee, grandTotal, status, error, canCheckout, refreshCart } = useCart();
   const { isAuthenticated } = useAuth();
   const checkoutHref = isAuthenticated ? '/checkout' : '/auth/login?redirect=/checkout';
   const [couponOpen, setCouponOpen] = useState(false);
@@ -71,8 +72,9 @@ export default function CartPage() {
     showToast(`تم حفظ "${title}" في قائمة المفضلة بنجاح`);
   };
 
-  const handleRemove = (id: string, title: string, variantId?: string, color?: string, size?: string) => {
-    removeFromCart(id, variantId, color, size);
+  const handleRemove = async (id: string, title: string, variantId?: string, color?: string, size?: string) => {
+    const result = await removeFromCart(id, variantId, color, size);
+    if (!result.success) { showToast(result.message || 'تعذر إزالة الصنف'); return; }
     showToast(`تمت إزالة "${title}" من السلة`);
   };
 
@@ -81,6 +83,8 @@ export default function CartPage() {
   return (
     <>
       <main className="max-w-[1240px] mx-auto px-4 py-4 sm:py-6 pb-32 text-right font-almarai">
+        {status === 'loading' && <p role="status">جارٍ تحميل السلة...</p>}
+        {error && <div role="alert" className="mb-4 rounded-lg border border-red-200 p-3 text-sm">{error} <button type="button" onClick={() => void refreshCart()} className="underline">إعادة المحاولة</button></div>}
         {/* Zone 1: Checkout Stepper */}
         {items.length > 0 && (
           <nav className="flex items-center justify-center gap-3 sm:gap-4 mb-5 select-none" aria-label="مراحل إتمام الطلب">
@@ -103,7 +107,7 @@ export default function CartPage() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
-              <span>طرد موحد 8 ₪</span>
+              <span>طرد موحد {deliveryFee} ₪</span>
             </span>
             <span className="text-xs text-brand-muted font-medium leading-relaxed">
               تُجمع طلبياتك من مختلف متاجر الوسطى في شحنة واحدة، مع حق المعاينة والفحص عند الباب قبل الدفع.
@@ -119,14 +123,15 @@ export default function CartPage() {
               <div className="flex items-center justify-between pb-2 border-b border-brand-border">
                 <h1 className="text-base sm:text-lg font-extrabold text-brand-dark m-0">المنتجات في السلة</h1>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-brand-surface border border-brand-border text-brand-muted">
-                  {totalItems} {totalItems === 1 ? 'منتج موثق' : 'منتجات موثقة'}
+                  {totalItems} {totalItems === 1 ? 'منتج' : 'منتجات'}
                 </span>
               </div>
 
               {/* Items Linear Container */}
               <div className="space-y-3">
-                {items.map(({ product, quantity, selectedColor, selectedSize, selectedVariantId }, idx) => {
+                {items.map(({ product, quantity, selectedColor, selectedSize, selectedVariantId, unavailableReason, priceChanged }, idx) => {
                   const itemKey = `${product.id}-${selectedVariantId || ''}-${selectedSize || ''}-${selectedColor || ''}-${idx}`;
+                  const options = cartOptions({ product, selectedColor, selectedSize });
                   return (
                     <article
                       key={itemKey}
@@ -146,15 +151,16 @@ export default function CartPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-1.5 text-[11px] text-brand-muted font-medium truncate">
                             <span className="text-brand-primary">●</span>
-                            <span className="font-bold text-brand-dark">{product.vendor.name}</span>
-                            <span>({product.vendor.city} · موثق)</span>
+                            <span className="font-bold text-brand-dark">{product.vendor?.name || 'بيانات المتجر غير متاحة'}</span>
+                            {product.vendor?.city && <span>({product.vendor.city})</span>}
+                            {product.vendor?.verified && <span>· موثق</span>}
                           </div>
                           <div className="text-left flex-shrink-0">
                             <div className="text-sm sm:text-base font-extrabold text-brand-primary">
-                              {product.price * quantity} <span className="text-xs font-bold">₪</span>
+                              {(product.price || 0) * quantity} <span className="text-xs font-bold">₪</span>
                             </div>
                             {quantity > 1 && (
-                              <span className="text-[10px] text-brand-subtle block">({product.price} ₪ للقطعة)</span>
+                              <span className="text-[10px] text-brand-subtle block">({product.price || 0} ₪ للقطعة)</span>
                             )}
                           </div>
                         </div>
@@ -165,12 +171,12 @@ export default function CartPage() {
                           </Link>
                         </h2>
 
-                        <div className="text-[11px] text-brand-muted flex items-center gap-1.5">
-                          <span>المقاس: <strong className="text-brand-dark">{selectedSize || 'L'}</strong></span>
-                          <span>·</span>
-                          <span>اللون: <strong className="text-brand-dark">{selectedColor || 'أخضر زيتي'}</strong></span>
-                        </div>
+                        {options.length > 0 && <div className="text-[11px] text-brand-muted flex flex-wrap items-center gap-1.5">
+                          {options.map(([name, value]) => <span key={name}>{name}: <strong className="text-brand-dark">{value}</strong></span>)}
+                        </div>}
 
+                        {unavailableReason && <p role="alert" className="text-xs text-red-600">{unavailableReason}</p>}
+                        {priceChanged && <p role="status" className="text-xs text-brand-primary">تغيّر السعر، المعروض هو السعر الحالي</p>}
                         {/* Action Controls: Stepper on Right, Links on Left */}
                         <div className="flex items-center justify-between mt-2 pt-2 border-t border-brand-border-subtle/50">
                           <div className="flex items-center border border-brand-border rounded-lg bg-brand-surface overflow-hidden h-7 sm:h-8">
@@ -178,7 +184,7 @@ export default function CartPage() {
                               type="button"
                               className="w-7 sm:w-8 h-full flex items-center justify-center text-sm font-bold text-brand-dark hover:bg-brand-border/40 transition active:scale-95 disabled:opacity-30 cursor-pointer border-0 bg-transparent"
                               onClick={() => updateQuantity(product.id, quantity - 1, selectedVariantId, selectedColor, selectedSize)}
-                              disabled={quantity <= 1}
+                              disabled={quantity <= 1 || status !== 'ready'}
                               title="إنقاص الكمية"
                             >
                               −
@@ -188,6 +194,7 @@ export default function CartPage() {
                               type="button"
                               className="w-7 sm:w-8 h-full flex items-center justify-center text-sm font-bold text-brand-dark hover:bg-brand-border/40 transition active:scale-95 cursor-pointer border-0 bg-transparent"
                               onClick={() => updateQuantity(product.id, quantity + 1, selectedVariantId, selectedColor, selectedSize)}
+                              disabled={status !== 'ready'}
                               title="زيادة الكمية"
                             >
                               +
@@ -301,7 +308,7 @@ export default function CartPage() {
                 {/* Primary Action Button: Inline Checkout CTA */}
                 <Link
                   ref={summaryBtnRef}
-                  href={checkoutHref}
+                  href={canCheckout ? checkoutHref : '#'} aria-disabled={!canCheckout} onClick={(event) => { if (!canCheckout) event.preventDefault(); }}
                   className="w-full py-3 px-4 rounded-xl bg-brand-primary hover:bg-brand-primary-hover text-white text-sm sm:text-base font-extrabold shadow-md hover:shadow-lg transition-all active:scale-98 flex items-center justify-between no-underline cursor-pointer border-0"
                 >
                   <span>متابعة الشحن والسداد</span>
@@ -329,7 +336,7 @@ export default function CartPage() {
               </div>
             </aside>
           </div>
-        ) : (
+        ) : status === 'ready' && !error ? (
           /* Empty Cart State */
           <section
             className="py-16 px-6 text-center bg-white border border-brand-border rounded-2xl max-w-lg mx-auto my-8 shadow-xs"
@@ -362,7 +369,7 @@ export default function CartPage() {
               </Link>
             </div>
           </section>
-        )}
+        ) : null}
       </main>
 
       {/* Mobile Sticky Floating Checkout Bar */}
@@ -380,7 +387,7 @@ export default function CartPage() {
             </div>
           </div>
           <Link
-            href={checkoutHref}
+            href={canCheckout ? checkoutHref : '#'} aria-disabled={!canCheckout} onClick={(event) => { if (!canCheckout) event.preventDefault(); }}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-brand-primary hover:bg-brand-primary-hover text-white text-xs sm:text-sm font-bold shadow-sm transition-all active:scale-95 no-underline"
           >
             <span>متابعة الشحن والسداد</span>

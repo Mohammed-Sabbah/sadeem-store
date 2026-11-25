@@ -18,6 +18,15 @@ const { ROLE } = require("../constants/enums")
 const { escapeRegex } = require("../utils")
 const { payForOrder, refundOrder, refundOrderItemsCancellation } = require("../services/walletService");
 const SORT_FIELDS = ["createdAt", "updatedAt", "totalAmount"];
+const { consumeCart, assertOwner } = require('./cart.service');
+const { calculateDeliveryFee } = require("./delivery.service");
+const { roundMoney } = require("../utils/wallet");
+const { divideByRegion } = require("../utils/order");
+const {
+    createStoreEarning,
+    updatePendingStoreEarning,
+    cancelPendingStoreEarning,
+} = require("./storeBalance.service");
 
 // Helpers
 const validateOrderItems = async (items, session) => {
@@ -104,8 +113,10 @@ const divideByStore = async (items, session) => {
     const stores = await Store.find({
         _id: { $in: storeIds },
         status: STATUS.ACTIVE,
+        isDeleted: false,
+        approveStatus: APPROVE_STATUS.APPROVED,
     })
-        .select("_id regionId")
+        .select("_id address.region address.coordinates")
         .session(session)
         .lean();
 
@@ -117,37 +128,17 @@ const divideByStore = async (items, session) => {
     const storeRegionMap = new Map(
         stores.map(store => [
             store._id.toString(),
-            store.regionId
+            {
+                region: store.address.region,
+                storePoint: store.address.coordinates
+            }
         ])
     );
 
     return Array.from(storeMap.values()).map(storeOrder => ({
         ...storeOrder,
-        regionId: storeRegionMap.get(storeOrder.storeId.toString())
+        ...storeRegionMap.get(storeOrder.storeId.toString())
     }));
-};
-
-const divideByRegion = (storeOrders) => {
-    const regionMap = new Map();
-
-    for (const order of storeOrders) {
-        const regionId = order.regionId.toString();
-
-        if (!regionMap.has(regionId)) {
-            regionMap.set(regionId, {
-                regionId: order.regionId,
-                orders: [],
-                subtotal: 0
-            });
-        }
-
-        const region = regionMap.get(regionId);
-
-        region.orders.push(order);
-        region.subtotal += order.subtotal;
-    }
-
-    return Array.from(regionMap.values());
 };
 
 const createStoresOrders = async ({ orders, userId, orderGroupId, deliveryPhone, deliveryAddress }, session) => {
@@ -162,7 +153,6 @@ const createStoresOrders = async ({ orders, userId, orderGroupId, deliveryPhone,
             subtotal: order.subtotal,
             deliveryPhone,
             deliveryAddress,
-            regionId: order.regionId
         }], { session });
 
         createdOrders.push(createdOrder);
@@ -172,16 +162,34 @@ const createStoresOrders = async ({ orders, userId, orderGroupId, deliveryPhone,
 }
 
 const calculateTotalOrdersAmount = (storeOrders, deliveryFee) => {
-    const subtotal = storeOrders.reduce(
+    const subtotal = roundMoney(storeOrders.reduce(
         (total, order) => total + order.subtotal,
         0
-    );
+    ));
 
     return {
         subtotal,
-        totalAmount: subtotal ? subtotal + deliveryFee : subtotal
+        totalAmount: subtotal ? roundMoney(subtotal + deliveryFee) : subtotal
     };
 }
+
+const calculateOrderTotals = async ({ items, deliveryAddress, session }) => {
+    const { orderItems } = await validateOrderItems(items, session);
+    const storeOrders = await divideByStore(orderItems, session);
+    const deliveryFee = await calculateDeliveryFee(storeOrders, deliveryAddress);
+    const totals = calculateTotalOrdersAmount(storeOrders, deliveryFee);
+
+    return { orderItems, storeOrders, deliveryFee, ...totals };
+};
+
+const calculateOrderTotal = async ({ items, deliveryAddress }) => {
+    const { subtotal, deliveryFee, totalAmount } = await calculateOrderTotals({
+        items,
+        deliveryAddress
+    });
+
+    return { subtotal, deliveryFee, totalAmount };
+};
 
 const calculateOrderSubtotal = (order) => order.items
     .filter(item => item.status === STATUS.ACTIVE)
@@ -294,9 +302,14 @@ const listOrders = async ({
     search,
     startDate,
     endDate,
+    createdFrom,
+    createdTo,
     userId,
+    buyerId,
+    orderNumber,
     storeId,
     page = 1,
+    offset,
     limit = 10,
     sortBy = "createdAt",
     sortOrder = "desc",
@@ -323,12 +336,13 @@ const listOrders = async ({
 
         case ROLE.ADMIN:
             // Admin can list orders across the marketplace.
-            if (userId) {
-                if (!mongoose.isValidObjectId(userId)) {
+            const buyerFilter = userId || buyerId;
+            if (buyerFilter) {
+                if (!mongoose.isValidObjectId(buyerFilter)) {
                     throw error("Invalid user ID", 400);
                 }
 
-                query.userId = userId;
+                query.userId = buyerFilter;
             }
 
             if (storeId) {
@@ -364,12 +378,21 @@ const listOrders = async ({
         ];
     }
 
+    if (orderNumber?.trim()) {
+        query.orderNumber = new RegExp(
+            `^${escapeRegex(orderNumber.trim())}$`,
+            "i"
+        );
+    }
+
     // 4. Filter by creation date.
-    if (startDate || endDate) {
+    const dateFrom = startDate || createdFrom;
+    const dateTo = endDate || createdTo;
+    if (dateFrom || dateTo) {
         const dateFilter = {};
 
-        if (startDate) {
-            const start = new Date(startDate);
+        if (dateFrom) {
+            const start = new Date(dateFrom);
 
             if (Number.isNaN(start.getTime())) {
                 throw error("Invalid start date", 400);
@@ -378,8 +401,8 @@ const listOrders = async ({
             dateFilter.$gte = start;
         }
 
-        if (endDate) {
-            const end = new Date(endDate);
+        if (dateTo) {
+            const end = new Date(dateTo);
 
             if (Number.isNaN(end.getTime())) {
                 throw error("Invalid end date", 400);
@@ -418,6 +441,13 @@ const listOrders = async ({
     }
 
     limit = Math.min(limit, 100);
+    const skip = offset === undefined
+        ? (page - 1) * limit
+        : Number(offset);
+
+    if (!Number.isInteger(skip) || skip < 0) {
+        throw error("Invalid pagination parameters", 400);
+    }
 
     // 6. Whitelist sorting fields and direction.
     if (!SORT_FIELDS.includes(sortBy)) {
@@ -425,8 +455,6 @@ const listOrders = async ({
     }
 
     const sortDirection = sortOrder === "asc" ? 1 : -1;
-
-    const skip = (page - 1) * limit;
 
     // 7. Fetch results and total count.
     const [orders, totalOrders] = await Promise.all([
@@ -443,12 +471,13 @@ const listOrders = async ({
     return {
         orders,
         pagination: {
-            page,
+            page: Math.floor(skip / limit) + 1,
+            offset: skip,
             limit,
             totalOrders,
             totalPages: Math.ceil(totalOrders / limit),
-            hasNextPage: page * limit < totalOrders,
-            hasPreviousPage: page > 1,
+            hasNextPage: skip + limit < totalOrders,
+            hasPreviousPage: skip > 0,
         },
     };
 };
@@ -480,26 +509,16 @@ const listOrder = async ({ orderId, actor, storeId }) => {
     return order;
 };
 
-const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
+const createOrder = async ({ userId, ownerId, cartRevision, expectedSubtotal, items, deliveryAddress, deliveryPhone, paymentMethod }) => {
+    // assertOwner(userId, ownerId);
     const session = await mongoose.startSession()
     try {
         let createdOrderGroup;
         let createdOrders;
         await session.withTransaction(async () => {
-            // validate order items - return validated order items 
-            const { orderItems } = await validateOrderItems(items, session)
-
-            // divide order items by store
-            const storeOrders = await divideByStore(orderItems, session)
-
-            // divide store orders by region
-            const regionOrders = divideByRegion(storeOrders)
-
-            // calculate delivery fees - based on the regions and stores of every region
-            const deliveryFee = 10
-
-            // calculate total amount for each region order
-            const { totalAmount, subtotal } = calculateTotalOrdersAmount(storeOrders, deliveryFee)
+            // await consumeCart(userId, items, cartRevision, session);
+            const { orderItems, storeOrders, deliveryFee, totalAmount, subtotal } =
+                await calculateOrderTotals({ items, deliveryAddress, session });
 
             // create the order group
             const [orderGroup] = await OrderGroup.create(
@@ -526,6 +545,10 @@ const createOrder = async ({ userId, items, deliveryAddress, deliveryPhone, paym
                 deliveryAddress,
                 deliveryPhone
             }, session)
+
+            for (const order of subOrders) {
+                await createStoreEarning({ order, session });
+            }
 
             const subOrdersIds = subOrders.map(subOrder => subOrder._id)
             orderGroup.orders = subOrdersIds
@@ -574,6 +597,7 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             // calculate the new subtotal and amount and refund the user
             const newSubtotal = calculateOrderSubtotal(order)
             order.subtotal = newSubtotal;
+            await updatePendingStoreEarning({ order, session });
 
             // save the order
             await order.save({ session })
@@ -591,7 +615,7 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             const oldTotalAmount = orderGroup.totalAmount
 
             // find subOrders of the order group
-            const subOrders = await Order.find({ orderGroupId: orderGroup._id }).session(session)
+            const subOrders = await Order.find({ orderGroupId: orderGroup._id }).populate("storeId").session(session)
 
             // check all orders cancelled 
             const allOrdersCancelled = subOrders.every(
@@ -603,7 +627,15 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             }
 
             // calculate the new deliveryfee
-            const deliveryFee = 10
+            const remainingStoreOrders = subOrders.filter(
+                subOrder =>
+                    subOrder.status !== ORDER_STATUS.CANCELLED &&
+                    calculateOrderSubtotal(subOrder) > 0
+            )
+            const deliveryFee = await calculateDeliveryFee(
+                remainingStoreOrders,
+                orderGroup.deliveryAddress
+            )
 
             // calculate the new subtotal and amount of the order group
             const { subtotal, totalAmount } = calculateTotalOrdersAmount(subOrders, deliveryFee)
@@ -615,8 +647,9 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
             await orderGroup.save({ session })
 
             // refund the user 
-            const refundAmount = oldTotalAmount - totalAmount
+            const refundAmount = roundMoney(oldTotalAmount - totalAmount)
             if (refundAmount > 0) {
+                console.log(`Refunding ${refundAmount} to user ${orderGroup.userId} for order group ${orderGroup._id}`)
                 await refundOrderItemsCancellation({
                     orderGroupId: orderGroup._id,
                     userId: orderGroup.userId,
@@ -632,7 +665,8 @@ const cancelOrderItem = async ({ orderId, storeId, variantId }) => {
     }
 }
 
-const cancelOrder = async ({ user, orderGroupId, store = null }) => {
+const cancelOrder = async ({ user, orderGroupId, orderId, store = null }) => {
+    const targetGroupId = orderGroupId || orderId;
     const session = await mongoose.startSession()
     try {
         let cancelledOrder;
@@ -652,7 +686,7 @@ const cancelOrder = async ({ user, orderGroupId, store = null }) => {
 
             // Update Order
             const orderFilters = {
-                _id: orderGroupId,
+                _id: targetGroupId,
                 status: ORDER_STATUS.PENDING,
                 ...(userId ? { userId } : {}),
             }
@@ -675,6 +709,9 @@ const cancelOrder = async ({ user, orderGroupId, store = null }) => {
 
             // cancel orders 
             subOrders.map(order => order.status = ORDER_STATUS.CANCELLED)
+            for (const order of subOrders) {
+                await cancelPendingStoreEarning({ order, session });
+            }
             await Promise.all(subOrders.map(order => order.save({ session })))
 
             cancelledOrder = orderGroup
@@ -688,7 +725,9 @@ const cancelOrder = async ({ user, orderGroupId, store = null }) => {
 module.exports = {
     listOrders,
     listOrder,
+    calculateOrderTotal,
     createOrder,
     cancelOrder,
-    cancelOrderItem
+    cancelOrderItem,
+    divideByRegion
 }

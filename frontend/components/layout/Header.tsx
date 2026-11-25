@@ -144,6 +144,20 @@ export function Header() {
           </Link>
 
 
+          {isAuthenticated && (
+            <Link
+              href="/orders"
+              className="p-2 rounded-full text-brand-muted hover:text-brand-primary hover:bg-brand-surface transition-colors"
+              title="طلباتي وتتبع الشحنات"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                <line x1="12" y1="22.08" x2="12" y2="12" />
+              </svg>
+            </Link>
+          )}
+
           <Link
             href="/wishlist"
             className="p-2 rounded-full text-brand-muted hover:text-brand-primary hover:bg-brand-surface transition-colors"
@@ -206,6 +220,9 @@ export function Header() {
           </Link>
           <Link href="/explore" className="transition-colors hover:text-brand-primary">
             التصنيفات
+          </Link>
+          <Link href="/orders" className={`transition-colors hover:text-brand-primary ${pathname === '/orders' ? 'text-brand-primary font-extrabold' : ''}`}>
+            طلباتي
           </Link>
           <Link href="/#curated-head" className="transition-colors hover:text-brand-primary">
             الأكثر طلباً

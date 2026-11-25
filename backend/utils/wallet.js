@@ -1,3 +1,15 @@
+const roundMoney = (value) => Number(Number(value).toFixed(2));
+
+const isMoneyAmount = (value) => {
+    if (!Number.isFinite(value)) {
+        return false;
+    }
+
+    const roundedAmount = roundMoney(value);
+    const precisionTolerance = Number.EPSILON * Math.max(1, Math.abs(value)) * 4;
+    return Math.abs(value - roundedAmount) <= precisionTolerance;
+};
+
 function parsePositiveMoney(value, label) {
     if (
         value === '' ||
@@ -14,10 +26,9 @@ function parsePositiveMoney(value, label) {
     const amount = Number(value);
 
     if (
-        !Number.isFinite(amount) ||
         amount < 0 ||
         amount > 100000000 ||
-        Math.round(amount * 100) !== amount * 100
+        !isMoneyAmount(amount)
     ) {
         const error = new Error(
             `${label} must be a valid positive amount with at most two decimal places`
@@ -26,9 +37,11 @@ function parsePositiveMoney(value, label) {
         throw error;
     }
 
-    return Math.round(amount * 100) / 100;
+    return roundMoney(amount);
 }
 
 module.exports = {
+    roundMoney,
+    isMoneyAmount,
     parsePositiveMoney,
 }

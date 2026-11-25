@@ -23,12 +23,13 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const variantRoutes = require('./routes/variantRoutes');
 const storeRoutes = require('./routes/storeRoutes');
-const deliveryRoutes = require('./routes/deliveryRoutes');
 const regionRoutes = require('./routes/regionRoutes');
 const walletRoutes = require('./routes/walletRoutes');
+const transactionRoutes = require('./routes/transactions.route');
 const withDrawalRoutes = require('./routes/withdrawal.route');
 const depositRoutes = require('./routes/deposit.route');
 const orderRoutes = require("./routes/order.route")
+const deliveryRoutes = require("./routes/delivery.route")
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -36,12 +37,14 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/products/:id/variants', variantRoutes);
 app.use('/api/stores', storeRoutes);
-app.use('/api/delivery', deliveryRoutes);
 app.use('/api/regions', regionRoutes);
 app.use('/api/wallet', walletRoutes);
+app.use('/api/transactions', transactionRoutes);
 app.use('/api/withdrawals', withDrawalRoutes);
 app.use('/api/deposits', depositRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/delivery', deliveryRoutes);
+app.use('/api/cart', require('./routes/cart.route'));
 
 app.use(notFound);
 app.use(errorHandler);

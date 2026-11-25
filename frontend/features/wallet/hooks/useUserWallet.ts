@@ -17,6 +17,9 @@ export function useUserWalletQuery(options?: {
     queryKey: USER_WALLET_KEYS.wallet,
     queryFn: async () => {
       const res = await walletService.getWallet();
+      if (!res.success || !res.data) {
+        throw new Error(res.message || 'تعذر استرجاع المحفظة');
+      }
       return res.data;
     },
     enabled: options?.enabled ?? true,
@@ -79,7 +82,11 @@ export function useUserWalletOperations() {
   const withdrawalMutation = useMutation({
     mutationFn: (data: {
       amount: number;
-      payoutDetails: { bankName: string; accountNumber: string; accountName: string; notes?: string };
+      payoutDetails: {
+        transferProvider: 'palestine' | 'jawwalpay' | 'palpay';
+        accountNumber: string;
+        accountName: string;
+      };
     }) => walletService.submitWithdrawal(data),
     onSuccess: (res) => {
       if (res.success) {

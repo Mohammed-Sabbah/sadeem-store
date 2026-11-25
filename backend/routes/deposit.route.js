@@ -10,7 +10,7 @@ const {
 } = require("../controllers/deposit.controller")
 
 // Schema
-// const { validateIdempotencyKey } = require("../schemas/walletSchema")
+// const { validateIdempotencyKey } = require("../schemas/transactionSchema")
 const {
     validateDepositRequest,
     validateDepositApproval,

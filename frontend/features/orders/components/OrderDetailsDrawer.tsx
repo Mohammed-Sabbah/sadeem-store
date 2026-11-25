@@ -25,7 +25,7 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({ order, o
 
   if (!order) return null;
 
-  const isActive = order.status === 'active';
+  const isActive = order.status === 'pending';
 
   return (
     <div
@@ -49,7 +49,7 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({ order, o
                 تفاصيل الطلب
               </span>
               <span className="font-mono text-xs font-black px-2 py-0.5 rounded-[6px] bg-brand-card border border-brand-border text-brand-primary">
-                #{order.id}
+                #{order.id.length > 8 ? order.id.slice(-8).toUpperCase() : order.id}
               </span>
             </div>
             <span className="text-[11px] text-brand-muted block">
@@ -117,7 +117,7 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({ order, o
                 <div key={item.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <img
-                      src={item.image}
+                      src={item.image || '/placeholder_product.svg'}
                       alt={item.title}
                       className="w-11 h-11 rounded-[8px] object-cover border border-brand-border bg-stone-100 shrink-0"
                     />
@@ -194,7 +194,7 @@ export const OrderDetailsDrawer: React.FC<OrderDetailsDrawerProps> = ({ order, o
         <div className="p-3 border-t border-brand-border/60 bg-brand-card/98 backdrop-blur-md shrink-0 flex items-center gap-2">
           {isActive ? (
             <Link
-              href={`/tracking?orderId=${order.id}`}
+              href={`/tracking?orderId=${order.orderGroupId || order.id}`}
               className="w-full h-10 rounded-[8px] bg-brand-primary text-white text-xs sm:text-sm font-black shadow-md hover:bg-brand-primary-hover active:scale-95 transition-all inline-flex items-center justify-center gap-1.5 no-underline"
             >
               <span>تتبع مسار الشحنة</span>

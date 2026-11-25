@@ -19,6 +19,18 @@ const getOrderById = async (req, res, next) => {
     }
 }
 
+const calculateOrderTotal = async (req, res, next) => {
+    try {
+        const totals = await orderService.calculateOrderTotal({
+            items: req.body.items,
+            deliveryAddress: req.body.deliveryAddress
+        });
+        return success(res, 200, { totals });
+    } catch (err) {
+        next(err);
+    }
+}
+
 const getStoreOrders = async (req, res, next) => {
     try {
         const orders = await orderService.listOrders(
@@ -40,7 +52,10 @@ const placeOrder = async (req, res, next) => {
             items: req.body.items,
             deliveryAddress: req.body.deliveryAddress,
             deliveryPhone: req.body.deliveryPhone,
-            paymentMethod: req.body.paymentMethod
+            paymentMethod: req.body.paymentMethod,
+            ownerId: req.body.ownerId,
+            cartRevision: req.body.cartRevision,
+            expectedSubtotal: req.body.expectedSubtotal
         })
         return success(res, 201, { order })
     } catch (err) {
@@ -52,7 +67,7 @@ const cancelOrder = async (req, res, next) => {
     try {
         const order = await orderService.cancelOrder({
             user: req.user,
-            orderId: req.params.id,
+            orderGroupId: req.params.id,
             store: req.store?._id
         })
         return success(res, 200, { order })
@@ -77,6 +92,7 @@ const cancelOrderItem = async (req, res, next) => {
 module.exports = {
     getOrders,
     getOrderById,
+    calculateOrderTotal,
     getStoreOrders,
     placeOrder,
     cancelOrder,

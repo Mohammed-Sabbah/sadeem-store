@@ -4,10 +4,9 @@
   "description": "Sadeem Central Gaza E-Commerce Backend (Express + MongoDB)",
   "main": "index.js",
   "scripts": {
+    "test": "node --test tests/*.test.js",
     "start": "node index.js",
-    "dev": "node --watch index.js",
-    "seed:clean": "node scripts/seed-complete-sadeem.js",
-    "migrate:drop-legacy-variant-index": "node scripts/drop-legacy-variant-index.js"
+    "dev": "node --watch index.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

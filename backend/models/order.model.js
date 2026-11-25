@@ -7,7 +7,7 @@ const {
     PAYMENT_STATUS_VALUES,
     PAYMENT_STATUS
 } = require("../constants/enums")
-// const { addressSchema } = require("./address")
+const { addressSchema } = require("./address")
 
 const orderItemSchema = new mongoose.Schema(
     {
@@ -93,7 +93,7 @@ const orderSchema = new mongoose.Schema({
         required: true
     },
     deliveryAddress: {
-        type: String,
+        type: addressSchema,
         required: true,
     },
     deliveryPhone: {
@@ -105,12 +105,6 @@ const orderSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "DriverAssignment",
         default: null,
-        index: true,
-    },
-    regionId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Region",
-        required: true,
         index: true,
     },
     subtotal: {

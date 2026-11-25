@@ -46,20 +46,21 @@ export default function MerchantMobileBottomNav() {
         </Link>
 
         {/* 2. Orders */}
-        <div
-          className="flex flex-col items-center justify-center gap-1 h-full rounded-xl text-brand-muted/50 cursor-not-allowed select-none"
-          title="مسار الطلبيات والطرود الموحدة 8 ₪ (قريباً)"
+        <Link
+          href="/merchant/orders"
+          className={`flex flex-col items-center justify-center gap-1 h-full rounded-xl transition-all active:scale-95 no-underline ${
+            pathname === '/merchant/orders'
+              ? 'text-brand-primary font-black'
+              : 'text-brand-muted hover:text-brand-dark font-bold'
+          }`}
         >
           <div className="relative">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={pathname === '/merchant/orders' ? 2.2 : 1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
             </svg>
-            <span className="absolute -top-1 -right-2 px-1 text-[8px] font-black rounded-full bg-brand-surface text-brand-muted border border-brand-border leading-3">
-              قريباً
-            </span>
           </div>
-          <span className="text-[11px] font-bold leading-none">الطلبيات</span>
-        </div>
+          <span className="text-[11px] leading-none">الطلبيات</span>
+        </Link>
 
         {/* 3. Wallet */}
         <div

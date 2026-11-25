@@ -7,8 +7,6 @@ import { ProductCard } from '@/components/ui/ProductCard';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { catalogService, type CatalogStore, type CatalogProduct } from '@/features/catalog/catalog.service';
 import type { Store, Product } from '@/types';
-import { stores } from '@/data/stores';
-import { products } from '@/data/products';
 
 export default function StoreDetailPage() {
   const params = useParams();
@@ -36,9 +34,7 @@ export default function StoreDetailPage() {
       })
       .catch(() => {
         if (!active) return;
-        // Graceful fallback to static demo store
-        const fallbackStore = stores.find((s) => s.id === id) || stores[0];
-        setStore(fallbackStore);
+        setStore(null);
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -57,34 +53,20 @@ export default function StoreDetailPage() {
       .then((items) => {
         if (!active) return;
         const visibleItems = items.filter((item) => !item.isAnonymousVendor);
-        if (visibleItems.length > 0) {
-          setStoreProducts(visibleItems);
-        } else {
-          // Fallback to local products matching vendor
-          const currentStore = store || stores.find((s) => s.id === id) || stores[0];
-          const localItems = products.filter(
-            (p) => (p.vendor.id === currentStore.id || p.vendor.name === currentStore.name || p.vendor.city.includes(currentStore.city)) && !isAnonymous(p)
-          );
-          setStoreProducts(localItems.length > 0 ? localItems : products.filter((p) => !isAnonymous(p)).slice(0, 4));
-        }
+        setStoreProducts(visibleItems);
       })
       .catch(() => {
         if (!active) return;
-        const currentStore = store || stores.find((s) => s.id === id) || stores[0];
-        const localItems = products.filter(
-          (p) => (p.vendor.id === currentStore.id || p.vendor.name === currentStore.name || p.vendor.city.includes(currentStore.city)) && !isAnonymous(p)
-        );
-        setStoreProducts(localItems.length > 0 ? localItems : products.filter((p) => !isAnonymous(p)).slice(0, 4));
+        setStoreProducts([]);
       });
 
     return () => {
       active = false;
     };
-  }, [id, store]);
+  }, [id]);
 
-  const currentStore = store || stores.find((s) => s.id === id) || stores[0];
-
-  const categories = ['all', ...Array.from(new Set(storeProducts.map((p) => p.category)))];
+  const currentStore = store;
+const categories = ['all', ...Array.from(new Set(storeProducts.map((p) => p.category)))];
 
   const filteredProducts =
     activeCategory === 'all'
@@ -93,7 +75,7 @@ export default function StoreDetailPage() {
 
   const handleShare = () => {
     if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ title: currentStore.name, url: window.location.href }).catch(() => {});
+      navigator.share({ title: currentStore?.name || 'متجر سَدِيم', url: window.location.href }).catch(() => {});
     } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
       setCopiedToast(true);
@@ -106,6 +88,29 @@ export default function StoreDetailPage() {
       <main className="max-w-[1240px] mx-auto px-4 py-20 text-center font-almarai">
         <div className="w-10 h-10 border-3 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
         <p className="text-xs font-bold text-brand-muted">جارٍ جلب تفاصيل المتجر المعتمد...</p>
+      </main>
+    );
+  }
+
+
+  if (!currentStore) {
+    return (
+      <main className="max-w-[1240px] mx-auto px-4 py-16 text-center font-almarai">
+        <div className="p-8 rounded-2xl bg-white border border-brand-border max-w-md mx-auto flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-brand-surface border border-brand-border flex items-center justify-center text-2xl text-brand-muted">
+            🏪
+          </div>
+          <h1 className="text-lg font-bold text-brand-dark m-0">المتجر غير متاح أو قيد الاعتماد</h1>
+          <p className="text-xs text-brand-muted m-0 leading-relaxed">
+            تعذر العثور على المتجر المطلوب في شبكة متاجر سَدِيم المعتمدة للمحافظة الوسطى.
+          </p>
+          <Link
+            href="/explore"
+            className="px-5 py-2.5 rounded-lg bg-brand-primary text-white text-xs font-bold hover:bg-brand-primary-hover transition-colors no-underline"
+          >
+            استكشاف المتاجر المعتمدة ←
+          </Link>
+        </div>
       </main>
     );
   }

@@ -101,7 +101,11 @@ export const walletService = {
   async submitWithdrawal(
     data: {
       amount: number;
-      payoutDetails: { bankName: string; accountNumber: string; accountName: string; notes?: string };
+      payoutDetails: {
+        transferProvider: 'palestine' | 'jawwalpay' | 'palpay';
+        accountNumber: string;
+        accountName: string;
+      };
     },
     idempotencyKey: string = generateIdempotencyKey()
   ): Promise<{ success: boolean; message?: string; data?: any }> {

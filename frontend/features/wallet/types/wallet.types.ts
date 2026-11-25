@@ -1,14 +1,19 @@
-export type WalletTransactionType = 'deposit' | 'withdrawal' | 'purchase' | 'refund';
+export type WalletTransactionType =
+  | 'deposit'
+  | 'withdrawal'
+  | 'purchase'
+  | 'refund'
+  | 'driver_earning'
+  | 'driver_payout';
 
-export type WalletTransactionStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type WalletTransactionStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded' | 'partially_refund';
 
 export type BalanceType = 'withdrawable' | 'storeCredit';
 
 export interface PayoutDetails {
-  bankName: string;
+  transferProvider: 'palestine' | 'jawwalpay' | 'palpay';
   accountNumber: string;
   accountName: string;
-  notes?: string;
 }
 
 export interface WalletTransactionItem {

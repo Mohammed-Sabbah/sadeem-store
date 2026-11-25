@@ -1,0 +1,89 @@
+const mongoose = require("mongoose")
+const { DELIVERY_STATUS_VALUES, DELIVERY_STATUS, DELIVERY_TYPE_VALUES, DELIVERY_TYPE, DRIVER_PAYOUT_STATUS, DRIVER_PAYOUT_STATUS_VALUES } = require("../constants/enums")
+
+// const driverPaymentSchema = new mongoose.Schema(
+//     {
+//         amount: {
+//             type: Number,
+//             min: 0,
+//             default: null
+//         },
+//         status: {
+//             type: String,
+//             enum: DRIVER_PAYOUT_STATUS_VALUES,
+//             default: DRIVER_PAYOUT_STATUS.PENDING
+//         },
+//         paidAt: {
+//             type: Date,
+//             default: null
+//         }
+//     },
+//     { _id: false }
+// );
+
+
+const deliverySchema = new mongoose.Schema({
+    orderGroupId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "OrderGroup",
+        required: true
+    },
+    orderIds: {
+        type: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Order",
+        }],
+        default: []
+    },
+    driverId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+    },
+    status: {
+        type: String,
+        enum: DELIVERY_STATUS_VALUES,
+        default: DELIVERY_STATUS.INPROGRESS
+    },
+    pickupLocations: {
+        type: [mongoose.Schema.Types.Mixed],
+        required: true
+    },
+    deliveryLocation: {
+        type: mongoose.Schema.Types.Mixed,
+        required: true
+    },
+    type: {
+        type: String,
+        enum: DELIVERY_TYPE_VALUES,
+        default: DELIVERY_TYPE.COLLECTION,
+    },
+    driverPayment: {
+        type: Number,
+        required: true
+    },
+    assignedAt: {
+        type: Date,
+        default: null
+    },
+    completedAt: {
+        type: Date,
+        default: null
+    },
+    cancelledAt: {
+        type: Date,
+        default: null
+    },
+    cancellationReason: {
+        type: String,
+        default: null,
+        trim: true
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    }
+}, { timestamps: true })
+
+const Delivery = new mongoose.model("DeliveryTask", deliverySchema)
+module.exports = Delivery

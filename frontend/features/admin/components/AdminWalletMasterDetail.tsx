@@ -364,7 +364,7 @@ export const AdminWalletMasterDetail: React.FC<AdminWalletMasterDetailProps> = (
                   <div>
                     <span className="text-[10px] text-brand-muted block">وسيلة السحب</span>
                     <span className="font-bold text-brand-dark">
-                      {selectedItem.payoutDetails?.method || 'محفظة جوال باي'}
+                      {selectedItem.payoutDetails?.transferProvider || 'محفظة جوال باي'}
                     </span>
                   </div>
                   <div>

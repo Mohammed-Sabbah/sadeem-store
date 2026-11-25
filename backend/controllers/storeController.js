@@ -2,6 +2,7 @@ const Store = require('../models/Store');
 const User = require('../models/User');
 const { STATUS, APPROVE_STATUS } = require('../constants/enums');
 const { success, error } = require('../utils/responses');
+const storeBalanceService = require('../services/storeBalance.service');
 
 async function getMyStore(req, res, next) {
     try {
@@ -12,6 +13,38 @@ async function getMyStore(req, res, next) {
         next(err)
     }
 }
+
+async function getMyStoreBalance(req, res, next) {
+    try {
+        const balance = await storeBalanceService.getStoreBalance(req.store._id);
+        return success(res, 200, { balance });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function getStoreBalance(req, res, next) {
+    try {
+        const balance = await storeBalanceService.getStoreBalance(req.params.id);
+        return success(res, 200, { balance });
+    } catch (err) {
+        return next(err);
+    }
+}
+
+async function createStorePayout(req, res, next) {
+    try {
+        const transaction = await storeBalanceService.createStorePayout({
+            storeId: req.params.id,
+            amount: req.body.amount,
+            adminId: req.user._id,
+        });
+        return success(res, 201, { transaction });
+    } catch (err) {
+        return next(err);
+    }
+}
+
 async function getPublicStore(req, res, next) {
     try {
         const store = await Store.findOne({
@@ -124,10 +157,31 @@ async function rejectStore(req, res, next) {
     }
 }
 
+
+async function getPublicStores(req, res, next) {
+    try {
+        const stores = await Store.find({
+            status: STATUS.ACTIVE,
+            approveStatus: APPROVE_STATUS.APPROVED,
+            isDeleted: false,
+        })
+            .select('name logo description address status approveStatus')
+            .lean();
+
+        return success(res, 200, { stores });
+    } catch (err) {
+        return next(err);
+    }
+}
+
 module.exports = {
+    getPublicStores,
     getPublicStore,
     approveStore,
     getMyStore,
+    getMyStoreBalance,
+    getStoreBalance,
+    createStorePayout,
     getAdminStores,
     toggleStoreStatus,
     rejectStore
